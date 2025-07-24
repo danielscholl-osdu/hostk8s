@@ -47,20 +47,22 @@ spec:
         app: demo-app
     spec:
       containers:
-      - name: nginx
-        image: nginx:alpine
+      - name: web-server
+        image: busybox:1.35
+        command: ["/bin/sh"]
+        args: ["-c", "cd /var/www && exec httpd -f -p 8080 -h /var/www"]
         ports:
-        - containerPort: 80
+        - containerPort: 8080
         volumeMounts:
         - name: html
-          mountPath: /usr/share/nginx/html
+          mountPath: /var/www
         resources:
           requests:
-            memory: "16Mi"
-            cpu: "10m"
+            memory: "8Mi"
+            cpu: "5m"
           limits:
-            memory: "32Mi"
-            cpu: "50m"
+            memory: "16Mi"
+            cpu: "25m"
       volumes:
       - name: html
         configMap:
@@ -76,7 +78,7 @@ spec:
     app: demo-app
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 8080
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
