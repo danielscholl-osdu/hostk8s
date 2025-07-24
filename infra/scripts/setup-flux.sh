@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Disable debug mode to prevent environment variable exposure
+set +x
+
 # Function for logging
 log() {
     echo "[$(date +'%Y-%m-%d %H:%M:%S')] [Flux] $*"

@@ -1,11 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
+# Disable debug mode to prevent environment variable exposure
+set +x
+
 # Source environment variables (suppress output to prevent secret exposure)
 if [ -f .env ]; then
-    set +x  # Temporarily disable debug mode
-    export $(grep -v '^#' .env | xargs) 2>/dev/null
-    [[ $- == *x* ]] && set -x  # Re-enable debug mode if it was on
+    set -a  # Enable allexport mode
+    source .env
+    set +a  # Disable allexport mode
 fi
 
 CLUSTER_NAME=${CLUSTER_NAME:-osdu-ci}
