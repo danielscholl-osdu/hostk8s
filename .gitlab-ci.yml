@@ -1,0 +1,177 @@
+# GitLab CI/CD Pipeline for OSDU-CI Kubernetes Development Environment
+# Tests cluster creation, deployment, and multi-service communication
+
+stages:
+  - validate
+  - test-basic
+  - test-advanced
+  - cleanup
+
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+  # Disable Docker BuildKit for compatibility
+  DOCKER_BUILDKIT: "0"
+
+# Base job template for Kind cluster operations
+.kind-base: &kind-base
+  image: docker:24.0
+  services:
+    - docker:24.0-dind
+  before_script:
+    # Install required tools
+    - apk add --no-cache make bash curl
+    # Install Kind
+    - curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
+    - chmod +x ./kind && mv ./kind /usr/local/bin/
+    # Install kubectl
+    - curl -LO "https://dl.k8s.io/release/v1.33.1/bin/linux/amd64/kubectl"
+    - chmod +x kubectl && mv kubectl /usr/local/bin/
+    # Install Helm
+    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    # Verify installations
+    - kind version
+    - kubectl version --client
+    - helm version --short
+  after_script:
+    # Always cleanup, even on failure
+    - make clean || true
+    - docker system prune -f || true
+
+# Job 1: Validate project structure and Make interface
+validate-structure:
+  stage: validate
+  image: alpine:latest
+  script:
+    - echo "🔍 Validating project structure..."
+    # Check key directories exist
+    - test -d infra/scripts/host || (echo "❌ Missing infra/scripts/host" && exit 1)
+    - test -d infra/kubernetes || (echo "❌ Missing infra/kubernetes" && exit 1)  
+    - test -d software || (echo "❌ Missing software directory" && exit 1)
+    # Check key files exist
+    - test -f Makefile || (echo "❌ Missing Makefile" && exit 1)
+    - test -f infra/scripts/host/cluster-up.sh || (echo "❌ Missing cluster-up.sh" && exit 1)
+    - test -f software/apps/sample-app.yaml || (echo "❌ Missing sample-app.yaml" && exit 1)
+    - test -f software/multi-service/frontend.yaml || (echo "❌ Missing multi-service example" && exit 1)
+    - echo "✅ Project structure validation passed"
+
+# Job 2: Test basic cluster operations
+test-cluster-basic:
+  <<: *kind-base
+  stage: test-basic
+  script:
+    - echo "🚀 Testing basic cluster operations..."
+    # Test cluster creation
+    - make up
+    - echo "✅ Cluster created successfully"
+    
+    # Test basic functionality
+    - make status
+    - make test
+    - echo "✅ Cluster validation passed"
+    
+    # Test sample application deployment
+    - make deploy
+    - echo "✅ Sample application deployed"
+    
+    # Verify sample app is accessible
+    - export KUBECONFIG=$(pwd)/data/kubeconfig/config
+    - kubectl wait --for=condition=available --timeout=300s deployment/sample-app
+    - kubectl get pods -l app=sample-app
+    - echo "✅ Basic cluster test completed"
+
+# Job 3: Test multi-service deployment and communication
+test-multi-service:
+  <<: *kind-base
+  stage: test-advanced
+  script:
+    - echo "🔗 Testing multi-service deployment..."
+    # Start cluster
+    - make up
+    
+    # Deploy multi-service application
+    - export KUBECONFIG=$(pwd)/data/kubeconfig/config
+    - kubectl apply -f software/multi-service/
+    - echo "✅ Multi-service deployed"
+    
+    # Wait for all services to be ready
+    - kubectl wait --for=condition=available --timeout=300s deployment/frontend
+    - kubectl wait --for=condition=available --timeout=300s deployment/api  
+    - kubectl wait --for=condition=available --timeout=300s deployment/database
+    - echo "✅ All services are ready"
+    
+    # Test service-to-service communication
+    - echo "🧪 Testing frontend → API communication..."
+    - kubectl exec deployment/frontend -- wget -qO- http://api | grep -i "api service" || (echo "❌ Frontend→API communication failed" && exit 1)
+    
+    - echo "🧪 Testing API → Database connectivity..."  
+    - kubectl exec deployment/api -- nc -zv database 5432 | grep "open" || (echo "❌ API→Database connection failed" && exit 1)
+    
+    # Test scaling
+    - echo "📈 Testing horizontal scaling..."
+    - kubectl scale deployment api --replicas=3
+    - kubectl wait --for=condition=available --timeout=180s deployment/api
+    - test $(kubectl get deployment api -o jsonpath='{.status.readyReplicas}') -eq 3 || (echo "❌ Scaling test failed" && exit 1)
+    
+    # Test service discovery
+    - echo "🔍 Testing DNS service discovery..."
+    - kubectl run dns-test --image=busybox:1.28 --rm -i --restart=Never -- nslookup api.default.svc.cluster.local | grep "can't resolve" && (echo "❌ DNS resolution failed" && exit 1) || echo "✅ DNS working"
+    
+    - echo "✅ Multi-service communication test completed"
+
+# Job 4: Test cluster restart and resilience  
+test-cluster-resilience:
+  <<: *kind-base
+  stage: test-advanced
+  script:
+    - echo "🔄 Testing cluster restart functionality..."
+    # Initial cluster setup
+    - make up
+    - make deploy
+    
+    # Test restart functionality
+    - make restart
+    - echo "✅ Cluster restart completed"
+    
+    # Verify cluster is functional after restart
+    - make status
+    - make test
+    - echo "✅ Cluster resilience test passed"
+
+# Job 5: Performance and resource validation
+test-performance:
+  <<: *kind-base  
+  stage: test-advanced
+  script:
+    - echo "⚡ Testing performance and resource usage..."
+    - make up
+    
+    # Check cluster startup time
+    - start_time=$(date +%s)
+    - make restart
+    - end_time=$(date +%s)
+    - duration=$((end_time - start_time))
+    - echo "🕐 Cluster restart took ${duration} seconds"
+    - test $duration -lt 120 || (echo "⚠️ Cluster restart took longer than 2 minutes" && exit 1)
+    
+    # Deploy and test under load
+    - export KUBECONFIG=$(pwd)/data/kubeconfig/config
+    - kubectl apply -f software/multi-service/
+    - kubectl wait --for=condition=available --timeout=300s deployment/frontend deployment/api deployment/database
+    
+    # Simple load test
+    - kubectl run load-test --image=busybox --rm -i --restart=Never -- wget -qO- http://frontend || (echo "❌ Load test failed" && exit 1)
+    
+    - echo "✅ Performance test completed"
+
+# Final cleanup job (runs even if other jobs fail)
+cleanup-resources:
+  stage: cleanup
+  image: docker:24.0
+  services:
+    - docker:24.0-dind
+  script:
+    - echo "🧹 Final cleanup..."
+    - docker system prune -af || true
+    - echo "✅ Cleanup completed"
+  when: always

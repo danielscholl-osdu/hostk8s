@@ -1,0 +1,171 @@
+# Sample application demonstrating Kind cluster features
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+  namespace: default
+  labels:
+    app: sample-app
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sample-app
+  template:
+    metadata:
+      labels:
+        app: sample-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: sample-app-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-app-html
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Sample App - Kind Cluster</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            .container { max-width: 800px; margin: 0 auto; }
+            .status { padding: 20px; background: #e8f5e8; border-radius: 5px; margin: 20px 0; }
+            .info { background: #e8f4f8; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎉 Kind Cluster Sample Application</h1>
+            
+            <div class="status">
+                <h2>✅ Deployment Successful!</h2>
+                <p>Your Kind cluster is working correctly if you can see this page.</p>
+            </div>
+            
+            <div class="info">
+                <h3>Connection Details</h3>
+                <ul>
+                    <li><strong>Pod Name:</strong> <span id="hostname">Loading...</span></li>
+                    <li><strong>Service:</strong> sample-app</li>
+                    <li><strong>Namespace:</strong> default</li>
+                    <li><strong>Access via:</strong> LoadBalancer and/or Ingress</li>
+                </ul>
+            </div>
+            
+            <div class="info">
+                <h3>Test Commands</h3>
+                <p>Try these commands in your terminal:</p>
+                <ul>
+                    <li><code>kubectl get pods -l app=sample-app</code></li>
+                    <li><code>kubectl get svc sample-app</code></li>
+                    <li><code>kubectl describe ingress sample-app</code></li>
+                    <li><code>kubectl logs -l app=sample-app</code></li>
+                </ul>
+            </div>
+            
+            <div class="info">
+                <h3>Scaling Test</h3>
+                <p>Scale the deployment:</p>
+                <ul>
+                    <li><code>kubectl scale deployment sample-app --replicas=5</code></li>
+                    <li><code>kubectl scale deployment sample-app --replicas=1</code></li>
+                </ul>
+            </div>
+        </div>
+        
+        <script>
+            // Show the actual pod hostname
+            fetch('/api/hostname')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('hostname').textContent = data;
+                })
+                .catch(() => {
+                    document.getElementById('hostname').textContent = window.location.hostname || 'Unknown';
+                });
+        </script>
+    </body>
+    </html>
+---
+# ClusterIP Service (internal access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-app
+  namespace: default
+spec:
+  selector:
+    app: sample-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+# LoadBalancer Service (external access via MetalLB)
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-app-lb
+  namespace: default
+spec:
+  selector:
+    app: sample-app
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
+# Ingress (HTTP access via NGINX)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sample-app
+  namespace: default
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /sample-app
+        pathType: Prefix
+        backend:
+          service:
+            name: sample-app
+            port:
+              number: 80
+  - http:  # Default rule (no host specified)
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sample-app
+            port:
+              number: 80

@@ -1,0 +1,19 @@
+# Environment variables
+.env
+
+# Data directory (runtime artifacts, credentials, storage)
+data/
+
+# Test data directory
+test-data/*
+!test-data/.gitkeep
+
+# Docker Compose override files
+docker-compose.override.yml
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

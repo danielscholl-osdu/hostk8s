@@ -1,0 +1,134 @@
+#!/bin/bash
+set -euo pipefail
+
+# Function for logging
+log() {
+    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [Flux] $*"
+}
+
+# Function for error handling
+error_exit() {
+    log "ERROR: $1"
+    exit 1
+}
+
+# Auto-detect execution environment and set kubeconfig path
+detect_kubeconfig() {
+    if [ -n "${KUBECONFIG:-}" ]; then
+        KUBECONFIG_PATH="${KUBECONFIG}"
+        log "Using KUBECONFIG environment variable: $KUBECONFIG_PATH"
+    elif [ -f "/kubeconfig/config" ]; then
+        KUBECONFIG_PATH="/kubeconfig/config"  # Container mode
+        log "Using container kubeconfig: $KUBECONFIG_PATH"
+    elif [ -f "$(pwd)/data/kubeconfig/config" ]; then
+        KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"  # Host mode
+        log "Using host-mode kubeconfig: $KUBECONFIG_PATH"
+    else
+        error_exit "No kubeconfig found. Ensure cluster is running."
+    fi
+}
+
+# Function to check if flux CLI is available
+check_flux_cli() {
+    if ! command -v flux >/dev/null 2>&1; then
+        error_exit "Flux CLI not found. Install it first with 'make install' or manually: https://fluxcd.io/flux/installation/"
+    fi
+    
+    # Verify flux CLI is working and check version
+    local flux_version
+    if ! flux_version=$(flux version --client --short 2>/dev/null); then
+        error_exit "Flux CLI found but not working properly"
+    fi
+    
+    log "✅ Flux CLI verified: $flux_version"
+}
+
+detect_kubeconfig
+
+log "Setting up Flux GitOps..."
+
+# Check if Flux is already installed
+if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace flux-system >/dev/null 2>&1; then
+    log "Flux namespace already exists, checking if installation is complete..."
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n flux-system -l app.kubernetes.io/part-of=flux | grep -q Running; then
+        log "Flux appears to already be running"
+        
+        # Show flux status
+        export KUBECONFIG="$KUBECONFIG_PATH"
+        if command -v flux >/dev/null 2>&1; then
+            log "Current Flux status:"
+            flux get all || log "WARNING: Could not get flux status"
+        fi
+        exit 0
+    fi
+fi
+
+# Check and install flux CLI
+check_flux_cli
+
+# Install Flux
+log "Installing Flux controllers..."
+export KUBECONFIG="$KUBECONFIG_PATH"
+
+# Install Flux with minimal components for development
+flux install \
+    --components-extra=image-reflector-controller,image-automation-controller \
+    --network-policy=false \
+    --watch-all-namespaces=true || error_exit "Failed to install Flux"
+
+# Wait for Flux controllers to be ready
+log "Waiting for Flux controllers to be ready..."
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
+
+# Create a basic GitRepository source for demonstration
+log "Creating sample GitRepository source..."
+cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create sample GitRepository"
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: osdu-ci-demo
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/fluxcd/flux2-kustomize-helm-example
+  ref:
+    branch: main
+  ignore: |
+    # exclude all
+    /*
+    # include only the demo directory
+    !/staging/
+EOF
+
+# Create a basic Kustomization for the demo
+log "Creating sample Kustomization..."
+cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create sample Kustomization"
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: osdu-ci-demo
+  namespace: flux-system
+spec:
+  interval: 5m
+  path: "./staging"
+  prune: true
+  sourceRef:
+    kind: GitRepository
+    name: osdu-ci-demo
+  validation: client
+EOF
+
+# Show Flux installation status
+log "Flux installation completed! Checking status..."
+flux get all || log "WARNING: Could not get flux status"
+
+log "✅ Flux GitOps setup complete!"
+log ""
+log "🚀 Next steps:"
+log "1. Check flux status: flux get all"
+log "2. Create your own GitRepository: kubectl apply -f your-git-repo.yaml"
+log "3. Create Kustomizations: kubectl apply -f your-kustomization.yaml"
+log "4. Monitor with: flux logs --follow"
+log ""
+log "📖 Documentation: https://fluxcd.io/flux/get-started/"
+log "💡 Example repository: https://github.com/fluxcd/flux2-kustomize-helm-example"

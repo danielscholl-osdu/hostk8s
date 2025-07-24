@@ -1,0 +1,104 @@
+# Simple sample application with NodePort access
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-app
+  namespace: default
+  labels:
+    app: sample-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sample-app
+  template:
+    metadata:
+      labels:
+        app: sample-app
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+        volumeMounts:
+        - name: html
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: html
+        configMap:
+          name: sample-app-html
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-app-html
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>OSDU-CI Sample App</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .success { padding: 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724; }
+            .info { background: #d1ecf1; padding: 15px; border-radius: 5px; color: #0c5460; margin: 20px 0; }
+            h1 { color: #28a745; text-align: center; }
+            code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; color: #e83e8c; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🎉 OSDU-CI Sample Application</h1>
+            
+            <div class="success">
+                <h2>✅ Cluster is Working!</h2>
+                <p>Your Kind cluster is running successfully if you can see this page.</p>
+            </div>
+            
+            <div class="info">
+                <h3>📋 Cluster Details</h3>
+                <ul>
+                    <li><strong>Access:</strong> http://localhost:8080</li>
+                    <li><strong>Service:</strong> NodePort (30080 → 8080)</li>
+                    <li><strong>Pods:</strong> 2 replicas running</li>
+                </ul>
+            </div>
+            
+            <div class="info">
+                <h3>🧪 Test Commands</h3>
+                <p>Try these in your terminal:</p>
+                <ul>
+                    <li><code>make status</code> - Check cluster health</li>
+                    <li><code>make logs</code> - View recent events</li>
+                    <li><code>kubectl get pods</code> - List running pods</li>
+                    <li><code>kubectl scale deployment sample-app --replicas=3</code> - Scale up</li>
+                </ul>
+            </div>
+        </div>
+    </body>
+    </html>
+---
+# NodePort Service for direct access
+apiVersion: v1
+kind: Service
+metadata:
+  name: sample-app
+  namespace: default
+spec:
+  selector:
+    app: sample-app
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+  type: NodePort

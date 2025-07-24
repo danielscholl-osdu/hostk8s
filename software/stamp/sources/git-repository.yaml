@@ -1,0 +1,28 @@
+# Example GitRepository source
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: osdu-ci-apps
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: https://github.com/your-username/osdu-ci-apps
+  ref:
+    branch: main
+  ignore: |
+    # exclude all
+    /*
+    # include only the apps directory
+    !/apps/
+---
+# Example for a public Kubernetes examples repository
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: k8s-examples
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/fluxcd/flux2-kustomize-helm-example
+  ref:
+    branch: main
