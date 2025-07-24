@@ -16,9 +16,7 @@ test-gitops-experience:
   stage: integration-test
   image: docker:24.0
   services:
-    - name: docker:24.0-dind
-      command: ["--mtu=1460"]
-      privileged: true
+    - docker:24.0-dind
   before_script:
     # Install required tools
     - echo "[DEPS] Installing dependencies..."
