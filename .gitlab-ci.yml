@@ -55,15 +55,7 @@ test-gitops-experience:
     
     # Wait for Flux to reconcile the demo app
     - echo "[WAIT] Waiting for Flux to deploy demo app..."
-    - |
-      for i in {1..60}; do
-        if kubectl get deployment demo-app >/dev/null 2>&1; then
-          echo "Demo app deployment found"
-          break
-        fi
-        echo "Waiting for demo-app deployment... ($i/60)"
-        sleep 5
-      done
+    - "for i in {1..60}; do kubectl get deployment demo-app >/dev/null 2>&1 && break || echo 'Waiting for demo-app deployment...'; sleep 5; done"
     - kubectl wait --for=condition=available --timeout=300s deployment/demo-app
     
     # Test that the ingress is accessible
@@ -73,15 +65,7 @@ test-gitops-experience:
     
     # Test HTTP access to the demo app
     - echo "[TEST] Testing HTTP access to demo app via localhost:8080..."
-    - |
-      for i in {1..15}; do
-        if curl -f -s http://localhost:8080 >/dev/null; then
-          echo "Ingress is accessible"
-          break
-        fi
-        echo "Waiting for ingress... ($i/15)"
-        sleep 2
-      done
+    - "for i in {1..15}; do curl -f -s http://localhost:8080 >/dev/null && break || echo 'Waiting for ingress...'; sleep 2; done"
     - curl -f http://localhost:8080 | grep -i "OSDU-CI GitOps Demo"
     
     # Verify Flux resources are healthy
