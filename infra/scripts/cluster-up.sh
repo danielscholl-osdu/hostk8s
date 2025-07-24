@@ -169,13 +169,16 @@ case "${KIND_CONFIG}" in
     "simple")
         KIND_CONFIG_FILE="kind-config-simple.yaml"
         ;;
+    "ci")
+        KIND_CONFIG_FILE="kind-config-ci.yaml"
+        ;;
     *)
         # If it doesn't match convention, assume it's a direct filename
         if [[ "${KIND_CONFIG}" == *.yaml ]]; then
             KIND_CONFIG_FILE="${KIND_CONFIG}"
         else
             error "Unknown config name: ${KIND_CONFIG}"
-            error "Available options: default, minimal, simple"
+            error "Available options: default, minimal, simple, ci"
             error "Or use full filename like: kind-config-custom.yaml"
             exit 1
         fi
