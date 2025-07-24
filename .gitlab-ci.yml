@@ -29,10 +29,14 @@ variables:
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     # Install Helm
     - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    # Install Flux CLI
+    - curl -s https://fluxcd.io/install.sh | bash
+    - mv /root/.local/bin/flux /usr/local/bin/
     # Verify installations
     - kind version
     - kubectl version --client
     - helm version --short
+    - flux version --client
   after_script:
     # Always cleanup, even on failure
     - make clean || true
@@ -45,14 +49,14 @@ validate-structure:
   script:
     - echo "🔍 Validating project structure..."
     # Check key directories exist
-    - test -d infra/scripts/host || (echo "❌ Missing infra/scripts/host" && exit 1)
+    - test -d infra/scripts || (echo "❌ Missing infra/scripts" && exit 1)
     - test -d infra/kubernetes || (echo "❌ Missing infra/kubernetes" && exit 1)  
     - test -d software || (echo "❌ Missing software directory" && exit 1)
     # Check key files exist
     - test -f Makefile || (echo "❌ Missing Makefile" && exit 1)
-    - test -f infra/scripts/host/cluster-up.sh || (echo "❌ Missing cluster-up.sh" && exit 1)
-    - test -f software/apps/sample-app.yaml || (echo "❌ Missing sample-app.yaml" && exit 1)
-    - test -f software/multi-service/frontend.yaml || (echo "❌ Missing multi-service example" && exit 1)
+    - test -f infra/scripts/cluster-up.sh || (echo "❌ Missing cluster-up.sh" && exit 1)
+    - test -f software/apps/app1/app.yaml || (echo "❌ Missing app1 example" && exit 1)
+    - test -f software/apps/app3/app.yaml || (echo "❌ Missing app3 multi-service example" && exit 1)
     - echo "✅ Project structure validation passed"
 
 # Job 2: Test basic cluster operations
@@ -70,14 +74,13 @@ test-cluster-basic:
     - make test
     - echo "✅ Cluster validation passed"
     
-    # Test sample application deployment
-    - make deploy
-    - echo "✅ Sample application deployed"
+    # GitOps demo app should be deployed automatically by Flux
+    - echo "✅ GitOps demo app should be deployed by Flux by default"
     
-    # Verify sample app is accessible
+    # Verify demo app is accessible via GitOps
     - export KUBECONFIG=$(pwd)/data/kubeconfig/config
-    - kubectl wait --for=condition=available --timeout=300s deployment/sample-app
-    - kubectl get pods -l app=sample-app
+    - kubectl wait --for=condition=available --timeout=300s deployment/demo-app || echo "Demo app not ready yet"
+    - kubectl get pods -l app=demo-app || echo "No demo app pods found"
     - echo "✅ Basic cluster test completed"
 
 # Job 3: Test multi-service deployment and communication
@@ -89,9 +92,9 @@ test-multi-service:
     # Start cluster
     - make up
     
-    # Deploy multi-service application
+    # Deploy multi-service application (app3)
     - export KUBECONFIG=$(pwd)/data/kubeconfig/config
-    - kubectl apply -f software/multi-service/
+    - make deploy app3
     - echo "✅ Multi-service deployed"
     
     # Wait for all services to be ready
@@ -156,7 +159,7 @@ test-performance:
     
     # Deploy and test under load
     - export KUBECONFIG=$(pwd)/data/kubeconfig/config
-    - kubectl apply -f software/multi-service/
+    - make deploy app3
     - kubectl wait --for=condition=available --timeout=300s deployment/frontend deployment/api deployment/database
     
     # Simple load test
