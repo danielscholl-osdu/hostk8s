@@ -11,6 +11,7 @@ variables:
 
 # Integration test that mirrors the actual user workflow
 test-gitops-experience:
+  stage: integration-test
   image: docker:24.0
   services:
     - docker:24.0-dind
