@@ -36,7 +36,7 @@ check_flux_cli() {
     
     # Verify flux CLI is working and check version
     local flux_version
-    if ! flux_version=$(flux version --client --short 2>/dev/null); then
+    if ! flux_version=$(flux version --client 2>/dev/null | head -1); then
         error_exit "Flux CLI found but not working properly"
     fi
     
@@ -45,7 +45,13 @@ check_flux_cli() {
 
 detect_kubeconfig
 
+# Set GitOps repository defaults
+GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/osdu-ci"}
+GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
+
 log "Setting up Flux GitOps..."
+log "GitOps Repository: $GITOPS_REPO"
+log "GitOps Branch: $GITOPS_BRANCH"
 
 # Check if Flux is already installed
 if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace flux-system >/dev/null 2>&1; then
@@ -80,42 +86,41 @@ flux install \
 log "Waiting for Flux controllers to be ready..."
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
 
-# Create a basic GitRepository source for demonstration
-log "Creating sample GitRepository source..."
-cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create sample GitRepository"
+# Create a GitRepository source using configured repository
+log "Creating GitRepository source..."
+cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create GitRepository"
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: osdu-ci-demo
+  name: osdu-ci
   namespace: flux-system
 spec:
   interval: 1m
-  url: https://github.com/fluxcd/flux2-kustomize-helm-example
+  url: $GITOPS_REPO
   ref:
-    branch: main
+    branch: $GITOPS_BRANCH
   ignore: |
     # exclude all
     /*
-    # include only the demo directory
-    !/staging/
+    # include only GitOps stamp directory
+    !/software/stamp/
 EOF
 
-# Create a basic Kustomization for the demo
+# Create a basic Kustomization for the stamp directory
 log "Creating sample Kustomization..."
 cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create sample Kustomization"
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: osdu-ci-demo
+  name: osdu-ci-stamp
   namespace: flux-system
 spec:
   interval: 5m
-  path: "./staging"
+  path: "./software/stamp"
   prune: true
   sourceRef:
     kind: GitRepository
-    name: osdu-ci-demo
-  validation: client
+    name: osdu-ci
 EOF
 
 # Show Flux installation status
