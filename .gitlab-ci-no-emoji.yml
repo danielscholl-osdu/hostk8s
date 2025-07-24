@@ -96,3 +96,4 @@ test-gitops-experience:
     - make clean || echo "Cleanup completed with warnings"
     - docker system prune -f || true
     - echo "[OK] Full integration test completed"
+  stage: integration-test
