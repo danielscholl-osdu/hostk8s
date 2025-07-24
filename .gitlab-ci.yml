@@ -18,6 +18,7 @@ test-gitops-experience:
   services:
     - name: docker:24.0-dind
       command: ["--mtu=1460"]
+      privileged: true
   before_script:
     # Install required tools
     - echo "[DEPS] Installing dependencies..."
@@ -79,5 +80,3 @@ test-gitops-experience:
     - echo "[STEP] Cleaning up resources..."
     - make clean || echo "Cleanup completed with warnings"
     - echo "[OK] Full integration test completed"
-  # Add privileged mode for Kind to work in docker-in-docker
-  privileged: true
