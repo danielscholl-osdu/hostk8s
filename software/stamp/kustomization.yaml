@@ -10,4 +10,4 @@ resources:
   - sources/helm-repository.yaml
   
   # Demo application with ingress (enabled by default for GitOps-first experience)
-  - apps/helm-release.yaml
+  - apps/demo-app.yaml
