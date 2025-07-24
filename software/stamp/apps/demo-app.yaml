@@ -89,8 +89,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: demo.local
-    http:
+  - http:
       paths:
       - path: /
         pathType: Prefix

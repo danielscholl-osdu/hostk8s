@@ -65,7 +65,23 @@ if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace metallb-system >/dev/nu
     
     log "Ingress controller configured for MetalLB LoadBalancer"
 else
-    log "MetalLB not detected, using default NodePort configuration"
+    log "MetalLB not detected, configuring NodePort for Kind port mapping..."
+    
+    # Wait for the ingress controller service to be created first
+    kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n ingress-nginx --timeout=60s || log "WARNING: Ingress service not found"
+    
+    # Patch the service to use specific NodePorts that match Kind port mapping (30080->8080, 30443->8443)
+    kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n ingress-nginx -p '{
+        "spec": {
+            "type": "NodePort",
+            "ports": [
+                {"name": "http", "port": 80, "protocol": "TCP", "targetPort": "http", "nodePort": 30080},
+                {"name": "https", "port": 443, "protocol": "TCP", "targetPort": "https", "nodePort": 30443}
+            ]
+        }
+    }' || log "WARNING: Failed to patch ingress service for NodePort"
+    
+    log "Ingress controller configured for Kind NodePort mapping (30080->8080, 30443->8443)"
 fi
 
 # Wait for NGINX Ingress pods to be ready
