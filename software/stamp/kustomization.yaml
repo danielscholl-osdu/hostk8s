@@ -9,6 +9,5 @@ resources:
   - sources/git-repository.yaml
   - sources/helm-repository.yaml
   
-  # Applications are commented out by default
-  # Once committed to Git, uncomment to enable:
-  # - apps/helm-release.yaml
+  # Demo application with ingress (enabled by default for GitOps-first experience)
+  - apps/helm-release.yaml

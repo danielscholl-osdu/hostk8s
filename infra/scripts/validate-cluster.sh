@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# Disable debug mode to prevent environment variable exposure
+set +x
+
 # Cluster validation script - supports both simple and comprehensive validation
 # Usage: ./validate-cluster.sh [--simple]
 
@@ -28,9 +31,11 @@ if [[ "${1:-}" == "--simple" ]]; then
     SIMPLE_MODE=true
 fi
 
-# Source environment variables
+# Source environment variables (suppress output to prevent secret exposure)
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    set -a  # Enable allexport mode
+    source .env
+    set +a  # Disable allexport mode
 fi
 
 # Set defaults

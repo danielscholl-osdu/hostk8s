@@ -2,6 +2,9 @@
 # infra/scripts/utils.sh - Development utilities
 set -euo pipefail
 
+# Disable debug mode to prevent environment variable exposure
+set +x
+
 # Colors
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -11,9 +14,11 @@ NC='\033[0m'
 log() { echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"; }
 warn() { echo -e "${YELLOW}[WARN]${NC} $*"; }
 
-# Source environment
+# Source environment (suppress output to prevent secret exposure)
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    set -a  # Enable allexport mode
+    source .env
+    set +a  # Disable allexport mode
 fi
 
 KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"
