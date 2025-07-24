@@ -126,7 +126,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:alpine
+        image: mcr.microsoft.com/cbl-mariner/base/nginx:1.22
         ports:
         - containerPort: 80
         volumeMounts:
@@ -204,7 +204,7 @@ EOF
 
 # Wait for test deployment to be ready
 log "Waiting for test deployment..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=available --timeout=120s deployment/ingress-test || log "WARNING: Test deployment not ready"
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=available --timeout=60s deployment/ingress-test || log "WARNING: Test deployment not ready, continuing..."
 
 # Test ingress connectivity
 log "Testing Ingress connectivity..."

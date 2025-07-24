@@ -80,10 +80,10 @@ restart: ## Quick cluster reset for development iteration
 
 ##@ Development
 
-test: ## Run cluster validation tests
+test: ## Run comprehensive cluster validation tests
 	$(call check_cluster)
-	@echo "🧪 Running validation tests..."
-	@./infra/scripts/validate-cluster.sh --simple
+	@echo "🧪 Running comprehensive validation tests..."
+	@./infra/scripts/validate-cluster.sh
 
 status: ## Show cluster health and running services
 	$(call check_cluster)

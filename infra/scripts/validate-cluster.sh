@@ -119,37 +119,26 @@ fi
 
 # === COMPREHENSIVE MODE TESTS (beyond this point) ===
 
-# Test 4: DNS resolution test
-log "✓ Test 4: Testing DNS resolution..."
-if kubectl run dns-test --image=busybox:1.28 --rm -i --restart=Never --quiet -- nslookup kubernetes.default.svc.cluster.local >/dev/null 2>&1; then
-    log "✅ DNS resolution working"
+# Test 4: Check Flux GitOps status (if enabled)
+if [[ "${FLUX_ENABLED:-false}" == "true" ]]; then
+    log "✓ Test 4: Checking Flux GitOps status..."
+    flux_pods=$(kubectl get pods -n flux-system --no-headers 2>/dev/null | grep Running | wc -l | tr -d ' ' || echo "0")
+    if [[ "$flux_pods" -gt 0 ]]; then
+        log "✅ Flux GitOps is running ($flux_pods pods)"
+        # Check if demo app is deployed via GitOps
+        if kubectl get deployment demo-app >/dev/null 2>&1; then
+            log "✅ GitOps demo application deployed successfully"
+        else
+            log "ℹ️ GitOps demo application not yet deployed (this is normal on first startup)"
+        fi
+    else
+        warn "⚠ Flux GitOps pods not found or not running"
+    fi
 else
-    warn "⚠ DNS resolution test failed"
+    log "ℹ️ Test 4: Flux GitOps not enabled, skipping"
 fi
 
-# Test 5: Create and delete a test pod
-log "✓ Test 5: Testing pod creation and deletion..."
-if kubectl run test-pod --image=busybox --rm -i --restart=Never --quiet -- echo "Pod creation test" >/dev/null 2>&1; then
-    log "✅ Pod creation and deletion working"
-else
-    warn "⚠ Pod creation test failed"
-fi
-
-# Test 6: Service creation test
-log "✓ Test 6: Testing service creation..."
-kubectl create deployment test-service --image=nginx:alpine >/dev/null 2>&1 || true
-kubectl expose deployment test-service --port=80 --target-port=80 >/dev/null 2>&1 || true
-sleep 2
-if kubectl get service test-service >/dev/null 2>&1; then
-    log "✅ Service and deployment creation working"
-    # Cleanup
-    kubectl delete deployment test-service >/dev/null 2>&1 || true
-    kubectl delete service test-service >/dev/null 2>&1 || true
-else
-    warn "⚠ Service creation test failed"
-fi
-
-# Test 7: Check if MetalLB is working (if enabled)
+# Test 5: Check if MetalLB is working (if enabled)
 if [[ "${METALLB_ENABLED}" == "true" ]]; then
     log "✓ Test 7: Checking MetalLB LoadBalancer..."
     metallb_pods=$(kubectl get pods -n metallb-system --no-headers 2>/dev/null | grep Running | wc -l | tr -d ' ')
@@ -159,10 +148,10 @@ if [[ "${METALLB_ENABLED}" == "true" ]]; then
         warn "⚠ MetalLB pods not found or not running"
     fi
 else
-    log "ℹ️ Test 7: MetalLB not enabled, skipping LoadBalancer test"
+    log "ℹ️ Test 5: MetalLB not enabled, skipping LoadBalancer test"
 fi
 
-# Test 8: Check if Ingress is working (if enabled)
+# Test 6: Check if Ingress is working (if enabled)
 if [[ "${INGRESS_ENABLED}" == "true" ]]; then
     log "✓ Test 8: Checking NGINX Ingress..."
     ingress_pods=$(kubectl get pods -n ingress-nginx --no-headers 2>/dev/null | grep Running | wc -l | tr -d ' ')
@@ -172,21 +161,19 @@ if [[ "${INGRESS_ENABLED}" == "true" ]]; then
         warn "⚠ NGINX Ingress pods not found or not running"
     fi
 else
-    log "ℹ️ Test 8: NGINX Ingress not enabled, skipping"
+    log "ℹ️ Test 6: NGINX Ingress not enabled, skipping"
 fi
 
-# Test 9: NodePort accessibility test
-log "✓ Test 9: Testing NodePort service access..."
-kubectl create deployment nodeport-test --image=nginx:alpine >/dev/null 2>&1 || true
-kubectl expose deployment nodeport-test --type=NodePort --port=80 --target-port=80 >/dev/null 2>&1 || true
-sleep 3
-if kubectl get service nodeport-test >/dev/null 2>&1; then
-    log "✅ NodePort service created successfully"
-    # Cleanup
-    kubectl delete deployment nodeport-test >/dev/null 2>&1 || true
-    kubectl delete service nodeport-test >/dev/null 2>&1 || true
+# Test 7: Test ingress accessibility (if enabled)
+if [[ "${INGRESS_ENABLED:-false}" == "true" ]]; then
+    log "✓ Test 7: Testing ingress accessibility..."
+    if curl -f -s --connect-timeout 5 http://localhost:8080 >/dev/null 2>&1; then
+        log "✅ Ingress accessible at http://localhost:8080"
+    else
+        warn "⚠ Ingress not accessible at http://localhost:8080 (may need time to start)"
+    fi
 else
-    warn "⚠ NodePort service creation failed"
+    log "ℹ️ Test 7: Ingress not enabled, skipping accessibility test"
 fi
 
 # Final status

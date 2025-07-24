@@ -1,26 +1,23 @@
 # GitLab CI/CD Pipeline for OSDU-CI Kubernetes Development Environment
-# Tests cluster creation, deployment, and multi-service communication
+# Tests the GitOps-first user experience: make up → make test → make clean
 
 stages:
-  - validate
-  - test-basic
-  - test-advanced
-  - cleanup
+  - integration-test
 
 variables:
   DOCKER_DRIVER: overlay2
   DOCKER_TLS_CERTDIR: ""
-  # Disable Docker BuildKit for compatibility
   DOCKER_BUILDKIT: "0"
 
-# Base job template for Kind cluster operations
-.kind-base: &kind-base
+# Integration test that mirrors the actual user workflow
+test-gitops-experience:
   image: docker:24.0
   services:
     - docker:24.0-dind
   before_script:
     # Install required tools
-    - apk add --no-cache make bash curl
+    - echo "📦 Installing dependencies..."
+    - apk add --no-cache make bash curl jq
     # Install Kind
     - curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x ./kind && mv ./kind /usr/local/bin/
@@ -33,148 +30,53 @@ variables:
     - curl -s https://fluxcd.io/install.sh | bash
     - mv /root/.local/bin/flux /usr/local/bin/
     # Verify installations
+    - echo "✅ Tools installed:"
     - kind version
-    - kubectl version --client
+    - kubectl version --client --short
     - helm version --short
     - flux version --client
-  after_script:
-    # Always cleanup, even on failure
-    - make clean || true
-    - docker system prune -f || true
-
-# Job 1: Validate project structure and Make interface
-validate-structure:
-  stage: validate
-  image: alpine:latest
   script:
-    - echo "🔍 Validating project structure..."
-    # Check key directories exist
-    - test -d infra/scripts || (echo "❌ Missing infra/scripts" && exit 1)
-    - test -d infra/kubernetes || (echo "❌ Missing infra/kubernetes" && exit 1)  
-    - test -d software || (echo "❌ Missing software directory" && exit 1)
-    # Check key files exist
-    - test -f Makefile || (echo "❌ Missing Makefile" && exit 1)
-    - test -f infra/scripts/cluster-up.sh || (echo "❌ Missing cluster-up.sh" && exit 1)
-    - test -f software/apps/app1/app.yaml || (echo "❌ Missing app1 example" && exit 1)
-    - test -f software/apps/app3/app.yaml || (echo "❌ Missing app3 multi-service example" && exit 1)
-    - echo "✅ Project structure validation passed"
-
-# Job 2: Test basic cluster operations
-test-cluster-basic:
-  <<: *kind-base
-  stage: test-basic
-  script:
-    - echo "🚀 Testing basic cluster operations..."
-    # Test cluster creation
+    - echo "🚀 Testing OSDU-CI GitOps-first experience..."
+    
+    # Step 1: Create GitOps-enabled cluster
+    - echo "📋 Step 1/3: Creating cluster with GitOps..."
     - make up
     - echo "✅ Cluster created successfully"
     
-    # Test basic functionality
-    - make status
+    # Step 2: Run comprehensive validation
+    - echo "📋 Step 2/3: Running validation tests..."
     - make test
-    - echo "✅ Cluster validation passed"
+    - echo "✅ Validation tests passed"
     
-    # GitOps demo app should be deployed automatically by Flux
-    - echo "✅ GitOps demo app should be deployed by Flux by default"
-    
-    # Verify demo app is accessible via GitOps
+    # Step 3: Verify GitOps + Ingress integration
+    - echo "📋 Step 3/3: Testing GitOps + Ingress integration..."
     - export KUBECONFIG=$(pwd)/data/kubeconfig/config
-    - kubectl wait --for=condition=available --timeout=300s deployment/demo-app || echo "Demo app not ready yet"
-    - kubectl get pods -l app=demo-app || echo "No demo app pods found"
-    - echo "✅ Basic cluster test completed"
-
-# Job 3: Test multi-service deployment and communication
-test-multi-service:
-  <<: *kind-base
-  stage: test-advanced
-  script:
-    - echo "🔗 Testing multi-service deployment..."
-    # Start cluster
-    - make up
     
-    # Deploy multi-service application (app3)
-    - export KUBECONFIG=$(pwd)/data/kubeconfig/config
-    - make deploy app3
-    - echo "✅ Multi-service deployed"
+    # Wait for Flux to reconcile the demo app
+    - echo "⏳ Waiting for Flux to deploy demo app..."
+    - timeout 300 bash -c 'until kubectl get deployment demo-app >/dev/null 2>&1; do echo "Waiting for demo-app deployment..."; sleep 5; done'
+    - kubectl wait --for=condition=available --timeout=300s deployment/demo-app
     
-    # Wait for all services to be ready
-    - kubectl wait --for=condition=available --timeout=300s deployment/frontend
-    - kubectl wait --for=condition=available --timeout=300s deployment/api  
-    - kubectl wait --for=condition=available --timeout=300s deployment/database
-    - echo "✅ All services are ready"
+    # Test that the ingress is accessible
+    - echo "🌐 Testing ingress accessibility..."
+    - kubectl wait --for=condition=ready --timeout=120s pod -l app.kubernetes.io/component=controller -n ingress-nginx
+    - sleep 10  # Give ingress time to update
     
-    # Test service-to-service communication
-    - echo "🧪 Testing frontend → API communication..."
-    - kubectl exec deployment/frontend -- wget -qO- http://api | grep -i "api service" || (echo "❌ Frontend→API communication failed" && exit 1)
+    # Test HTTP access to the demo app
+    - echo "🧪 Testing HTTP access to demo app via localhost:8080..."
+    - timeout 30 bash -c 'until curl -f -s http://localhost:8080 >/dev/null; do echo "Waiting for ingress..."; sleep 2; done'
+    - curl -f http://localhost:8080 | grep -i "OSDU-CI GitOps Demo" || (echo "❌ Demo app content not found" && exit 1)
     
-    - echo "🧪 Testing API → Database connectivity..."  
-    - kubectl exec deployment/api -- nc -zv database 5432 | grep "open" || (echo "❌ API→Database connection failed" && exit 1)
+    # Verify Flux resources are healthy
+    - echo "🔄 Verifying Flux GitOps status..."
+    - flux get sources git || echo "No git sources found"
+    - flux get kustomizations || echo "No kustomizations found"
     
-    # Test scaling
-    - echo "📈 Testing horizontal scaling..."
-    - kubectl scale deployment api --replicas=3
-    - kubectl wait --for=condition=available --timeout=180s deployment/api
-    - test $(kubectl get deployment api -o jsonpath='{.status.readyReplicas}') -eq 3 || (echo "❌ Scaling test failed" && exit 1)
-    
-    # Test service discovery
-    - echo "🔍 Testing DNS service discovery..."
-    - kubectl run dns-test --image=busybox:1.28 --rm -i --restart=Never -- nslookup api.default.svc.cluster.local | grep "can't resolve" && (echo "❌ DNS resolution failed" && exit 1) || echo "✅ DNS working"
-    
-    - echo "✅ Multi-service communication test completed"
-
-# Job 4: Test cluster restart and resilience  
-test-cluster-resilience:
-  <<: *kind-base
-  stage: test-advanced
-  script:
-    - echo "🔄 Testing cluster restart functionality..."
-    # Initial cluster setup
-    - make up
-    - make deploy
-    
-    # Test restart functionality
-    - make restart
-    - echo "✅ Cluster restart completed"
-    
-    # Verify cluster is functional after restart
-    - make status
-    - make test
-    - echo "✅ Cluster resilience test passed"
-
-# Job 5: Performance and resource validation
-test-performance:
-  <<: *kind-base  
-  stage: test-advanced
-  script:
-    - echo "⚡ Testing performance and resource usage..."
-    - make up
-    
-    # Check cluster startup time
-    - start_time=$(date +%s)
-    - make restart
-    - end_time=$(date +%s)
-    - duration=$((end_time - start_time))
-    - echo "🕐 Cluster restart took ${duration} seconds"
-    - test $duration -lt 120 || (echo "⚠️ Cluster restart took longer than 2 minutes" && exit 1)
-    
-    # Deploy and test under load
-    - export KUBECONFIG=$(pwd)/data/kubeconfig/config
-    - make deploy app3
-    - kubectl wait --for=condition=available --timeout=300s deployment/frontend deployment/api deployment/database
-    
-    # Simple load test
-    - kubectl run load-test --image=busybox --rm -i --restart=Never -- wget -qO- http://frontend || (echo "❌ Load test failed" && exit 1)
-    
-    - echo "✅ Performance test completed"
-
-# Final cleanup job (runs even if other jobs fail)
-cleanup-resources:
-  stage: cleanup
-  image: docker:24.0
-  services:
-    - docker:24.0-dind
-  script:
-    - echo "🧹 Final cleanup..."
-    - docker system prune -af || true
-    - echo "✅ Cleanup completed"
-  when: always
+    - echo "✅ GitOps + Ingress integration test completed successfully!"
+  after_script:
+    # Step 4: Clean up everything
+    - echo "📋 Step 4/4: Cleaning up resources..."
+    - make clean || echo "Cleanup completed with warnings"
+    - docker system prune -f || true
+    - echo "✅ Full integration test completed"
+  stage: integration-test

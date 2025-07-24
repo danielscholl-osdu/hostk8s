@@ -250,16 +250,8 @@ if [[ "${FLUX_ENABLED}" == "true" ]]; then
     fi
 fi
 
-# Run comprehensive host-mode validation
-log "Running cluster validation..."
-if [ -f "infra/scripts/validate-cluster.sh" ]; then
-    ./infra/scripts/validate-cluster.sh || warn "Some validation checks failed, but cluster is ready"
-else
-    # Fallback basic validation
-    log "Running basic validation..."
-    kubectl get nodes
-    kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded | grep -v "^NAMESPACE" || log "All pods are running successfully"
-fi
+# Show basic cluster readiness
+kubectl get nodes
 
 # Clear trap on successful completion
 trap - ERR
