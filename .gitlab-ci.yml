@@ -6,15 +6,17 @@ stages:
 
 test-gitops-experience:
   stage: integration-test
-  tags:
-    - saas-linux-small-amd64
   image:
     name: docker:27.0.3
   services:
     - name: docker:27.0.3-dind
       alias: docker
+      command: ["--privileged"]
   variables:
     FF_NETWORK_PER_BUILD: 1
+    DOCKER_DRIVER: overlay2
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: ""
     KUBECONFIG: "$HOME/.kube/config"
   before_script:
     - echo "Installing dependencies..."
