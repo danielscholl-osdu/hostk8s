@@ -54,18 +54,34 @@ test-gitops-experience:
     
     # Wait for Flux to reconcile the demo app
     - echo "⏳ Waiting for Flux to deploy demo app..."
-    - timeout 300 bash -c 'until kubectl get deployment demo-app >/dev/null 2>&1; do echo "Waiting for demo-app deployment..."; sleep 5; done'
+    - |
+      for i in {1..60}; do
+        if kubectl get deployment demo-app >/dev/null 2>&1; then
+          echo "Demo app deployment found"
+          break
+        fi
+        echo "Waiting for demo-app deployment... ($i/60)"
+        sleep 5
+      done
     - kubectl wait --for=condition=available --timeout=300s deployment/demo-app
     
     # Test that the ingress is accessible
     - echo "🌐 Testing ingress accessibility..."
     - kubectl wait --for=condition=ready --timeout=120s pod -l app.kubernetes.io/component=controller -n ingress-nginx
-    - sleep 10  # Give ingress time to update
+    - sleep 10
     
     # Test HTTP access to the demo app
     - echo "🧪 Testing HTTP access to demo app via localhost:8080..."
-    - timeout 30 bash -c 'until curl -f -s http://localhost:8080 >/dev/null; do echo "Waiting for ingress..."; sleep 2; done'
-    - curl -f http://localhost:8080 | grep -i "OSDU-CI GitOps Demo" || (echo "❌ Demo app content not found" && exit 1)
+    - |
+      for i in {1..15}; do
+        if curl -f -s http://localhost:8080 >/dev/null; then
+          echo "Ingress is accessible"
+          break
+        fi
+        echo "Waiting for ingress... ($i/15)"
+        sleep 2
+      done
+    - curl -f http://localhost:8080 | grep -i "OSDU-CI GitOps Demo"
     
     # Verify Flux resources are healthy
     - echo "🔄 Verifying Flux GitOps status..."
