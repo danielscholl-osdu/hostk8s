@@ -47,22 +47,20 @@ spec:
         app: demo-app
     spec:
       containers:
-      - name: web-server
-        image: busybox:1.35
-        command: ["/bin/sh"]
-        args: ["-c", "cd /var/www && exec httpd -f -p 8080 -h /var/www"]
+      - name: nginx
+        image: mcr.microsoft.com/cbl-mariner/base/nginx:1.22
         ports:
-        - containerPort: 8080
+        - containerPort: 80
         volumeMounts:
         - name: html
-          mountPath: /var/www
+          mountPath: /usr/share/nginx/html
         resources:
           requests:
-            memory: "8Mi"
-            cpu: "5m"
-          limits:
             memory: "16Mi"
-            cpu: "25m"
+            cpu: "10m"
+          limits:
+            memory: "32Mi"
+            cpu: "50m"
       volumes:
       - name: html
         configMap:
@@ -78,7 +76,7 @@ spec:
     app: demo-app
   ports:
   - port: 80
-    targetPort: 8080
+    targetPort: 80
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
