@@ -83,7 +83,7 @@ curl -H "Host: myapp.local" http://localhost:8080  # Ingress
 kubectl scale deployment sample-app --replicas=5
 
 # Test rolling updates  
-kubectl set image deployment/sample-app nginx=nginx:alpine
+kubectl set image deployment/sample-app nginx=mcr.microsoft.com/azurelinux/base/nginx
 
 # Test resource usage
 kubectl top pods

@@ -20,7 +20,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: nginx:alpine
+        image: mcr.microsoft.com/azurelinux/base/nginx
         ports:
         - containerPort: 80
         env:
@@ -153,7 +153,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: nginx:alpine  # Placeholder - would be your API image
+        image: mcr.microsoft.com/azurelinux/base/nginx  # Placeholder - would be your API image
         ports:
         - containerPort: 80
         env:

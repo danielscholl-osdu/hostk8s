@@ -108,7 +108,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: nginx:alpine
+        image: mcr.microsoft.com/azurelinux/base/nginx
         ports:
         - containerPort: 80
 ---

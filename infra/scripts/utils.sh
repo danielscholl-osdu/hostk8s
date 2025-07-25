@@ -113,7 +113,7 @@ dev_cleanup() {
 
 # Quick test deployment (simple, no ingress complexity)
 dev_deploy() {
-    local image=${1:-nginx:alpine}
+    local image=${1:-mcr.microsoft.com/azurelinux/base/nginx}
     local name=${2:-test-$(date +%s)}
     
     log "Deploying $image as $name..."

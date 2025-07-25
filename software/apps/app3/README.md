@@ -22,13 +22,13 @@ Frontend (nginx) → API (nginx) → Database (postgresql)
 
 ### 🎨 Frontend Service (2 replicas)
 - **Purpose**: User interface and API communication
-- **Image**: nginx:alpine with custom HTML
+- **Image**: mcr.microsoft.com/azurelinux/base/nginx with custom HTML
 - **Access**: http://localhost:8080 (NodePort 30080)
 - **Environment**: `API_URL=http://api`
 
 ### 🔌 API Service (2 replicas)
 - **Purpose**: Business logic and database communication  
-- **Image**: nginx:alpine (placeholder for real API)
+- **Image**: mcr.microsoft.com/azurelinux/base/nginx (placeholder for real API)
 - **Internal Access**: `http://api` (ClusterIP)
 - **Environment**: `DATABASE_URL=postgresql://appuser:apppass@database:5432/appdb`
 - **Health Checks**: `/health` and `/ready` endpoints
