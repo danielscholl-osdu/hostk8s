@@ -109,6 +109,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Report GitOps testing start to GitLab
+        if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
+        run: |
+          echo "📤 Reporting GitOps test start to GitLab..."
+          curl -X POST \
+            -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "https://community.opengroup.org/api/v4/projects/1595/statuses/${{ github.event.client_payload.gitlab_commit_sha }}" \
+            -d "{
+              \"state\": \"running\",
+              \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+              \"description\": \"GitOps reconciliation tests starting...\",
+              \"context\": \"github-actions/gitops-testing\"
+            }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
+
       - name: Create full Kind cluster with registry
         uses: helm/kind-action@v1
         with:
@@ -319,3 +334,38 @@ jobs:
           if [ "$overall_status" = "failed" ]; then
             exit 1
           fi
+
+      - name: Report status back to GitLab
+        if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
+        run: |
+          # Overall status
+          overall_status="success"
+          if [ "${{ needs.test-flux-minimal.result }}" != "success" ] || [ "${{ needs.test-flux-full-gitops.result }}" != "success" ]; then
+            overall_status="failed"
+          fi
+
+          # Prepare status message
+          if [ "$overall_status" = "success" ]; then
+            state="success"
+            description="GitOps reconciliation tests passed: Flux healthy, sources reconciled"
+          else
+            state="failed"
+            description="GitOps reconciliation tests failed: Check logs for details"
+          fi
+
+          echo "📤 Reporting status back to GitLab..."
+          echo "Commit: ${{ github.event.client_payload.gitlab_commit_sha }}"
+          echo "Status: $state"
+          echo "Description: $description"
+
+          # Report to GitLab commit status API
+          curl -X POST \
+            -H "PRIVATE-TOKEN: ${{ secrets.GITLAB_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            "https://community.opengroup.org/api/v4/projects/1595/statuses/${{ github.event.client_payload.gitlab_commit_sha }}" \
+            -d "{
+              \"state\": \"$state\",
+              \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+              \"description\": \"$description\",
+              \"context\": \"github-actions/gitops-testing\"
+            }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
