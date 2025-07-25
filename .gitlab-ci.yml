@@ -46,12 +46,24 @@ test-kubernetes-basic:
     - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found - must run on docker-small runner"; exit 1; fi
     - echo "Installing Kubernetes tools..."
     - apk add --no-cache make bash curl jq
+    
+    # Install Kind
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
+    
+    # Install kubectl
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
+    
+    # Install Helm
+    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    
+    # Install Flux CLI
+    - curl -s https://fluxcd.io/install.sh | bash
+    - if [ -f /root/.local/bin/flux ]; then mv /root/.local/bin/flux /usr/local/bin/; fi
+    
     - echo "Tools installed"
-    - kind version && kubectl version --client && docker version
+    - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
     - echo "Testing OSDU-CI minimal cluster functionality..."
     - make up minimal
