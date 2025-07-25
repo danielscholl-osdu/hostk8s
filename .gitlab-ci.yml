@@ -62,27 +62,6 @@ test-kubernetes-basic:
     - curl -s https://fluxcd.io/install.sh | bash
     - if [ -f /root/.local/bin/flux ]; then mv /root/.local/bin/flux /usr/local/bin/; fi
     
-    # Create CI-specific Kind config for GitLab CI networking
-    - |
-      cat <<EOF > infra/kubernetes/kind-config-ci.yaml
-      kind: Cluster
-      apiVersion: kind.x-k8s.io/v1alpha4
-      nodes:
-      - role: control-plane
-        extraPortMappings:
-        - containerPort: 30080
-          hostPort: 8080
-          protocol: TCP
-      networking:
-        apiServerAddress: "0.0.0.0"
-      kubeadmConfigPatches:
-      - |
-        kind: ClusterConfiguration
-        apiServer:
-          certSANs:
-          - "docker"
-      EOF
-    
     - echo "Tools installed"
     - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
