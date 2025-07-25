@@ -64,22 +64,15 @@ sync-to-github:
     - apk add --no-cache git
   script:
     - echo "Syncing code to GitHub repository..."
-    - |
-      if [ -n "$GITHUB_TOKEN" ]; then
-        echo "Configuring git for GitHub sync..."
-        git config --global user.email "ci@gitlab.com"
-        git config --global user.name "GitLab CI"
-        
-        echo "Adding GitHub remote..."
-        git remote add github https://$GITHUB_TOKEN@github.com/danielscholl-osdu/osdu-ci.git || true
-        
-        echo "Pushing to GitHub..."
-        git push github HEAD:main --force
-        echo "Code synced to GitHub successfully"
-      else
-        echo "GITHUB_TOKEN not configured - skipping GitHub sync"
-        echo "To enable: Set GITHUB_TOKEN variable in GitLab CI/CD settings"
-      fi
+    - if [ -n "$GITHUB_TOKEN" ]; then echo "GITHUB_TOKEN configured"; else echo "GITHUB_TOKEN not configured - skipping GitHub sync"; exit 0; fi
+    - echo "Configuring git for GitHub sync..."
+    - git config --global user.email "ci@gitlab.com"
+    - git config --global user.name "GitLab CI"
+    - echo "Adding GitHub remote..."
+    - git remote add github https://$GITHUB_TOKEN@github.com/danielscholl-osdu/osdu-ci.git || true
+    - echo "Pushing to GitHub..."
+    - git push github HEAD:main --force
+    - echo "Code synced to GitHub successfully"
   when: on_success
   allow_failure: true
 
