@@ -204,3 +204,17 @@ If you see references to automation containers or `osdu-automation`, these are l
 **Validation Scripts:**
 - Use `make test` for cluster validation (runs `validate-cluster.sh --simple`)
 - For comprehensive validation: `./infra/scripts/validate-cluster.sh` (full mode)
+
+## Git Commit Guidelines
+
+**IMPORTANT: Commit Message Format**
+- **NEVER include** the following signature in commit messages:
+  ```
+  🤖 Generated with [Claude Code](https://claude.ai/code)
+  
+  Co-Authored-By: Claude <noreply@anthropic.com>
+  ```
+- Write clean, professional commit messages without AI attribution
+- Focus on **what changed** and **why** it changed
+- Use conventional commit format when appropriate: `feat:`, `fix:`, `docs:`, etc.
+- Keep commit messages concise but descriptive
