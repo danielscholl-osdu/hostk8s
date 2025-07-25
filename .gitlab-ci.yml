@@ -66,6 +66,8 @@ test-kubernetes-basic:
     - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
     - echo "Testing OSDU-CI CI cluster functionality..."
+    - echo "Ensuring clean state..."
+    - kind delete cluster --name osdu-ci || true
     - make up ci
     - echo "Cluster created successfully"
     - kubectl get nodes
