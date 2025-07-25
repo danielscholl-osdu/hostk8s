@@ -37,7 +37,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: ${{ github.event.client_payload.gitlab_commit_sha || github.sha }}
+        ref: main
     
     - name: Log trigger context
       run: |
