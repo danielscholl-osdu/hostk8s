@@ -5,6 +5,7 @@
 stages:
   - validate
   - test
+  - report
 
 validate-structure:
   stage: validate
@@ -91,3 +92,58 @@ github-test:
   when: on_success
   allow_failure: true
   needs: ["github-sync"]
+
+github-results:
+  stage: report
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
+  variables:
+    GIT_STRATEGY: none
+  before_script:
+    - tdnf install -y curl jq
+  script:
+    - echo "🔍 Checking GitHub Actions results for comprehensive testing..."
+    - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured - skipping results check" && exit 0)
+    - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured - skipping results check" && exit 0)
+    - echo "Waiting for GitHub Actions to start..."
+    - sleep 60
+    - echo "Polling GitHub Actions for workflow completion..."
+    - |
+      for i in {1..20}; do
+        echo "Check $i/20 - Fetching workflow runs..."
+        RUNS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+          "https://api.github.com/repos/$GITHUB_REPO/actions/runs?event=repository_dispatch&per_page=5")
+        
+        LATEST_RUN=$(echo "$RUNS" | jq -r '.workflow_runs[0] // empty')
+        if [ -n "$LATEST_RUN" ]; then
+          STATUS=$(echo "$LATEST_RUN" | jq -r '.status')
+          CONCLUSION=$(echo "$LATEST_RUN" | jq -r '.conclusion')
+          RUN_URL=$(echo "$LATEST_RUN" | jq -r '.html_url')
+          
+          echo "📊 GitHub Actions Status: $STATUS"
+          echo "🔗 Run URL: $RUN_URL"
+          
+          if [ "$STATUS" = "completed" ]; then
+            echo "✅ GitHub Actions completed with result: $CONCLUSION"
+            if [ "$CONCLUSION" = "success" ]; then
+              echo "🎉 All comprehensive tests PASSED!"
+              exit 0
+            else
+              echo "❌ Comprehensive tests FAILED!"
+              echo "Check details at: $RUN_URL"
+              exit 1
+            fi
+          else
+            echo "⏳ Still running... waiting 30 seconds"
+            sleep 30
+          fi
+        else
+          echo "🔍 No recent workflow runs found, waiting..."
+          sleep 30
+        fi
+      done
+      echo "⏰ Timeout waiting for GitHub Actions results"
+      echo "Check manually at: https://github.com/$GITHUB_REPO/actions"
+      exit 1
+  when: on_success
+  allow_failure: false
+  needs: ["github-test"]
