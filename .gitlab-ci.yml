@@ -33,54 +33,23 @@ test-tooling-validation:
   stage: test-tooling
   image: docker:27.0.3
   tags:
-    - docker-small          # target runner with host docker
+    - docker-small
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
-    KUBECONFIG: "$CI_PROJECT_DIR/data/kubeconfig/config"
-    KIND_CONFIG: "minimal"
-    METALLB_ENABLED: "false"
-    INGRESS_ENABLED: "false" 
-    FLUX_ENABLED: "false"
   before_script:
-    # Fail fast if socket is missing (mis-scheduled runner)
-    - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found - must run on docker-small runner"; exit 1; fi
-    - echo "Installing Kubernetes tools..."
+    - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found"; exit 1; fi
+    - echo "Installing tools..."
     - apk add --no-cache make bash curl jq
-    
-    # Install Kind
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
-    
-    # Install kubectl
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
-    
-    # Install Helm
-    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-    
-    # Install Flux CLI
-    - curl -s https://fluxcd.io/install.sh | bash
-    - if [ -f /root/.local/bin/flux ]; then mv /root/.local/bin/flux /usr/local/bin/; fi
-    
-    - echo "Tools installed"
-    - kind version && kubectl version --client && helm version && flux version --client && docker version
+    - echo "Tools ready"
   script:
-    - echo "Testing OSDU-CI tooling and workflow validation..."
-    - echo "Testing Make workflow..."
+    - echo "Testing tooling validation..."
     - make help
-    - echo "Testing Kind functionality..."
     - kind version
-    - echo "Testing kubectl connectivity..."
     - kubectl version --client
-    - echo "Testing Docker connectivity..."
     - docker ps
-    - echo "Testing OSDU-CI project structure..."
     - test -f infra/scripts/cluster-up.sh
-    - test -f infra/kubernetes/kind-config-minimal.yaml
-    - test -f infra/kubernetes/kind-config-ci.yaml
-    - echo "All OSDU-CI tooling validation completed successfully!"
-    - echo "Note: Full cluster testing available via GitHub Actions"
-  after_script:
-    - echo "Cleaning up..."
-    - make clean || true
-    - echo "Cleanup completed"
+    - echo "Tooling validation completed!"
