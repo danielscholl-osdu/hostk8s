@@ -8,9 +8,9 @@ stages:
 
 validate-basic:
   stage: validate
-  image: alpine:latest
+  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
   script:
-    - echo "Testing basic GitLab CI validation approach"
+    - echo "Testing basic GitLab CI validation approach with CBL-Mariner"
     - ls -la
     - test -f Makefile
     - test -f README.md
@@ -20,11 +20,11 @@ validate-basic:
 
 validate-tools:
   stage: validate  
-  image: alpine:latest
+  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
   before_script:
-    - apk add --no-cache make bash
+    - tdnf install -y make bash
   script:
-    - echo "Testing make targets"
+    - echo "Testing make targets with CBL-Mariner"
     - make help
     - make -n up
     - make -n test
@@ -32,22 +32,22 @@ validate-tools:
 
 test-tooling-validation:
   stage: test-tooling
-  image: docker:27.0.3
+  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
   tags:
     - docker-small
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
   before_script:
     - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found"; exit 1; fi
-    - echo "Installing tools..."
-    - apk add --no-cache make bash curl jq
+    - echo "Installing tools with CBL-Mariner..."
+    - tdnf install -y make bash curl docker-cli
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - echo "Tools ready"
   script:
-    - echo "Testing tooling validation..."
+    - echo "Testing tooling validation with CBL-Mariner..."
     - make help
     - kind version
     - kubectl version --client
