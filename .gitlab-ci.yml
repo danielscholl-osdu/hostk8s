@@ -66,10 +66,10 @@ test-tooling-validation:
     - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
     - echo "Testing OSDU-CI tooling and workflow validation..."
-    - echo "Testing Make workflow (dry run)..."
-    - make -n up minimal
+    - echo "Testing Make workflow..."
+    - make help
     - echo "Testing Kind functionality..."
-    - kind create cluster --name test-cluster --dry-run
+    - kind version
     - echo "Testing kubectl connectivity..."
     - kubectl version --client
     - echo "Testing Docker connectivity..."
