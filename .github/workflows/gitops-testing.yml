@@ -123,7 +123,7 @@ jobs:
               \"state\": \"running\",
               \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
               \"description\": \"GitOps reconciliation tests starting...\",
-              \"context\": \"github-actions/gitops-testing\"
+              \"context\": \"github-actions/cluster-testing\"
             }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
 
       - name: Create full Kind cluster with registry
@@ -369,5 +369,5 @@ jobs:
               \"state\": \"$state\",
               \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
               \"description\": \"$description\",
-              \"context\": \"github-actions/gitops-testing\"
+              \"context\": \"github-actions/cluster-testing\"
             }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
