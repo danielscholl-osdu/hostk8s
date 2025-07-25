@@ -57,14 +57,15 @@ test-tooling-validation:
 
 sync-to-github:
   stage: trigger-comprehensive
-  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+  image: mcr.microsoft.com/cbl-mariner/base/python:3.9
   variables:
     GIT_STRATEGY: clone
     GIT_DEPTH: 0
   before_script:
-    - tdnf install -y git python3
+    - tdnf install -y git ca-certificates
+    - git config --global http.sslVerify true
   script:
-    - echo "Starting sync process with CBL-Mariner"
+    - echo "Starting sync process with CBL-Mariner Python 3.9"
     - ls -la sync-to-github.sh
     - chmod +x sync-to-github.sh
     - ./sync-to-github.sh
