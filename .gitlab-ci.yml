@@ -32,22 +32,26 @@ validate-tools:
 
 test-tooling-validation:
   stage: test-tooling
-  image: mcr.microsoft.com/azurelinux/base/core:3.0
+  image: docker:27.0.3
+  services:
+    - docker:27.0.3-dind
   tags:
     - docker-small
   variables:
-    DOCKER_HOST: unix:///var/run/docker.sock
+    DOCKER_HOST: tcp://docker:2376
+    DOCKER_TLS_CERTDIR: "/certs"
+    DOCKER_TLS_VERIFY: 1
+    DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
   before_script:
-    - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found"; exit 1; fi
-    - echo "Installing tools with Azure Linux..."
-    - tdnf install -y make bash gawk curl ca-certificates docker
+    - echo "Installing tools with Docker base image..."
+    - apk add --no-cache make bash curl
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - echo "Tools ready"
   script:
-    - echo "Testing tooling validation with Azure Linux..."
+    - echo "Testing tooling validation with Docker-in-Docker..."
     - make help
     - kind version
     - kubectl version --client
