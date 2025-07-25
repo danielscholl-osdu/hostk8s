@@ -8,9 +8,9 @@ stages:
 
 validate-basic:
   stage: validate
-  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
   script:
-    - echo "Testing basic GitLab CI validation approach with CBL-Mariner"
+    - echo "Testing basic GitLab CI validation approach with Azure Linux"
     - ls -la
     - test -f Makefile
     - test -f README.md
@@ -20,11 +20,11 @@ validate-basic:
 
 validate-tools:
   stage: validate  
-  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
   before_script:
     - tdnf install -y make bash gawk
   script:
-    - echo "Testing make targets with CBL-Mariner"
+    - echo "Testing make targets with Azure Linux"
     - make help
     - make -n up
     - make -n test
@@ -32,22 +32,22 @@ validate-tools:
 
 test-tooling-validation:
   stage: test-tooling
-  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
   tags:
     - docker-small
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
   before_script:
     - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found"; exit 1; fi
-    - echo "Installing tools with CBL-Mariner..."
-    - tdnf install -y make bash gawk curl docker-cli
+    - echo "Installing tools with Azure Linux..."
+    - tdnf install -y make bash gawk curl ca-certificates docker
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - echo "Tools ready"
   script:
-    - echo "Testing tooling validation with CBL-Mariner..."
+    - echo "Testing tooling validation with Azure Linux..."
     - make help
     - kind version
     - kubectl version --client
@@ -57,7 +57,7 @@ test-tooling-validation:
 
 sync-to-github:
   stage: trigger-comprehensive
-  image: mcr.microsoft.com/cbl-mariner/base/python:3.9
+  image: mcr.microsoft.com/azurelinux/base/python:3.12
   variables:
     GIT_STRATEGY: clone
     GIT_DEPTH: 0
@@ -65,7 +65,7 @@ sync-to-github:
     - tdnf install -y git ca-certificates
     - git config --global http.sslVerify true
   script:
-    - echo "Starting sync process with CBL-Mariner Python 3.9"
+    - echo "Starting sync process with Azure Linux Python 3.12"
     - ls -la sync-to-github.sh
     - chmod +x sync-to-github.sh
     - ./sync-to-github.sh
@@ -74,7 +74,7 @@ sync-to-github:
 
 trigger-github-actions:
   stage: trigger-comprehensive
-  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
     GIT_STRATEGY: none
   before_script:
