@@ -65,28 +65,20 @@ sync-to-github:
     - apk add --no-cache git jq
   script:
     - echo "Syncing code to GitHub repository..."
-    - |
-      if [ -z "$GITHUB_TOKEN" ]; then
-        echo "GITHUB_TOKEN not configured - skipping GitHub sync"
-        exit 0
-      fi
-      if [ -z "$GITHUB_REPO" ]; then
-        echo "GITHUB_REPO not configured - skipping GitHub sync"
-        exit 0
-      fi
-      echo "GITHUB_REPO=$GITHUB_REPO"
-      echo "Token length: ${#GITHUB_TOKEN}"
-      echo "Configuring git..."
-      git config --global user.email "ci@gitlab.com"
-      git config --global user.name "GitLab CI"
-      echo "URL-encoding GitHub token..."
-      GITHUB_URL=$(printf '%s' "$GITHUB_TOKEN" | jq -s -R -r @uri)
-      echo "Adding GitHub remote..."
-      git remote add github https://$GITHUB_URL@github.com/$GITHUB_REPO.git
-      git remote -v
-      echo "Pushing to GitHub..."
-      git push github HEAD:main --force
-      echo "Code synced to GitHub repository $GITHUB_REPO successfully"
+    - test -n "$GITHUB_TOKEN" || exit 0
+    - test -n "$GITHUB_REPO" || exit 0
+    - echo "GITHUB_REPO=$GITHUB_REPO"
+    - echo "Configuring git..."
+    - git config --global user.email "ci@gitlab.com"
+    - git config --global user.name "GitLab CI"
+    - echo "URL-encoding GitHub token..."
+    - GITHUB_URL=$(printf '%s' "$GITHUB_TOKEN" | jq -s -R -r @uri)
+    - echo "Adding GitHub remote..."
+    - git remote add github https://$GITHUB_URL@github.com/$GITHUB_REPO.git
+    - git remote -v
+    - echo "Pushing to GitHub..."
+    - git push github HEAD:main --force
+    - echo "Code synced to GitHub repository $GITHUB_REPO successfully"
   when: on_success
   allow_failure: false
 
