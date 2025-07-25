@@ -177,7 +177,8 @@ jobs:
           # Apply GitOps source configurations
           echo "🔗 Applying GitOps source configurations..."
           if [ -d "software/stamp/sources" ]; then
-            kubectl apply -f software/stamp/sources/ || echo "No sources directory found, creating basic source"
+            # Apply only the actual Kubernetes resources, not kustomization.yaml
+            find software/stamp/sources -name "*.yaml" ! -name "kustomization.yaml" -exec kubectl apply -f {} \; || echo "No sources directory found, creating basic source"
 
             # Create basic source if none exists
             flux create source git osdu-ci-source \
@@ -190,7 +191,8 @@ jobs:
           # Apply GitOps application configurations
           echo "📦 Applying GitOps application configurations..."
           if [ -d "software/stamp/apps" ]; then
-            kubectl apply -f software/stamp/apps/ || echo "No apps directory found, skipping"
+            # Apply only the actual Kubernetes resources, not kustomization.yaml
+            find software/stamp/apps -name "*.yaml" ! -name "kustomization.yaml" -exec kubectl apply -f {} \; || echo "No apps directory found, skipping"
           fi
 
           # Apply cluster-specific configurations
