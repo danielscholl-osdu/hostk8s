@@ -88,7 +88,12 @@ trigger-github-actions:
     - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured - skipping GitHub Actions trigger" && exit 0)
     - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured - skipping GitHub Actions trigger" && exit 0)
     - echo "Triggering GitHub Actions with repository dispatch on $GITHUB_REPO..."
-    - curl -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_REPO/dispatches -d "{\"event_type\":\"gitlab-ci-success\",\"client_payload\":{\"gitlab_pipeline_id\":\"$CI_PIPELINE_ID\",\"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",\"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",\"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",\"trigger_source\":\"gitlab-ci\"}}"
+    - >
+      curl -X POST 
+      -H "Authorization: token $GITHUB_TOKEN" 
+      -H "Accept: application/vnd.github.v3+json" 
+      https://api.github.com/repos/$GITHUB_REPO/dispatches 
+      -d "{\"event_type\":\"gitlab-ci-success\",\"client_payload\":{\"gitlab_pipeline_id\":\"$CI_PIPELINE_ID\",\"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",\"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",\"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",\"trigger_source\":\"gitlab-ci\"}}"
     - echo "GitHub Actions triggered successfully on $GITHUB_REPO"
   when: on_success
   allow_failure: true
