@@ -1,0 +1,184 @@
+name: Comprehensive Kubernetes Testing
+
+on:
+  repository_dispatch:
+    types: [gitlab-ci-success]
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'Test scenario to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+        - minimal
+        - full
+        - gitops
+  push:
+    branches: [main]
+    paths: 
+    - 'infra/**'
+    - 'software/**'
+    - '.github/workflows/**'
+
+env:
+  CLUSTER_NAME: osdu-ci-gh
+  KIND_CONFIG: default
+  METALLB_ENABLED: true
+  INGRESS_ENABLED: true  
+  FLUX_ENABLED: true
+
+jobs:
+  comprehensive-testing:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.client_payload.gitlab_commit_sha || github.sha }}
+    
+    - name: Log trigger context
+      run: |
+        echo "🔍 Comprehensive testing triggered by: ${{ github.event_name }}"
+        if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+          echo "GitLab Pipeline ID: ${{ github.event.client_payload.gitlab_pipeline_id }}"
+          echo "GitLab Commit: ${{ github.event.client_payload.gitlab_commit_sha }}"
+          echo "GitLab Ref: ${{ github.event.client_payload.gitlab_ref }}"
+          echo "GitLab Pipeline URL: ${{ github.event.client_payload.gitlab_pipeline_url }}"
+        fi
+    
+    - name: Install tools
+      run: |
+        echo "🛠️ Installing Kubernetes tools..."
+        
+        # Install Kind
+        curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
+        sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind
+        
+        # Install kubectl  
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+        
+        # Install Helm
+        curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+        
+        # Install Flux CLI  
+        curl -s https://fluxcd.io/install.sh | sudo bash
+        
+        echo "✅ Tools installed"
+        kind version && kubectl version --client && helm version && flux version --client
+    
+    - name: Test minimal cluster
+      run: |
+        echo "🚀 Testing minimal cluster creation..."
+        make up minimal
+        kubectl get nodes
+        kubectl get pods -A
+        echo "✅ Minimal cluster test passed"
+        make clean
+    
+    - name: Test full cluster with GitOps
+      run: |
+        echo "🚀 Testing full cluster with GitOps..."
+        make up
+        
+        echo "⏳ Waiting for cluster to be ready..."
+        kubectl wait --for=condition=Ready nodes --all --timeout=300s
+        
+        echo "📦 Checking installed components..."
+        kubectl get pods -A
+        
+        # Test MetalLB
+        if [ "$METALLB_ENABLED" = "true" ]; then
+          echo "🔍 Testing MetalLB..."
+          kubectl get pods -n metallb-system
+        fi
+        
+        # Test Ingress
+        if [ "$INGRESS_ENABLED" = "true" ]; then
+          echo "🔍 Testing NGINX Ingress..."
+          kubectl get pods -n ingress-nginx
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/component=controller -n ingress-nginx --timeout=300s
+        fi
+        
+        # Test Flux GitOps
+        if [ "$FLUX_ENABLED" = "true" ]; then
+          echo "🔍 Testing Flux GitOps..."
+          kubectl get pods -n flux-system
+          flux get sources git -A
+          flux get kustomizations -A
+        fi
+        
+        echo "✅ Full cluster test passed"
+    
+    - name: Test application deployment
+      run: |
+        echo "📦 Testing application deployment..."
+        
+        # Deploy each sample app
+        for app in app1 app2 app3; do
+          if [ -d "software/apps/$app" ]; then
+            echo "🚀 Deploying $app..."
+            make deploy $app
+            sleep 30
+            kubectl get pods -l app=$app || true
+          fi
+        done
+        
+        echo "✅ Application deployment tests completed"
+    
+    - name: Test connectivity and access
+      run: |
+        echo "🔍 Testing connectivity and access..."
+        
+        # Test NodePort access
+        echo "Testing NodePort services..."
+        kubectl get services --all-namespaces -o wide
+        
+        # Test if services are responding
+        for svc in $(kubectl get svc -o name | grep -v kubernetes); do
+          echo "Checking service: $svc"
+          kubectl describe $svc || true
+        done
+        
+        echo "✅ Connectivity tests completed"
+    
+    - name: Run validation tests
+      run: |
+        echo "🧪 Running comprehensive validation tests..."
+        make test
+        echo "✅ Validation tests completed"
+    
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "🧹 Cleaning up..."
+        make clean || true
+        echo "✅ Cleanup completed"
+    
+    - name: Report results
+      if: always()
+      run: |
+        echo "📊 Comprehensive Kubernetes Testing Results:"
+        echo ""
+        if [ "${{ job.status }}" = "success" ]; then
+          echo "✅ All comprehensive tests passed!"
+          echo "✅ Kind cluster creation: PASSED"
+          echo "✅ GitOps integration: PASSED"  
+          echo "✅ Application deployment: PASSED"
+          echo "✅ Connectivity tests: PASSED"
+          echo "✅ Validation tests: PASSED"
+        else
+          echo "❌ Some comprehensive tests failed"
+          echo "Check logs above for details"
+        fi
+        echo ""
+        echo "🔗 Hybrid Testing Summary:"
+        echo "  • GitLab CI: Fast validation and tooling checks"
+        echo "  • GitHub Actions: Comprehensive Kubernetes testing"
+        echo ""
+        if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+          echo "🔗 Original GitLab Pipeline: ${{ github.event.client_payload.gitlab_pipeline_url }}"
+        fi

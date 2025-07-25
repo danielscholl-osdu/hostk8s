@@ -106,6 +106,29 @@ kubectl run debug --image=busybox --rm -it --restart=Never -- sh
 
 ---
 
+## CI/CD Integration
+
+OSDU-CI uses a **hybrid testing strategy** for optimal development velocity:
+
+### 🚀 Fast Track (GitLab CI)
+- **Duration**: 2-3 minutes
+- **Purpose**: Quick feedback during development
+- **Tests**: Project structure, Makefile interface, tool installation
+
+### 🔍 Comprehensive Track (GitHub Actions) 
+- **Duration**: 5-10 minutes  
+- **Purpose**: Full Kubernetes and GitOps validation
+- **Tests**: Complete cluster creation, application deployment, connectivity
+
+### How it works:
+1. Push code → GitLab CI runs fast validation
+2. On success → Automatically triggers GitHub Actions
+3. GitHub Actions runs comprehensive Kubernetes testing
+
+See [docs/HYBRID-CI.md](docs/HYBRID-CI.md) for detailed setup and configuration.
+
+---
+
 ## Troubleshooting
 
 **Common fixes:**
