@@ -67,16 +67,13 @@ test-gitops-experience:
   script:
     - echo "Step 1 - Creating GitOps-enabled cluster with CI config"
     - KIND_CONFIG=ci make up
-    - echo "Step 2 - Fixing kubeconfig for GitLab CI networking"
-    - sed -i.bak -E -e "s/localhost|0\.0\.0\.0/docker/g" "$HOME/.kube/config"
-    - kubectl wait --for=condition=Ready nodes --all --timeout=600s
-    - echo "Step 3 - Running validation tests"
+    - echo "Step 2 - Running validation tests"
     - make test
-    - echo "Step 4 - Testing GitOps integration"
+    - echo "Step 3 - Testing GitOps integration"
     - sleep 60
     - kubectl wait --for=condition=available --timeout=600s deployment/demo-app
     - kubectl get pods -l app=demo-app
-    - echo "Step 5 - Testing ingress via port mapping"
+    - echo "Step 4 - Testing ingress via port mapping"
     - curl -f http://docker:8080 | grep -i "OSDU-CI GitOps Demo" || echo "Testing via alternative access"
     - flux get sources git -n flux-system
     - flux get kustomizations -n flux-system  

@@ -214,6 +214,14 @@ kind export kubeconfig \
 # Set up kubectl context
 export KUBECONFIG=$(pwd)/data/kubeconfig/config
 
+# Fix kubeconfig for CI environment (GitLab CI networking)
+if [[ "${KIND_CONFIG}" == "ci" ]]; then
+    log "Applying CI-specific kubeconfig fixes for GitLab CI networking..."
+    # Replace 0.0.0.0 and localhost with docker hostname for GitLab CI
+    sed -i.bak -E -e "s/localhost|0\.0\.0\.0/docker/g" "$(pwd)/data/kubeconfig/config"
+    log "Kubeconfig updated for GitLab CI docker-in-docker networking"
+fi
+
 # Wait for cluster to be ready with retry
 log "Waiting for cluster nodes to be ready..."
 if ! retry_with_backoff "Waiting for nodes to be ready" \
