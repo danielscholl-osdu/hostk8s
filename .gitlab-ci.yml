@@ -57,9 +57,9 @@ github-sync:
     - git config --global http.sslVerify true
   script:
     - echo "Starting sync process with Azure Linux Python 3.12"
-    - ls -la sync-to-github.sh
-    - chmod +x sync-to-github.sh
-    - ./sync-to-github.sh
+    - ls -la .gitlab/scripts/sync-to-github.sh
+    - chmod +x .gitlab/scripts/sync-to-github.sh
+    - ./.gitlab/scripts/sync-to-github.sh
   when: on_success
   allow_failure: false
 
@@ -112,16 +112,16 @@ github-results:
         echo "Check $i/20 - Fetching workflow runs..."
         RUNS=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
           "https://api.github.com/repos/$GITHUB_REPO/actions/runs?event=repository_dispatch&per_page=5")
-        
+
         LATEST_RUN=$(echo "$RUNS" | jq -r '.workflow_runs[0] // empty')
         if [ -n "$LATEST_RUN" ]; then
           STATUS=$(echo "$LATEST_RUN" | jq -r '.status')
           CONCLUSION=$(echo "$LATEST_RUN" | jq -r '.conclusion')
           RUN_URL=$(echo "$LATEST_RUN" | jq -r '.html_url')
-          
+
           echo "📊 GitHub Actions Status: $STATUS"
           echo "🔗 Run URL: $RUN_URL"
-          
+
           if [ "$STATUS" = "completed" ]; then
             echo "✅ GitHub Actions completed with result: $CONCLUSION"
             if [ "$CONCLUSION" = "success" ]; then

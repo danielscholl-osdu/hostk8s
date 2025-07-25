@@ -69,12 +69,12 @@ flux logs --follow # Watch GitOps sync logs
 
 **Make Interface:**
 - `Makefile` - Standard conventions wrapper around scripts
-- Automatic KUBECONFIG management 
+- Automatic KUBECONFIG management
 - Grouped help sections for discoverability
 
 **Configuration:**
 - `infra/kubernetes/kind-config-minimal.yaml` - Minimal cluster config
-- `infra/kubernetes/kind-config.yaml` - Standard cluster config  
+- `infra/kubernetes/kind-config.yaml` - Standard cluster config
 - `.env` - Environment variables (cluster name, versions, add-on toggles: METALLB_ENABLED, INGRESS_ENABLED, FLUX_ENABLED, APP_DEPLOY)
 - `docker-compose.yml` - **Optional services only** (registry, monitoring)
 
@@ -88,7 +88,7 @@ flux logs --follow # Watch GitOps sync logs
 
 **Development Workflow:**
 1. `make status` - Check cluster health and services
-2. `make deploy app1` - Deploy basic sample application  
+2. `make deploy app1` - Deploy basic sample application
 3. `make deploy app2` - Deploy advanced app (requires MetalLB/Ingress)
 4. `make deploy app3` - Deploy multi-service app (microservices demo)
 5. `make test` - Run validation tests
@@ -107,6 +107,33 @@ flux logs --follow # Watch GitOps sync logs
 - **NodePort Services**: `http://localhost:8080` (mapped from 30080)
 - **LoadBalancer**: External IPs when MetalLB enabled
 - **Optional Registry**: `localhost:5000`
+
+### Code Quality and CI/CD
+
+**YAML Validation - CRITICAL:**
+- **ALWAYS validate YAML after any changes** to prevent CI/CD pipeline failures
+- Run: `yamllint -c .yamllint.yaml .` to check all YAML files
+- Pre-commit hooks SHOULD catch issues but may not always run
+- Common issues that break pipelines:
+  - Trailing spaces (use `sed -i '' 's/[[:space:]]*$//' filename.yml`)
+  - Missing newlines at end of file (ensure exactly one newline at EOF)
+  - Line length over 200 characters (manual breaking required)
+  - Incorrect indentation (2 spaces for Kubernetes YAML)
+
+**CI/CD Pipeline Structure:**
+- **GitLab CI**: Fast validation (`validate-*` jobs) - should complete in < 4 minutes
+- **GitHub Actions**: Comprehensive Kubernetes testing - 5-10 minutes with full cluster testing
+- Pipeline fails on ANY YAML validation errors - fix immediately
+- Scripts organized by usage:
+  - `.gitlab/scripts/` - GitLab CI specific scripts
+  - `.github/scripts/` - GitHub Actions specific scripts
+  - `scripts/` - General development tools
+
+**Quality Gates:**
+- Pre-commit hooks validate YAML, trailing spaces, newlines
+- GitLab CI validates project structure, Makefile syntax, all YAML files
+- GitHub Actions runs full Kubernetes integration tests
+- All stages must pass for successful deployment
 
 ### Error Handling Context
 
