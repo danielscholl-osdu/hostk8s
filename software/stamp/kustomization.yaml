@@ -8,6 +8,6 @@ resources:
   # Include source repositories first (working examples)
   - sources/git-repository.yaml
   - sources/helm-repository.yaml
-  
+
   # Demo application with ingress (enabled by default for GitOps-first experience)
   - apps/demo-app.yaml

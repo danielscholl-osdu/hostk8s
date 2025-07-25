@@ -59,12 +59,12 @@ data:
     <body>
         <div class="container">
             <h1>🎉 OSDU-CI Sample Application</h1>
-            
+
             <div class="success">
                 <h2>✅ Cluster is Working!</h2>
                 <p>Your Kind cluster is running successfully if you can see this page.</p>
             </div>
-            
+
             <div class="info">
                 <h3>📋 Cluster Details</h3>
                 <ul>
@@ -73,7 +73,7 @@ data:
                     <li><strong>Pods:</strong> 2 replicas running</li>
                 </ul>
             </div>
-            
+
             <div class="info">
                 <h3>🧪 Test Commands</h3>
                 <p>Try these in your terminal:</p>

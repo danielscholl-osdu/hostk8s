@@ -58,12 +58,12 @@ data:
     <body>
         <div class="container">
             <h1>🎉 Kind Cluster Sample Application</h1>
-            
+
             <div class="status">
                 <h2>✅ Deployment Successful!</h2>
                 <p>Your Kind cluster is working correctly if you can see this page.</p>
             </div>
-            
+
             <div class="info">
                 <h3>Connection Details</h3>
                 <ul>
@@ -73,7 +73,7 @@ data:
                     <li><strong>Access via:</strong> LoadBalancer and/or Ingress</li>
                 </ul>
             </div>
-            
+
             <div class="info">
                 <h3>Test Commands</h3>
                 <p>Try these commands in your terminal:</p>
@@ -84,7 +84,7 @@ data:
                     <li><code>kubectl logs -l app=sample-app</code></li>
                 </ul>
             </div>
-            
+
             <div class="info">
                 <h3>Scaling Test</h3>
                 <p>Scale the deployment:</p>
@@ -94,7 +94,7 @@ data:
                 </ul>
             </div>
         </div>
-        
+
         <script>
             // Show the actual pod hostname
             fetch('/api/hostname')

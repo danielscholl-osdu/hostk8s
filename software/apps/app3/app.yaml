@@ -68,7 +68,7 @@ data:
     <body>
         <div class="container">
             <h1>🏗️ Multi-Service Application Demo</h1>
-            
+
             <div class="service frontend">
                 <h3>🎨 Frontend Service</h3>
                 <p><span class="status">Status: Running</span></p>
@@ -76,7 +76,7 @@ data:
                 <p><strong>API Endpoint:</strong> <code>http://api</code></p>
                 <button class="test-btn" onclick="testAPI()">Test API Connection</button>
             </div>
-            
+
             <div class="service api">
                 <h3>🔌 API Service</h3>
                 <p><span class="status">Status: Running</span></p>
@@ -84,14 +84,14 @@ data:
                 <p><strong>Database:</strong> <code>postgresql://database:5432/appdb</code></p>
                 <button class="test-btn" onclick="testDatabase()">Test Database Connection</button>
             </div>
-            
+
             <div class="service database">
                 <h3>🗄️ Database Service</h3>
                 <p><span class="status">Status: Running</span></p>
                 <p><strong>Purpose:</strong> Data persistence</p>
                 <p><strong>Type:</strong> PostgreSQL 15</p>
             </div>
-            
+
             <div style="margin-top: 30px; padding: 20px; background: #e9ecef; border-radius: 5px;">
                 <h3>🧪 Testing Commands</h3>
                 <p>Test service-to-service communication:</p>
@@ -103,13 +103,13 @@ data:
                 </ul>
             </div>
         </div>
-        
+
         <script>
             function testAPI() {
                 // In a real app, this would make an actual API call
                 alert('In a real app, this would test:\nGET http://api/health\n\nFor now, use: kubectl exec -it deployment/frontend -- wget -qO- http://api');
             }
-            
+
             function testDatabase() {
                 alert('In a real app, the API would test database connectivity.\n\nFor now, use: kubectl exec -it deployment/api -- nc -zv database 5432');
             }
@@ -166,7 +166,7 @@ spec:
             memory: "64Mi"
             cpu: "50m"
           limits:
-            memory: "128Mi" 
+            memory: "128Mi"
             cpu: "100m"
         volumeMounts:
         - name: api-config
@@ -225,7 +225,7 @@ data:
     OK
   ready: |
     Ready
----  
+---
 apiVersion: v1
 kind: Service
 metadata:
@@ -268,7 +268,7 @@ spec:
         - name: POSTGRES_DB
           value: "appdb"
         - name: POSTGRES_USER
-          value: "appuser"  
+          value: "appuser"
         - name: POSTGRES_PASSWORD
           value: "apppass"
         resources:
