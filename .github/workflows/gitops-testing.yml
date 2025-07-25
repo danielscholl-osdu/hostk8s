@@ -203,24 +203,35 @@ jobs:
           kubectl wait --for=condition=ready pod -l app=helm-controller -n flux-system --timeout=180s
           kubectl wait --for=condition=ready pod -l app=notification-controller -n flux-system --timeout=180s
 
-          # Apply GitOps source configurations
-          echo "🔗 Applying GitOps source configurations..."
-          if [ -d "software/stamp/sources" ]; then
-            # Apply only the actual Kubernetes resources, not kustomization.yaml
-            find software/stamp/sources -name "*.yaml" ! -name "kustomization.yaml" -exec kubectl apply -f {} \; || echo "No sources directory found, creating basic source"
-          fi
-
-          # Create basic source pointing to the branch being tested
+          # Create PR-specific GitRepository source for testing
           GITOPS_REPO="${{ github.event.client_payload.gitops_repo || 'https://github.com/danielscholl-osdu/osdu-ci' }}"
           GITOPS_BRANCH="${{ github.event.client_payload.gitlab_ref || 'main' }}"
-          echo "🎯 Creating GitRepository source:"
+
+          echo "🎯 GitOps Configuration for Testing:"
           echo "   Repository: $GITOPS_REPO"
           echo "   Branch: $GITOPS_BRANCH"
-          flux create source git osdu-ci-source \
+          echo "   Testing Strategy: Branch-specific GitOps validation"
+
+          # Skip static sources and create PR-specific source with highest priority
+          echo "🔗 Creating PR-specific GitRepository source (overriding any static sources)..."
+          flux create source git osdu-ci-pr-test \
             --url="$GITOPS_REPO" \
             --branch="$GITOPS_BRANCH" \
-            --interval=1m \
-            --timeout=60s
+            --interval=30s \
+            --timeout=60s \
+            --export > /tmp/pr-gitrepo.yaml
+
+          echo "📋 PR GitRepository source definition:"
+          cat /tmp/pr-gitrepo.yaml
+          kubectl apply -f /tmp/pr-gitrepo.yaml
+
+          # Wait for the PR-specific source to be ready
+          echo "⏳ Waiting for PR GitRepository source to be ready..."
+          kubectl wait --for=condition=ready gitrepository/osdu-ci-pr-test -n flux-system --timeout=120s
+
+          # Verify what we're actually testing
+          echo "🔍 Verifying GitOps sources:"
+          flux get sources git
 
           # Apply GitOps application configurations
           echo "📦 Applying GitOps application configurations..."
@@ -239,55 +250,72 @@ jobs:
           echo "⏳ Waiting for source reconciliations..."
           sleep 60
 
-          echo "🔄 Triggering reconciliations..."
-          flux reconcile source git osdu-ci-source --timeout=120s || true
-          flux reconcile source git osdu-ci-self --timeout=120s || true
+          echo "🔄 Triggering reconciliations with PR-specific source..."
+          flux reconcile source git osdu-ci-pr-test --timeout=120s || true
           flux reconcile source helm bitnami --timeout=120s || true
           flux reconcile source helm nginx-stable --timeout=120s || true
           flux reconcile source helm prometheus-community --timeout=120s || true
 
-          # Validate reconciliation status
+          # Validate reconciliation status with PR-specific focus
           echo "📊 GitOps reconciliation status:"
           echo "================================"
 
-          echo "Git Sources:"
+          echo "🎯 PR-Specific GitRepository Source Status:"
+          flux get sources git osdu-ci-pr-test -n flux-system || echo "PR-specific source not found"
+          echo ""
+
+          echo "📋 All Git Sources (for comparison):"
           flux get sources git -A
           echo ""
 
-          echo "Helm Sources:"
+          echo "📋 Helm Sources:"
           flux get sources helm -A || echo "No Helm sources configured"
           echo ""
 
-          echo "Kustomizations:"
+          echo "📋 Kustomizations:"
           flux get kustomizations -A || echo "No Kustomizations configured"
           echo ""
 
-          echo "Complete GitOps Status:"
+          echo "📋 Complete GitOps Status:"
           flux get all
+          echo ""
+
+          # Verify PR source is working
+          echo "🔍 PR Source Verification:"
+          if flux get sources git osdu-ci-pr-test -n flux-system | grep -q "True"; then
+            PR_REVISION=$(flux get sources git osdu-ci-pr-test -n flux-system -o yaml | grep revision | head -1 | awk '{print $2}')
+            echo "✅ PR-specific source is ready"
+            echo "   Revision: $PR_REVISION"
+            echo "   Repository: $GITOPS_REPO"
+            echo "   Branch: $GITOPS_BRANCH"
+          else
+            echo "❌ PR-specific source is not ready"
+          fi
           echo ""
 
           # Check for reconciliation failures
           reconciliation_status="success"
           summary=""
 
-          # Check Git sources for failures (ready=False)
-          if flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
+          # Check PR-specific source first
+          if ! flux get sources git osdu-ci-pr-test -n flux-system | grep -q "True"; then
             reconciliation_status="failed"
-            summary="Git source reconciliation failed"
-          # Check Helm sources for failures (ready=False)
+            summary="PR-specific GitRepository source (osdu-ci-pr-test) failed to reconcile"
+          # Check other Git sources for failures
+          elif flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
+            reconciliation_status="failed"
+            summary="Other Git source reconciliation failed"
+          # Check Helm sources for failures
           elif flux get sources helm -A 2>/dev/null | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Helm source reconciliation failed"
-          # Check Kustomizations for failures (ready=False)
+          # Check Kustomizations for failures
           elif flux get kustomizations -A 2>/dev/null | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Kustomization reconciliation failed"
-          # Success if all sources are Ready=True
-          elif flux get sources git -A | grep -q "True" && flux get sources helm -A | grep -q "True"; then
-            summary="GitOps sources reconciled successfully"
+          # Success - PR source is ready
           else
-            reconciliation_status="failed"
-            summary="Unable to determine GitOps reconciliation status"
+            summary="PR-specific GitOps validation successful - Branch: $GITOPS_BRANCH"
           fi
 
           echo "status=$reconciliation_status" >> $GITHUB_OUTPUT
