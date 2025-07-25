@@ -50,39 +50,86 @@ jobs:
           fi
 
       - name: Install tools
+        timeout-minutes: 5
         run: |
-          echo "🛠️ Installing Kubernetes tools..."
+          echo "🛠️ Installing Kubernetes tools with optimized downloads..."
 
-          # Install Kind
-          curl -Lo /tmp/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
-          sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind
+          # Create downloads directory
+          mkdir -p /tmp/downloads
 
-          # Install kubectl
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+          # Parallel downloads with timeouts
+          echo "📥 Starting parallel downloads..."
+          (curl --max-time 60 -Lo /tmp/downloads/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64) &
+          (curl --max-time 60 -LO https://dl.k8s.io/release/v1.33.2/bin/linux/amd64/kubectl && mv kubectl /tmp/downloads/) &
+          (curl --max-time 60 -L https://get.helm.sh/helm-v3.16.1-linux-amd64.tar.gz | tar xz && mv linux-amd64/helm /tmp/downloads/) &
+          (curl --max-time 60 -L https://github.com/fluxcd/flux2/releases/download/v2.4.0/flux_2.4.0_linux_amd64.tar.gz | tar xz && mv flux /tmp/downloads/) &
 
-          # Install Helm
-          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+          # Wait for all downloads to complete
+          wait
 
-          # Install Flux CLI
-          curl -s https://fluxcd.io/install.sh | sudo bash
+          # Install all at once
+          sudo install -o root -g root -m 0755 /tmp/downloads/* /usr/local/bin/
 
           echo "✅ Tools installed"
           kind version && kubectl version --client && helm version && flux version --client
 
       - name: Test minimal cluster
+        timeout-minutes: 5
         run: |
           echo "🚀 Testing minimal cluster creation..."
-          make up minimal
+
+          # Backup original .env file
+          cp .env .env.backup 2>/dev/null || true
+
+          # Create minimal .env configuration
+          cat > .env.minimal << 'EOF'
+          CLUSTER_NAME=osdu-ci-gh
+          KIND_CONFIG=minimal
+          METALLB_ENABLED=false
+          INGRESS_ENABLED=false
+          FLUX_ENABLED=false
+          APP_DEPLOY=false
+          EOF
+          mv .env.minimal .env
+
+          echo "📊 Minimal cluster configuration:"
+          cat .env
+
+          # Add timing
+          start_time=$(date +%s)
+          timeout 240s make up minimal || {
+            echo "❌ Cluster creation timed out after 4 minutes"
+            echo "🔍 Debugging information:"
+            docker ps
+            kind get clusters || true
+            kubectl get nodes || true
+            kubectl get pods -A || true
+            # Restore .env file before exit
+            mv .env.backup .env 2>/dev/null || true
+            exit 1
+          }
+          end_time=$(date +%s)
+          echo "⏱️ Cluster creation took $((end_time - start_time)) seconds"
+
           kubectl get nodes
           kubectl get pods -A
           echo "✅ Minimal cluster test passed"
           make clean
 
+          # Restore original .env file
+          mv .env.backup .env 2>/dev/null || true
+
       - name: Test full cluster with GitOps
+        timeout-minutes: 10
         run: |
           echo "🚀 Testing full cluster with GitOps..."
+          echo "Add-on status: MetalLB=$METALLB_ENABLED, Ingress=$INGRESS_ENABLED, Flux=$FLUX_ENABLED"
+
+          # Add timing
+          start_time=$(date +%s)
           make up
+          cluster_time=$(date +%s)
+          echo "⏱️ Cluster creation took $((cluster_time - start_time)) seconds"
 
           echo "⏳ Waiting for cluster to be ready..."
           kubectl wait --for=condition=Ready nodes --all --timeout=300s
