@@ -13,6 +13,5 @@ spec:
   prune: true
   wait: true
   timeout: 2m
-  validation: client
   dependsOn:
     - name: infrastructure

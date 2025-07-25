@@ -204,9 +204,11 @@ jobs:
           sleep 60
 
           echo "🔄 Triggering reconciliations..."
-          flux reconcile source git --all --timeout=120s || true
-          flux reconcile source helm --all --timeout=120s || true
-          flux reconcile kustomization --all --timeout=120s || true
+          flux reconcile source git osdu-ci-source --timeout=120s || true
+          flux reconcile source git osdu-ci-self --timeout=120s || true
+          flux reconcile source helm bitnami --timeout=120s || true
+          flux reconcile source helm nginx-stable --timeout=120s || true
+          flux reconcile source helm prometheus-community --timeout=120s || true
 
           # Validate reconciliation status
           echo "📊 GitOps reconciliation status:"
@@ -232,17 +234,24 @@ jobs:
           reconciliation_status="success"
           summary=""
 
-          if flux get sources git -A | grep -q "False"; then
+          # Check Git sources for failures (ready=False)
+          if flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Git source reconciliation failed"
-          elif flux get sources helm -A 2>/dev/null | grep -q "False"; then
+          # Check Helm sources for failures (ready=False)
+          elif flux get sources helm -A 2>/dev/null | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Helm source reconciliation failed"
-          elif flux get kustomizations -A 2>/dev/null | grep -q "False"; then
+          # Check Kustomizations for failures (ready=False)
+          elif flux get kustomizations -A 2>/dev/null | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Kustomization reconciliation failed"
+          # Success if all sources are Ready=True
+          elif flux get sources git -A | grep -q "True" && flux get sources helm -A | grep -q "True"; then
+            summary="GitOps sources reconciled successfully"
           else
-            summary="All GitOps reconciliations successful"
+            reconciliation_status="failed"
+            summary="Unable to determine GitOps reconciliation status"
           fi
 
           echo "status=$reconciliation_status" >> $GITHUB_OUTPUT
