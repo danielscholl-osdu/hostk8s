@@ -55,26 +55,16 @@ test-tooling-validation:
     - test -f infra/scripts/cluster-up.sh
     - echo "Tooling validation completed!"
 
-test-minimal:
-  stage: trigger-comprehensive
-  image: alpine:latest
-  script:
-    - echo "Testing minimal script"
-    - ls -la
-    - pwd
-  when: on_success
-  allow_failure: true
-
 sync-to-github:
   stage: trigger-comprehensive
-  image: alpine:latest
+  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
   variables:
     GIT_STRATEGY: clone
     GIT_DEPTH: 0
   before_script:
-    - apk add --no-cache git python3
+    - tdnf install -y git python3
   script:
-    - echo "Starting sync process"
+    - echo "Starting sync process with CBL-Mariner"
     - ls -la sync-to-github.sh
     - chmod +x sync-to-github.sh
     - ./sync-to-github.sh
@@ -83,11 +73,11 @@ sync-to-github:
 
 trigger-github-actions:
   stage: trigger-comprehensive
-  image: alpine:latest
+  image: mcr.microsoft.com/cbl-mariner/base/core:2.0
   variables:
     GIT_STRATEGY: none
   before_script:
-    - apk add --no-cache curl jq
+    - tdnf install -y curl
   script:
     - echo "Waiting for GitHub sync to complete, then triggering comprehensive testing..."
     - sleep 30
