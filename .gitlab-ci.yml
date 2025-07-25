@@ -55,15 +55,27 @@ test-tooling-validation:
     - test -f infra/scripts/cluster-up.sh
     - echo "Tooling validation completed!"
 
+test-minimal:
+  stage: trigger-comprehensive
+  image: alpine:latest
+  script:
+    - echo "Testing minimal script"
+    - ls -la
+    - pwd
+  when: on_success
+  allow_failure: true
+
 sync-to-github:
   stage: trigger-comprehensive
-  image: alpine/git:latest
+  image: alpine:latest
   variables:
     GIT_STRATEGY: clone
     GIT_DEPTH: 0
   before_script:
     - apk add --no-cache git python3
   script:
+    - echo "Starting sync process"
+    - ls -la sync-to-github.sh
     - chmod +x sync-to-github.sh
     - ./sync-to-github.sh
   when: on_success
