@@ -35,7 +35,7 @@ Frontend (nginx) → API (nginx) → Database (postgresql)
 
 ### 🗄️ Database Service (1 replica)
 - **Purpose**: Data persistence
-- **Image**: postgres:15-alpine
+- **Image**: mcr.microsoft.com/azurelinux/base/postgres:15
 - **Internal Access**: `database:5432` (ClusterIP)
 - **Credentials**: `appuser/apppass`, database: `appdb`
 

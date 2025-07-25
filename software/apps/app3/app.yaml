@@ -261,7 +261,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: postgres:15-alpine
+        image: mcr.microsoft.com/azurelinux/base/postgres:15
         ports:
         - containerPort: 5432
         env:
