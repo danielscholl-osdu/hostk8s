@@ -117,7 +117,7 @@ github-status-info:
       echo ""
       echo "✅ GitLab CI: Fast validation completed successfully"
       echo "   • Project structure validated"
-      echo "   • Makefile syntax checked"  
+      echo "   • Makefile syntax checked"
       echo "   • YAML files validated"
       echo "   • Code synced to GitHub"
       echo ""

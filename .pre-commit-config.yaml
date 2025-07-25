@@ -24,7 +24,7 @@ repos:
     hooks:
       - id: yamllint
         name: Lint YAML files
-        args: ['-d', 'relaxed']  # Use relaxed rules initially
+        args: ['-c', '.yamllint.yaml']  # Use same config as GitLab CI
         files: \.(yaml|yml)$
 
   - repo: local
