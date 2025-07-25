@@ -37,7 +37,7 @@ test-kubernetes-basic:
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
     KUBECONFIG: "$CI_PROJECT_DIR/data/kubeconfig/config"
-    KIND_CONFIG: "ci"
+    KIND_CONFIG: "minimal"
     METALLB_ENABLED: "false"
     INGRESS_ENABLED: "false" 
     FLUX_ENABLED: "false"
@@ -65,10 +65,10 @@ test-kubernetes-basic:
     - echo "Tools installed"
     - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
-    - echo "Testing OSDU-CI CI cluster functionality..."
+    - echo "Testing OSDU-CI minimal cluster functionality..."
     - echo "Ensuring clean state..."
     - kind delete cluster --name osdu-ci || true
-    - make up ci
+    - make up minimal
     - echo "Cluster created successfully"
     - kubectl get nodes
     - kubectl get pods -A
