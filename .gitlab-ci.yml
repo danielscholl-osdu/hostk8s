@@ -3,11 +3,11 @@
 # Hybrid approach: Fast lint validation + GitHub Actions integration testing
 
 stages:
-  - lint
-  - integration
+  - validate
+  - test
 
-lint-structure:
-  stage: lint
+validate-structure:
+  stage: validate
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   script:
     - echo "Validating project structure..."
@@ -17,8 +17,8 @@ lint-structure:
     - test -d software
     - echo "✅ Project structure validated"
 
-lint-makefile:
-  stage: lint
+validate-makefile:
+  stage: validate
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   before_script:
     - tdnf install -y make bash gawk
@@ -29,8 +29,8 @@ lint-makefile:
     - make -n test
     - echo "✅ Makefile syntax validated"
 
-lint-yaml:
-  stage: lint
+validate-yaml:
+  stage: validate
   image: mcr.microsoft.com/azurelinux/base/python:3.12
   before_script:
     - pip install yamllint
@@ -45,8 +45,8 @@ lint-yaml:
     - find infra -name "*.yaml" -o -name "*.yml" | xargs yamllint -c .yamllint.yaml
     - echo "✅ All YAML files validated with relaxed rules"
 
-sync-to-github:
-  stage: integration
+github-sync:
+  stage: test
   image: mcr.microsoft.com/azurelinux/base/python:3.12
   variables:
     GIT_STRATEGY: clone
@@ -62,8 +62,8 @@ sync-to-github:
   when: on_success
   allow_failure: false
 
-trigger-integration-tests:
-  stage: integration
+github-test:
+  stage: test
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
     GIT_STRATEGY: none
@@ -90,4 +90,4 @@ trigger-integration-tests:
     - echo "GitHub Actions triggered successfully on $GITHUB_REPO"
   when: on_success
   allow_failure: true
-  needs: ["sync-to-github"]
+  needs: ["github-sync"]
