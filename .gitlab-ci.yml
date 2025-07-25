@@ -118,6 +118,7 @@ execute:
       \"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",
       \"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",
       \"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",
+      \"gitops_repo\":\"https://github.com/$GITHUB_REPO\",
       \"trigger_source\":\"gitlab-ci\",
       \"test_type\":\"gitops-reconciliation\"}}"
     - echo "GitHub GitOps testing triggered successfully on $GITHUB_REPO"

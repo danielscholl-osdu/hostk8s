@@ -112,7 +112,7 @@ jobs:
   cluster-default:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ github.event.inputs.test_scenario != 'minimal' && (github.event.client_payload.gitlab_ref == 'main' || github.event.client_payload.gitlab_ref == '' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ github.event.inputs.test_scenario != 'minimal' }}
     outputs:
       gitops_status: ${{ steps.gitops_validation.outputs.status }}
       reconciliation_summary: ${{ steps.gitops_validation.outputs.summary }}
@@ -208,14 +208,19 @@ jobs:
           if [ -d "software/stamp/sources" ]; then
             # Apply only the actual Kubernetes resources, not kustomization.yaml
             find software/stamp/sources -name "*.yaml" ! -name "kustomization.yaml" -exec kubectl apply -f {} \; || echo "No sources directory found, creating basic source"
-
-            # Create basic source if none exists
-            flux create source git osdu-ci-source \
-              --url=https://github.com/danielscholl-osdu/osdu-ci \
-              --branch=main \
-              --interval=1m \
-              --timeout=60s
           fi
+
+          # Create basic source pointing to the branch being tested
+          GITOPS_REPO="${{ github.event.client_payload.gitops_repo || 'https://github.com/danielscholl-osdu/osdu-ci' }}"
+          GITOPS_BRANCH="${{ github.event.client_payload.gitlab_ref || 'main' }}"
+          echo "🎯 Creating GitRepository source:"
+          echo "   Repository: $GITOPS_REPO"
+          echo "   Branch: $GITOPS_BRANCH"
+          flux create source git osdu-ci-source \
+            --url="$GITOPS_REPO" \
+            --branch="$GITOPS_BRANCH" \
+            --interval=1m \
+            --timeout=60s
 
           # Apply GitOps application configurations
           echo "📦 Applying GitOps application configurations..."
@@ -311,7 +316,7 @@ jobs:
 
           # Determine testing type
           if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-            echo "🚀 Main Branch - Full Testing Results:"
+            echo "🚀 Main Branch - Standard Testing Results:"
             echo ""
             echo "🔹 Minimal Cluster Test: ${{ needs.cluster-minimal.result }}"
             echo "   Status: ${{ needs.cluster-minimal.outputs.flux_status }}"
@@ -320,13 +325,16 @@ jobs:
             echo "   Status: ${{ needs.cluster-default.outputs.gitops_status }}"
             echo "   Summary: ${{ needs.cluster-default.outputs.reconciliation_summary }}"
           else
-            echo "🔄 PR Branch - Fast Testing Results:"
+            echo "🔄 PR Branch - Full Validation Results:"
             echo "📝 Branch: ${{ github.event.client_payload.gitlab_ref }}"
+            echo "🎯 Testing PR branch code with GitOps pointing to PR changes"
             echo ""
             echo "🔹 Minimal Cluster Test: ${{ needs.cluster-minimal.result }}"
             echo "   Status: ${{ needs.cluster-minimal.outputs.flux_status }}"
             echo ""
-            echo "🔹 Default Cluster Test: Skipped (PR branch - fast feedback)"
+            echo "🔹 Default Cluster Test: ${{ needs.cluster-default.result }}"
+            echo "   Status: ${{ needs.cluster-default.outputs.gitops_status }}"
+            echo "   Summary: ${{ needs.cluster-default.outputs.reconciliation_summary }}"
           fi
           echo ""
 
@@ -373,35 +381,26 @@ jobs:
       - name: Report status back to GitLab
         if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
         run: |
-          # Overall status based on branch type
+          # Overall status - both jobs must pass for all branches
           overall_status="success"
-
-          # For main branch: check both jobs
-          if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-            if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
-              overall_status="failed"
-            fi
-          # For PR branches: only check minimal (default is skipped)
-          else
-            if [ "${{ needs.cluster-minimal.result }}" != "success" ]; then
-              overall_status="failed"
-            fi
+          if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
+            overall_status="failed"
           fi
 
           # Prepare status message based on branch and result
           if [ "$overall_status" = "success" ]; then
             state="success"
             if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-              description="GitOps tests passed: Full validation (minimal + default clusters)"
+              description="GitOps tests passed: Standard validation (minimal + default clusters)"
             else
-              description="GitOps tests passed: Fast validation (minimal cluster) - Branch: ${{ github.event.client_payload.gitlab_ref }}"
+              description="GitOps tests passed: PR validation with branch-specific GitOps - Branch: ${{ github.event.client_payload.gitlab_ref }}"
             fi
           else
             state="failed"
             if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-              description="GitOps tests failed: Check full validation logs for details"
+              description="GitOps tests failed: Check standard validation logs for details"
             else
-              description="GitOps tests failed: Check fast validation logs - Branch: ${{ github.event.client_payload.gitlab_ref }}"
+              description="GitOps tests failed: Check PR validation logs - Branch: ${{ github.event.client_payload.gitlab_ref }}"
             fi
           fi
 
