@@ -8,7 +8,7 @@ spec:
   interval: 10m
   sourceRef:
     kind: GitRepository
-    name: osdu-ci-apps
+    name: osdu-ci-self
   path: "./infrastructure/osdu-ci"
   prune: true
   wait: true
