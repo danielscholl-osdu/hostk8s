@@ -37,7 +37,7 @@ test-kubernetes-basic:
   variables:
     DOCKER_HOST: unix:///var/run/docker.sock
     KUBECONFIG: "$CI_PROJECT_DIR/data/kubeconfig/config"
-    KIND_CONFIG: "minimal"
+    KIND_CONFIG: "ci"
     METALLB_ENABLED: "false"
     INGRESS_ENABLED: "false" 
     FLUX_ENABLED: "false"
@@ -62,11 +62,32 @@ test-kubernetes-basic:
     - curl -s https://fluxcd.io/install.sh | bash
     - if [ -f /root/.local/bin/flux ]; then mv /root/.local/bin/flux /usr/local/bin/; fi
     
+    # Create CI-specific Kind config for GitLab CI networking
+    - |
+      cat <<EOF > infra/kubernetes/kind-config-ci.yaml
+      kind: Cluster
+      apiVersion: kind.x-k8s.io/v1alpha4
+      nodes:
+      - role: control-plane
+        extraPortMappings:
+        - containerPort: 30080
+          hostPort: 8080
+          protocol: TCP
+      networking:
+        apiServerAddress: "0.0.0.0"
+      kubeadmConfigPatches:
+      - |
+        kind: ClusterConfiguration
+        apiServer:
+          certSANs:
+          - "docker"
+      EOF
+    
     - echo "Tools installed"
     - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
-    - echo "Testing OSDU-CI minimal cluster functionality..."
-    - make up minimal
+    - echo "Testing OSDU-CI CI cluster functionality..."
+    - make up ci
     - echo "Cluster created successfully"
     - kubectl get nodes
     - kubectl get pods -A
