@@ -69,7 +69,7 @@ trigger-github-actions:
         curl -X POST \
           -H "Authorization: token $GITHUB_TOKEN" \
           -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/repos/danielscholl/osdu-ci/dispatches \
+          https://api.github.com/repos/danielscholl-osdu/osdu-ci/dispatches \
           -d "{
             \"event_type\": \"gitlab-ci-success\",
             \"client_payload\": {
