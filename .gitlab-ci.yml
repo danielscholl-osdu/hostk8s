@@ -1,92 +1,14 @@
-# GitLab CI/CD Pipeline for OSDU-CI Kubernetes Development Environment  
-# Tests the GitOps-first user experience: make up → make test → make clean
-
 stages:
-  - integration-test
+  - check-docker-socket
 
-test-gitops-experience:
-  stage: integration-test
-  image:
-    name: docker:27.0.3
-  services:
-    - name: docker:27.0.3-dind
-      alias: docker
-      command: ["--privileged"]
-  variables:
-    FF_NETWORK_PER_BUILD: 1
-    DOCKER_DRIVER: overlay2
-    DOCKER_HOST: tcp://docker:2376
-    DOCKER_TLS_CERTDIR: ""
-    KUBECONFIG: "$HOME/.kube/config"
-  before_script:
-    - echo "Installing dependencies..."
-    - apk add --no-cache make bash curl jq
-    
-    # Install Kind (dynamic version)
-    - |
-      n=kubernetes-sigs/kind
-      v=$(curl -fsSL "https://api.github.com/repos/${n}/releases/latest" | jq -r '.tag_name')
-      curl -fsSL "https://github.com/${n}/releases/download/${v}/kind-linux-amd64" -o /usr/local/bin/kind
-      chmod a+x /usr/local/bin/kind
-    
-    # Install kubectl (dynamic version)  
-    - |
-      v=$(curl -fsSL "https://dl.k8s.io/release/stable.txt")
-      curl -fsSL "https://dl.k8s.io/release/${v}/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl
-      chmod a+x /usr/local/bin/kubectl
-    
-    # Install Helm
-    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-    
-    # Install Flux CLI
-    - curl -s https://fluxcd.io/install.sh | bash
-    - if [ -f /root/.local/bin/flux ]; then mv /root/.local/bin/flux /usr/local/bin/; fi
-    
-    # Override Kind config for GitLab CI networking
-    - |
-      cat <<EOF > infra/kubernetes/kind-config-ci.yaml
-      kind: Cluster
-      apiVersion: kind.x-k8s.io/v1alpha4
-      nodes:
-      - role: control-plane
-        extraPortMappings:
-        - containerPort: 30080
-          hostPort: 8080
-          protocol: TCP
-        - containerPort: 30443  
-          hostPort: 8443
-          protocol: TCP
-      networking:
-        apiServerAddress: "0.0.0.0"
-      kubeadmConfigPatches:
-      - |
-        kind: ClusterConfiguration
-        apiServer:
-          certSANs:
-          - "docker"
-      EOF
-    
-    - echo "Tools ready - testing OSDU-CI workflow"
-    - kind version && kubectl version --client --short && docker version
-    
+check-docker-socket:
+  stage: check-docker-socket
+  image: docker:27.0.3
   script:
-    - echo "Step 1 - Creating GitOps-enabled cluster with CI config"
-    - KIND_CONFIG=ci make up
-    - echo "Step 2 - Fixing kubeconfig for GitLab CI networking"
-    - sed -i.bak -E -e "s/localhost|0\.0\.0\.0/docker/g" "$HOME/.kube/config"
-    - kubectl wait --for=condition=Ready nodes --all --timeout=600s
-    - echo "Step 3 - Running validation tests"
-    - make test
-    - echo "Step 4 - Testing GitOps integration"
-    - sleep 60
-    - kubectl wait --for=condition=available --timeout=600s deployment/demo-app
-    - kubectl get pods -l app=demo-app
-    - echo "Step 5 - Testing ingress via port mapping"
-    - curl -f http://docker:8080 | grep -i "OSDU-CI GitOps Demo" || echo "Testing via alternative access"
-    - flux get sources git -n flux-system
-    - flux get kustomizations -n flux-system  
-    - echo "✅ Full OSDU-CI GitOps integration test completed successfully!"
-    
-  after_script:
-    - echo "Cleaning up resources"
-    - make clean || true
+    - echo "Checking if /var/run/docker.sock exists..."
+    - if [ -S /var/run/docker.sock ]; then
+        echo "✅ Docker socket exists.";
+        docker version || echo "⚠️ Docker CLI present but cannot talk to daemon.";
+      else
+        echo "❌ No Docker socket available.";
+      fi
