@@ -28,6 +28,22 @@ lint-makefile:
     - make -n test
     - echo "✅ Makefile syntax validated"
 
+lint-yaml:
+  stage: lint
+  image: mcr.microsoft.com/azurelinux/base/python:3.12
+  before_script:
+    - pip install yamllint
+  script:
+    - echo "Validating YAML files..."
+    - echo "Checking GitLab CI configuration..."
+    - yamllint .gitlab-ci.yml
+    - echo "Checking GitHub Actions workflows..."
+    - find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs yamllint
+    - echo "Checking Kubernetes manifests..."
+    - find software -name "*.yaml" -o -name "*.yml" | xargs yamllint
+    - find infra -name "*.yaml" -o -name "*.yml" | xargs yamllint
+    - echo "✅ All YAML files validated"
+
 sync-to-github:
   stage: integration
   image: mcr.microsoft.com/azurelinux/base/python:3.12
