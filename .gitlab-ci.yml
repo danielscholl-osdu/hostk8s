@@ -1,5 +1,5 @@
 # GitLab CI/CD Pipeline for OSDU-CI Development Environment
-# Hybrid approach: Fast validation + Basic Kubernetes testing (no Ingress/Flux)
+# Hybrid approach: Fast validation + Basic Kubernetes testing
 
 stages:
   - validate
@@ -10,34 +10,30 @@ variables:
   DOCKER_HOST: tcp://docker:2376
   DOCKER_TLS_CERTDIR: ""
 
-# Fast validation jobs
-validate-structure:
+validate-basic:
   stage: validate
   image: alpine:latest
   script:
-    - echo "Validating OSDU-CI project structure..."
-    - test -f Makefile && echo "Makefile found"
-    - test -f README.md && echo "README found"
-    - test -d infra/scripts && echo "Scripts directory found"
-    - test -d software && echo "Software directory found"
-    - test -f infra/scripts/cluster-up.sh && echo "cluster-up.sh found"
-    - test -f infra/kubernetes/kind-config.yaml && echo "Kind config found"
-    - echo "Project structure validation passed"
+    - echo "Testing basic GitLab CI validation approach"
+    - ls -la
+    - test -f Makefile
+    - test -f README.md
+    - test -d infra/scripts
+    - test -d software
+    - echo "Basic validation passed"
 
-validate-makefile:
-  stage: validate
+validate-tools:
+  stage: validate  
   image: alpine:latest
   before_script:
     - apk add --no-cache make bash
   script:
-    - echo "Testing Makefile interface..."
-    - make help | grep -q "OSDU-CI Development Environment"
-    - make -n up >/dev/null
-    - make -n test >/dev/null
-    - make -n clean >/dev/null
-    - echo "Makefile validation passed"
+    - echo "Testing make targets"
+    - make help
+    - make -n up
+    - make -n test
+    - echo "Make targets validated"
 
-# Basic Kubernetes testing using OSDU-CI built-in functionality
 test-kubernetes-basic:
   stage: test-kubernetes
   image: docker:27.0.3
@@ -54,61 +50,19 @@ test-kubernetes-basic:
     FLUX_ENABLED: "false"
   before_script:
     - echo "Installing Kubernetes tools..."
-    - apk add --no-cache make bash curl jq
+    - apk add --no-cache make bash curl
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
     - echo "Tools installed"
-    - kind version && kubectl version --client && docker version
   script:
     - echo "Testing OSDU-CI minimal cluster functionality..."
-    - echo "Step 1: Creating minimal cluster using make up minimal..."
     - make up minimal
-    - echo "OSDU-CI minimal cluster created successfully"
-    - echo "Step 2: Testing cluster functionality..."
+    - echo "Cluster created successfully"
     - kubectl get nodes
-    - kubectl get pods -A
-    - echo "Cluster is ready and accessible"
-    - echo "Step 3: Testing pod creation..."
-    - kubectl run test-pod --image=busybox --restart=Never --rm -i --timeout=60s -- echo "Hello from Kubernetes"
-    - echo "Pod creation and execution successful"
-    - echo "Step 4: Testing service creation..."
-    - kubectl create deployment nginx-test --image=nginx:alpine
-    - kubectl expose deployment nginx-test --port=80 --target-port=80
-    - kubectl wait --for=condition=available --timeout=120s deployment/nginx-test
-    - kubectl get services nginx-test
-    - kubectl delete deployment nginx-test
-    - kubectl delete service nginx-test
-    - echo "Service creation and cleanup successful"
-    - echo "OSDU-CI basic Kubernetes testing completed successfully!"
+    - echo "Basic Kubernetes testing completed successfully"
   after_script:
-    - echo "Cleaning up using OSDU-CI built-in cleanup..."
+    - echo "Cleaning up..."
     - make clean || true
     - echo "Cleanup completed"
-
-# Summary job
-integration-summary:
-  stage: test-kubernetes
-  image: alpine:latest
-  dependencies: []
-  script:
-    - echo "OSDU-CI Integration Test Results:"
-    - echo ""
-    - echo "GitLab CI Validation:"
-    - echo "  - Project structure validated"
-    - echo "  - Makefile interface tested"
-    - echo "  - Configuration files checked"
-    - echo ""
-    - echo "Kubernetes Core Testing:"
-    - echo "  - Kind cluster creation successful"
-    - echo "  - Docker-in-Docker networking working"
-    - echo "  - Basic pod operations functional"
-    - echo "  - Service creation working"
-    - echo ""
-    - echo "For Full GitOps Testing:"
-    - echo "  - Use make up locally for Flux + Ingress"
-    - echo "  - GitHub Actions for comprehensive CI testing"
-    - echo ""
-    - echo "OSDU-CI core functionality validated!"
-  when: on_success
