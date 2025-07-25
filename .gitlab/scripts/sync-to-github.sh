@@ -33,10 +33,10 @@ echo "Pushing branch: $CURRENT_BRANCH"
 
 if [ "$CURRENT_BRANCH" = "main" ]; then
     echo "Main branch detected - pushing to main"
-    git push github HEAD:main --force
+    git push github HEAD:refs/heads/main --force
 else
     echo "PR branch detected - pushing to branch: $CURRENT_BRANCH"
-    git push github HEAD:$CURRENT_BRANCH --force
+    git push github HEAD:refs/heads/$CURRENT_BRANCH --force
 fi
 
 echo "Code synced successfully to $GITHUB_REPO (branch: $CURRENT_BRANCH)"
