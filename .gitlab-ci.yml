@@ -22,7 +22,7 @@ validate-tools:
   stage: validate  
   image: mcr.microsoft.com/cbl-mariner/base/core:2.0
   before_script:
-    - tdnf install -y make bash
+    - tdnf install -y make bash gawk
   script:
     - echo "Testing make targets with CBL-Mariner"
     - make help
@@ -40,7 +40,7 @@ test-tooling-validation:
   before_script:
     - if [ ! -S /var/run/docker.sock ]; then echo "No Docker socket found"; exit 1; fi
     - echo "Installing tools with CBL-Mariner..."
-    - tdnf install -y make bash curl docker-cli
+    - tdnf install -y make bash gawk curl docker-cli
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
@@ -78,7 +78,7 @@ trigger-github-actions:
   variables:
     GIT_STRATEGY: none
   before_script:
-    - tdnf install -y curl
+    - tdnf install -y curl ca-certificates
   script:
     - echo "Waiting for GitHub sync to complete, then triggering comprehensive testing..."
     - sleep 30
