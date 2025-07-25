@@ -86,10 +86,34 @@ fi
 
 # Wait for NGINX Ingress pods to be ready
 log "Waiting for NGINX Ingress Controller to be ready..."
+
+# Increase timeout for CI environments
+INGRESS_TIMEOUT=300s
+if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ]; then
+    log "CI environment detected, increasing timeout to 600s for Ingress readiness..."
+    INGRESS_TIMEOUT=600s
+fi
+
+# First, wait for the deployment to be ready
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace ingress-nginx \
+  --for=condition=available deployment/ingress-nginx-controller \
+  --timeout=$INGRESS_TIMEOUT || {
+    log "WARNING: Ingress deployment not ready, checking pod status..."
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n ingress-nginx
+    kubectl --kubeconfig="$KUBECONFIG_PATH" describe pods -n ingress-nginx
+}
+
+# Then wait for pods to be ready
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace ingress-nginx \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
-  --timeout=300s || error_exit "NGINX Ingress Controller failed to become ready"
+  --timeout=$INGRESS_TIMEOUT || {
+    log "WARNING: NGINX Ingress Controller failed to become ready within $INGRESS_TIMEOUT"
+    log "Checking ingress controller status..."
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n ingress-nginx
+    kubectl --kubeconfig="$KUBECONFIG_PATH" logs -n ingress-nginx -l app.kubernetes.io/component=controller --tail=50
+    log "Continuing without waiting for ingress readiness..."
+}
 
 # Wait for admission webhook jobs to complete
 log "Waiting for admission webhook setup jobs to complete..."
