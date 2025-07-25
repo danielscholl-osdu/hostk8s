@@ -1,68 +1,35 @@
 # GitLab CI/CD Pipeline for OSDU-CI Development Environment  
-# Hybrid approach: Fast validation + Tooling verification (K8s testing via GitHub Actions)
+# Hybrid approach: Fast lint validation + GitHub Actions integration testing
 
 stages:
-  - validate
-  - test-tooling
-  - trigger-comprehensive
+  - lint
+  - integration
 
-validate-basic:
-  stage: validate
+lint-structure:
+  stage: lint
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   script:
-    - echo "Testing basic GitLab CI validation approach with Azure Linux"
-    - ls -la
+    - echo "Validating project structure..."
     - test -f Makefile
     - test -f README.md
     - test -d infra/scripts
     - test -d software
-    - echo "Basic validation passed"
+    - echo "✅ Project structure validated"
 
-validate-tools:
-  stage: validate  
+lint-makefile:
+  stage: lint
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   before_script:
     - tdnf install -y make bash gawk
   script:
-    - echo "Testing make targets with Azure Linux"
+    - echo "Validating Makefile syntax and targets..."
     - make help
     - make -n up
     - make -n test
-    - echo "Make targets validated"
-
-test-tooling-validation:
-  stage: test-tooling
-  image: docker:27.0.3
-  services:
-    - name: docker:27.0.3-dind
-      command: ["--tls=false"]
-  tags:
-    - docker-small
-  variables:
-    DOCKER_HOST: tcp://docker:2375
-    DOCKER_TLS_CERTDIR: ""
-  before_script:
-    - echo "Installing tools with Docker base image..."
-    - apk add --no-cache make bash curl
-    - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
-    - chmod +x /usr/local/bin/kind
-    - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
-    - chmod +x kubectl && mv kubectl /usr/local/bin/
-    - echo "Tools ready"
-    - echo "Waiting for Docker daemon to be ready..."
-    - until docker info >/dev/null 2>&1; do sleep 1; done
-    - echo "Docker daemon is ready"
-  script:
-    - echo "Testing tooling validation with Docker-in-Docker..."
-    - make help
-    - kind version
-    - kubectl version --client
-    - docker ps
-    - test -f infra/scripts/cluster-up.sh
-    - echo "Tooling validation completed!"
+    - echo "✅ Makefile syntax validated"
 
 sync-to-github:
-  stage: trigger-comprehensive
+  stage: integration
   image: mcr.microsoft.com/azurelinux/base/python:3.12
   variables:
     GIT_STRATEGY: clone
@@ -78,8 +45,8 @@ sync-to-github:
   when: on_success
   allow_failure: false
 
-trigger-github-actions:
-  stage: trigger-comprehensive
+trigger-integration-tests:
+  stage: integration
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
     GIT_STRATEGY: none
