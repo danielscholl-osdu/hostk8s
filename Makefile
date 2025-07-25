@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install clean up down restart test status deploy logs port-forward
+.PHONY: help install clean up down restart prepare test status deploy logs port-forward
 
 # Environment setup
 KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
@@ -91,11 +91,46 @@ down: ## Stop the Kind cluster (preserves data)
 	@echo "🛑 Stopping cluster..."
 	@./infra/scripts/cluster-down.sh
 
-restart: ## Quick cluster reset for development iteration  
+restart: ## Quick cluster reset for development iteration
 	@echo "🔄 Restarting cluster..."
 	@./infra/scripts/cluster-restart.sh
 
 ##@ Development
+
+prepare: ## Setup development environment (pre-commit, yamllint, hooks)
+	@echo "🛠️  Setting up OSDU-CI development environment..."
+	@# Install pre-commit if not available
+	@if ! command -v pre-commit >/dev/null 2>&1; then \
+		echo "Installing pre-commit..."; \
+		if command -v pip >/dev/null 2>&1; then \
+			pip install pre-commit; \
+		elif command -v pipx >/dev/null 2>&1; then \
+			pipx install pre-commit; \
+		elif command -v brew >/dev/null 2>&1; then \
+			brew install pre-commit; \
+		else \
+			echo "❌ Could not install pre-commit. Please install manually:"; \
+			echo "   pip install pre-commit"; \
+			exit 1; \
+		fi; \
+	fi
+	@# Install yamllint if not available
+	@if ! command -v yamllint >/dev/null 2>&1; then \
+		echo "Installing yamllint..."; \
+		pip install yamllint; \
+	fi
+	@# Install pre-commit hooks
+	@echo "Installing pre-commit hooks..."
+	@pre-commit install
+	@echo "✅ Development environment setup complete!"
+	@echo ""
+	@echo "📋 Available commands:"
+	@echo "  make help                    # Show project targets"
+	@echo "  pre-commit run --all-files   # Run all linting checks"
+	@echo "  yamllint .                   # Check YAML files manually"
+	@echo "  make up                      # Start development cluster"
+	@echo ""
+	@echo "💡 Pre-commit hooks will now run automatically on git commit"
 
 test: ## Run comprehensive cluster validation tests
 	$(call check_cluster)

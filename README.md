@@ -31,6 +31,7 @@ A lightweight Kubernetes development setup using **Kind** directly on your host.
 ## Quick Start (Using Make)
 
 ```bash
+make prepare   # Setup development environment (pre-commit, yamllint)
 make up        # Install dependencies + start cluster
 make deploy    # Deploy default app (app1)
 make status    # Check cluster health
@@ -115,8 +116,8 @@ OSDU-CI uses a **hybrid testing strategy** for optimal development velocity:
 - **Purpose**: Quick feedback during development
 - **Tests**: Project structure, Makefile interface, tool installation
 
-### 🔍 Comprehensive Track (GitHub Actions) 
-- **Duration**: 5-10 minutes  
+### 🔍 Comprehensive Track (GitHub Actions)
+- **Duration**: 5-10 minutes
 - **Purpose**: Full Kubernetes and GitOps validation
 - **Tests**: Complete cluster creation, application deployment, connectivity
 
