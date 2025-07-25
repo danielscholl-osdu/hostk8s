@@ -10,19 +10,19 @@ variables:
   DOCKER_HOST: tcp://docker:2376
   DOCKER_TLS_CERTDIR: ""
 
-# Fast validation jobs (same as before)
+# Fast validation jobs
 validate-structure:
   stage: validate
   image: alpine:latest
   script:
-    - echo "🔍 Validating OSDU-CI project structure..."
-    - test -f Makefile && echo "✅ Makefile found"
-    - test -f README.md && echo "✅ README found"
-    - test -d infra/scripts && echo "✅ Scripts directory found"
-    - test -d software && echo "✅ Software directory found"
-    - test -f infra/scripts/cluster-up.sh && echo "✅ cluster-up.sh found"
-    - test -f infra/kubernetes/kind-config.yaml && echo "✅ Kind config found"
-    - echo "✅ Project structure validation passed"
+    - echo "Validating OSDU-CI project structure..."
+    - test -f Makefile && echo "Makefile found"
+    - test -f README.md && echo "README found"
+    - test -d infra/scripts && echo "Scripts directory found"
+    - test -d software && echo "Software directory found"
+    - test -f infra/scripts/cluster-up.sh && echo "cluster-up.sh found"
+    - test -f infra/kubernetes/kind-config.yaml && echo "Kind config found"
+    - echo "Project structure validation passed"
 
 validate-makefile:
   stage: validate
@@ -30,14 +30,14 @@ validate-makefile:
   before_script:
     - apk add --no-cache make bash
   script:
-    - echo "🔧 Testing Makefile interface..."
+    - echo "Testing Makefile interface..."
     - make help | grep -q "OSDU-CI Development Environment"
     - make -n up >/dev/null
     - make -n test >/dev/null
     - make -n clean >/dev/null
-    - echo "✅ Makefile validation passed"
+    - echo "Makefile validation passed"
 
-# Basic Kubernetes testing (without Ingress/Flux)
+# Basic Kubernetes testing using OSDU-CI built-in functionality
 test-kubernetes-basic:
   stage: test-kubernetes
   image: docker:27.0.3
@@ -48,83 +48,44 @@ test-kubernetes-basic:
   variables:
     FF_NETWORK_PER_BUILD: 1
     KUBECONFIG: "$CI_PROJECT_DIR/data/kubeconfig/config"
+    KIND_CONFIG: "minimal"
+    METALLB_ENABLED: "false"
+    INGRESS_ENABLED: "false" 
+    FLUX_ENABLED: "false"
   before_script:
-    - echo "🛠️ Installing Kubernetes tools..."
+    - echo "Installing Kubernetes tools..."
     - apk add --no-cache make bash curl jq
-    
-    # Install Kind
     - curl -Lo /usr/local/bin/kind https://kind.sigs.k8s.io/dl/v0.25.0/kind-linux-amd64
     - chmod +x /usr/local/bin/kind
-    
-    # Install kubectl
     - curl -LO "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl && mv kubectl /usr/local/bin/
-    
-    - echo "✅ Tools installed"
+    - echo "Tools installed"
     - kind version && kubectl version --client && docker version
-    
   script:
-    - echo "🚀 Testing basic Kubernetes functionality..."
-    
-    # Create minimal Kind cluster (no add-ons)
-    - echo "Step 1: Creating minimal Kind cluster..."
-    - |
-      cat <<EOF > kind-config-test.yaml
-      kind: Cluster
-      apiVersion: kind.x-k8s.io/v1alpha4
-      nodes:
-      - role: control-plane
-      networking:
-        apiServerAddress: "0.0.0.0"
-      kubeadmConfigPatches:
-      - |
-        kind: ClusterConfiguration
-        apiServer:
-          certSANs:
-          - "docker"
-      EOF
-    - kind create cluster --name test-cluster --config kind-config-test.yaml --wait 300s
-    - echo "✅ Kind cluster created successfully"
-    
-    # Fix kubeconfig for CI networking
-    - echo "Step 2: Configuring kubectl connectivity..."
-    - kind export kubeconfig --name test-cluster --kubeconfig $KUBECONFIG
-    - sed -i.bak -E -e "s/localhost|0\.0\.0\.0/docker/g" "$KUBECONFIG"
-    - echo "✅ Kubeconfig configured for CI"
-    
-    # Test basic cluster functionality
-    - echo "Step 3: Testing cluster functionality..."
-    - kubectl wait --for=condition=Ready nodes --all --timeout=300s
+    - echo "Testing OSDU-CI minimal cluster functionality..."
+    - echo "Step 1: Creating minimal cluster using make up minimal..."
+    - make up minimal
+    - echo "OSDU-CI minimal cluster created successfully"
+    - echo "Step 2: Testing cluster functionality..."
     - kubectl get nodes
     - kubectl get pods -A
-    - echo "✅ Cluster is ready and accessible"
-    
-    # Test basic pod operations
-    - echo "Step 4: Testing pod creation..."
+    - echo "Cluster is ready and accessible"
+    - echo "Step 3: Testing pod creation..."
     - kubectl run test-pod --image=busybox --restart=Never --rm -i --timeout=60s -- echo "Hello from Kubernetes"
-    - echo "✅ Pod creation and execution successful"
-    
-    # Test service creation
-    - echo "Step 5: Testing service creation..."
+    - echo "Pod creation and execution successful"
+    - echo "Step 4: Testing service creation..."
     - kubectl create deployment nginx-test --image=nginx:alpine
     - kubectl expose deployment nginx-test --port=80 --target-port=80
     - kubectl wait --for=condition=available --timeout=120s deployment/nginx-test
     - kubectl get services nginx-test
     - kubectl delete deployment nginx-test
     - kubectl delete service nginx-test
-    - echo "✅ Service creation and cleanup successful"
-    
-    - echo "🎉 Basic Kubernetes testing completed successfully!"
-    - echo "✅ Kind cluster creation works in GitLab CI"
-    - echo "✅ Docker-in-Docker networking functional"
-    - echo "✅ Kubectl connectivity established"
-    - echo "✅ Pod creation and execution working"
-    - echo "✅ Service creation and networking working"
-    
+    - echo "Service creation and cleanup successful"
+    - echo "OSDU-CI basic Kubernetes testing completed successfully!"
   after_script:
-    - echo "🧹 Cleaning up test cluster..."
-    - kind delete cluster --name test-cluster || true
-    - echo "✅ Cleanup completed"
+    - echo "Cleaning up using OSDU-CI built-in cleanup..."
+    - make clean || true
+    - echo "Cleanup completed"
 
 # Summary job
 integration-summary:
