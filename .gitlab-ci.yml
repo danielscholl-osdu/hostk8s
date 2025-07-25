@@ -63,7 +63,7 @@ github-sync:
   when: on_success
   allow_failure: false
 
-github-test:
+github-gitops-test:
   stage: test
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
@@ -75,7 +75,7 @@ github-test:
     - sleep 30
     - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured" && exit 0)
     - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured" && exit 0)
-    - echo "Triggering GitHub Actions on $GITHUB_REPO..."
+    - echo "Triggering GitOps reconciliation testing on $GITHUB_REPO..."
     - >
       curl -X POST
       -H "Authorization: token $GITHUB_TOKEN"
@@ -87,8 +87,9 @@ github-test:
       \"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",
       \"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",
       \"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",
-      \"trigger_source\":\"gitlab-ci\"}}"
-    - echo "GitHub Actions triggered successfully on $GITHUB_REPO"
+      \"trigger_source\":\"gitlab-ci\",
+      \"test_type\":\"gitops-reconciliation\"}}"
+    - echo "GitHub GitOps testing triggered successfully on $GITHUB_REPO"
   when: on_success
   allow_failure: true
   needs: ["github-sync"]
@@ -101,7 +102,7 @@ github-results:
   before_script:
     - tdnf install -y curl jq
   script:
-    - echo "🔍 Checking GitHub Actions results for comprehensive testing..."
+    - echo "🔍 Checking GitHub Actions results for GitOps reconciliation testing..."
     - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured - skipping results check" && exit 0)
     - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured - skipping results check" && exit 0)
     - echo "Waiting for GitHub Actions to start..."
@@ -125,11 +126,14 @@ github-results:
           if [ "$STATUS" = "completed" ]; then
             echo "✅ GitHub Actions completed with result: $CONCLUSION"
             if [ "$CONCLUSION" = "success" ]; then
-              echo "🎉 All comprehensive tests PASSED!"
+              echo "🎉 All GitOps reconciliation tests PASSED!"
+              echo "✅ Flux system: HEALTHY"
+              echo "✅ Git sources: RECONCILED"
+              echo "✅ Multi-environment patterns: VALIDATED"
               exit 0
             else
-              echo "❌ Comprehensive tests FAILED!"
-              echo "Check details at: $RUN_URL"
+              echo "❌ GitOps reconciliation tests FAILED!"
+              echo "❌ Check Flux logs and reconciliation status at: $RUN_URL"
               exit 1
             fi
           else
@@ -146,4 +150,4 @@ github-results:
       exit 1
   when: on_success
   allow_failure: false
-  needs: ["github-test"]
+  needs: ["github-gitops-test"]

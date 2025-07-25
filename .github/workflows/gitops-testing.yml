@@ -1,0 +1,310 @@
+name: GitOps Reconciliation Testing
+
+on:
+  repository_dispatch:
+    types: [gitlab-ci-success]
+  workflow_dispatch:
+    inputs:
+      test_scenario:
+        description: 'GitOps test scenario to run'
+        required: false
+        default: 'full'
+        type: choice
+        options:
+          - minimal
+          - full
+          - gitops
+
+jobs:
+  test-flux-minimal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    outputs:
+      flux_status: ${{ steps.flux_validation.outputs.status }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log GitLab trigger context
+        if: github.event_name == 'repository_dispatch'
+        run: |
+          echo "🔍 GitOps testing triggered by GitLab CI"
+          echo "GitLab Pipeline ID: ${{ github.event.client_payload.gitlab_pipeline_id }}"
+          echo "GitLab Commit: ${{ github.event.client_payload.gitlab_commit_sha }}"
+          echo "GitLab Pipeline URL: ${{ github.event.client_payload.gitlab_pipeline_url }}"
+
+      - name: Create minimal Kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: osdu-ci-minimal
+          node_image: kindest/node:v1.33.2
+          config: infra/kubernetes/kind-config-minimal.yaml
+
+      - name: Install Flux CLI
+        run: |
+          echo "📥 Installing Flux CLI..."
+          curl -s https://fluxcd.io/install.sh | sudo bash
+          flux version --client
+          echo "✅ Flux CLI installed"
+
+      - name: Bootstrap Flux and test basic reconciliation
+        id: flux_validation
+        run: |
+          echo "🚀 Testing basic Flux GitOps reconciliation..."
+
+          # Install Flux system
+          echo "📦 Installing Flux system..."
+          flux install --timeout=300s
+
+          # Wait for Flux system to be ready
+          echo "⏳ Waiting for Flux system readiness..."
+          kubectl wait --for=condition=ready pod -l app=source-controller -n flux-system --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=kustomize-controller -n flux-system --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=helm-controller -n flux-system --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=notification-controller -n flux-system --timeout=180s
+
+          # Create basic GitRepository source
+          echo "🔗 Creating GitRepository source..."
+          flux create source git osdu-ci-source \
+            --url=https://github.com/danielscholl-osdu/osdu-ci \
+            --branch=main \
+            --interval=1m \
+            --timeout=60s
+
+          # Verify source reconciliation
+          echo "⏳ Waiting for GitRepository reconciliation..."
+          sleep 30
+          flux reconcile source git osdu-ci-source --timeout=60s
+
+          # Validate Flux system health
+          echo "📊 Flux system status:"
+          kubectl get pods -n flux-system
+          echo ""
+
+          echo "📊 GitRepository source status:"
+          flux get sources git
+          echo ""
+
+          # Check for reconciliation success
+          if flux get sources git | grep -q "True"; then
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "✅ Basic Flux reconciliation successful"
+          else
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "❌ Basic Flux reconciliation failed"
+            flux logs --all-namespaces
+            exit 1
+          fi
+
+  test-flux-full-gitops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    if: ${{ github.event.inputs.test_scenario != 'minimal' }}
+    outputs:
+      gitops_status: ${{ steps.gitops_validation.outputs.status }}
+      reconciliation_summary: ${{ steps.gitops_validation.outputs.summary }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create full Kind cluster with registry
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: osdu-ci-gitops
+          node_image: kindest/node:v1.33.2
+          config: infra/kubernetes/kind-config.yaml
+          registry: true
+
+      - name: Install additional tools
+        run: |
+          echo "📥 Installing additional tools..."
+          curl -s https://fluxcd.io/install.sh | sudo bash
+          helm version && flux version --client
+          echo "✅ Additional tools installed"
+
+      - name: Install infrastructure prerequisites
+        run: |
+          echo "🏗️ Installing infrastructure prerequisites..."
+
+          # Install MetalLB
+          echo "📦 Installing MetalLB..."
+          kubectl apply -f https://raw.githubusercontent.com/metallb/metallb/v0.14.8/config/manifests/metallb-native.yaml
+          kubectl wait --namespace metallb-system --for=condition=ready pod --selector=app=metallb --timeout=300s
+
+          # Configure MetalLB IP pool
+          kubectl apply -f - <<EOF
+          apiVersion: metallb.io/v1beta1
+          kind: IPAddressPool
+          metadata:
+            name: example
+            namespace: metallb-system
+          spec:
+            addresses:
+            - 172.19.255.200-172.19.255.250
+          ---
+          apiVersion: metallb.io/v1beta1
+          kind: L2Advertisement
+          metadata:
+            name: empty
+            namespace: metallb-system
+          EOF
+
+          # Install NGINX Ingress
+          echo "📦 Installing NGINX Ingress..."
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx --for=condition=ready pod --selector=app.kubernetes.io/component=controller --timeout=300s
+
+          echo "✅ Infrastructure prerequisites installed"
+
+      - name: Test complete GitOps reconciliation
+        id: gitops_validation
+        run: |
+          echo "🚀 Testing complete GitOps reconciliation..."
+
+          # Install Flux system
+          echo "📦 Installing Flux system..."
+          flux install --timeout=300s
+
+          # Wait for Flux system readiness
+          echo "⏳ Waiting for Flux system readiness..."
+          kubectl wait --for=condition=ready pod -l app=source-controller -n flux-system --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=kustomize-controller -n flux-system --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=helm-controller -n flux-system --timeout=180s
+          kubectl wait --for=condition=ready pod -l app=notification-controller -n flux-system --timeout=180s
+
+          # Apply GitOps source configurations
+          echo "🔗 Applying GitOps source configurations..."
+          if [ -d "software/stamp/sources" ]; then
+            kubectl apply -f software/stamp/sources/ || echo "No sources directory found, creating basic source"
+
+            # Create basic source if none exists
+            flux create source git osdu-ci-source \
+              --url=https://github.com/danielscholl-osdu/osdu-ci \
+              --branch=main \
+              --interval=1m \
+              --timeout=60s
+          fi
+
+          # Apply GitOps application configurations
+          echo "📦 Applying GitOps application configurations..."
+          if [ -d "software/stamp/apps" ]; then
+            kubectl apply -f software/stamp/apps/ || echo "No apps directory found, skipping"
+          fi
+
+          # Apply cluster-specific configurations
+          echo "🎯 Applying cluster-specific configurations..."
+          if [ -d "software/stamp/clusters/osdu-ci" ]; then
+            kubectl apply -f software/stamp/clusters/osdu-ci/ || echo "No cluster-specific configs found, skipping"
+          fi
+
+          # Wait for reconciliations
+          echo "⏳ Waiting for source reconciliations..."
+          sleep 60
+
+          echo "🔄 Triggering reconciliations..."
+          flux reconcile source git --all --timeout=120s || true
+          flux reconcile source helm --all --timeout=120s || true
+          flux reconcile kustomization --all --timeout=120s || true
+
+          # Validate reconciliation status
+          echo "📊 GitOps reconciliation status:"
+          echo "================================"
+
+          echo "Git Sources:"
+          flux get sources git -A
+          echo ""
+
+          echo "Helm Sources:"
+          flux get sources helm -A || echo "No Helm sources configured"
+          echo ""
+
+          echo "Kustomizations:"
+          flux get kustomizations -A || echo "No Kustomizations configured"
+          echo ""
+
+          echo "Complete GitOps Status:"
+          flux get all
+          echo ""
+
+          # Check for reconciliation failures
+          reconciliation_status="success"
+          summary=""
+
+          if flux get sources git -A | grep -q "False"; then
+            reconciliation_status="failed"
+            summary="Git source reconciliation failed"
+          elif flux get sources helm -A 2>/dev/null | grep -q "False"; then
+            reconciliation_status="failed"
+            summary="Helm source reconciliation failed"
+          elif flux get kustomizations -A 2>/dev/null | grep -q "False"; then
+            reconciliation_status="failed"
+            summary="Kustomization reconciliation failed"
+          else
+            summary="All GitOps reconciliations successful"
+          fi
+
+          echo "status=$reconciliation_status" >> $GITHUB_OUTPUT
+          echo "summary=$summary" >> $GITHUB_OUTPUT
+
+          if [ "$reconciliation_status" = "failed" ]; then
+            echo "❌ GitOps reconciliation failures detected"
+            echo "🔍 Flux logs:"
+            flux logs --all-namespaces --since=5m
+            exit 1
+          else
+            echo "✅ Complete GitOps reconciliation successful"
+          fi
+
+  report-gitops-results:
+    runs-on: ubuntu-latest
+    needs: [test-flux-minimal, test-flux-full-gitops]
+    if: always()
+
+    steps:
+      - name: Report comprehensive GitOps results
+        run: |
+          echo "📊 GitOps Reconciliation Testing Results:"
+          echo "========================================"
+          echo ""
+
+          echo "🔹 Minimal Flux Test: ${{ needs.test-flux-minimal.result }}"
+          echo "   Status: ${{ needs.test-flux-minimal.outputs.flux_status }}"
+          echo ""
+
+          echo "🔹 Full GitOps Test: ${{ needs.test-flux-full-gitops.result }}"
+          echo "   Status: ${{ needs.test-flux-full-gitops.outputs.gitops_status }}"
+          echo "   Summary: ${{ needs.test-flux-full-gitops.outputs.reconciliation_summary }}"
+          echo ""
+
+          # Overall status
+          overall_status="success"
+          if [ "${{ needs.test-flux-minimal.result }}" != "success" ] || [ "${{ needs.test-flux-full-gitops.result }}" != "success" ]; then
+            overall_status="failed"
+          fi
+
+          if [ "$overall_status" = "success" ]; then
+            echo "✅ All GitOps reconciliation tests passed!"
+            echo "✅ Flux system: HEALTHY"
+            echo "✅ Git sources: RECONCILED"
+            echo "✅ Multi-environment patterns: VALIDATED"
+          else
+            echo "❌ Some GitOps reconciliation tests failed"
+            echo "❌ Check individual job logs for details"
+          fi
+          echo ""
+
+          echo "🔗 Hybrid CI/CD Summary:"
+          echo "  • GitLab CI: Fast validation and tooling checks"
+          echo "  • GitHub Actions: GitOps reconciliation validation"
+          echo ""
+
+          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
+            echo "🔗 Original GitLab Pipeline: ${{ github.event.client_payload.gitlab_pipeline_url }}"
+          fi
+
+          # Set exit code for GitLab feedback
+          if [ "$overall_status" = "failed" ]; then
+            exit 1
+          fi

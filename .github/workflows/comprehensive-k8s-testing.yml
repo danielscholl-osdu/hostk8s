@@ -14,12 +14,6 @@ on:
           - minimal
           - full
           - gitops
-  push:
-    branches: [main]
-    paths:
-      - 'infra/**'
-      - 'software/**'
-      - '.github/workflows/**'
 
 env:
   CLUSTER_NAME: osdu-ci-gh
