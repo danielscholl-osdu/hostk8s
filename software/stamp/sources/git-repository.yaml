@@ -12,8 +12,8 @@ spec:
   ignore: |
     # exclude all
     /*
-    # include only the apps directory for self-deployment
-    !/software/apps/
+    # include directories needed for GitOps
+    !/software/
 ---
 # Example for external Kubernetes examples (commented out by default)
 # apiVersion: source.toolkit.fluxcd.io/v1
