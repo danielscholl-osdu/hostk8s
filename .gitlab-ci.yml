@@ -65,12 +65,13 @@ sync-to-github:
   script:
     - echo "Syncing code to GitHub repository..."
     - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured - skipping GitHub sync" && exit 0)
-    - echo "GITHUB_TOKEN configured, proceeding with sync..."
+    - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured - skipping GitHub sync" && exit 0)
+    - echo "GITHUB_TOKEN and GITHUB_REPO configured, proceeding with sync to $GITHUB_REPO..."
     - git config --global user.email "ci@gitlab.com"
     - git config --global user.name "GitLab CI"
-    - git remote add github https://$GITHUB_TOKEN@github.com/danielscholl-osdu/osdu-ci.git || true
+    - git remote add github https://$GITHUB_TOKEN@github.com/$GITHUB_REPO.git || true
     - git push github HEAD:main --force
-    - echo "Code synced to GitHub successfully"
+    - echo "Code synced to GitHub repository $GITHUB_REPO successfully"
   when: on_success
   allow_failure: true
 
@@ -85,9 +86,10 @@ trigger-github-actions:
     - echo "Waiting for GitHub sync to complete, then triggering comprehensive testing..."
     - sleep 30
     - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured - skipping GitHub Actions trigger" && exit 0)
-    - echo "Triggering GitHub Actions with repository dispatch..."
-    - curl -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/danielscholl-osdu/osdu-ci/dispatches -d "{\"event_type\":\"gitlab-ci-success\",\"client_payload\":{\"gitlab_pipeline_id\":\"$CI_PIPELINE_ID\",\"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",\"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",\"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",\"trigger_source\":\"gitlab-ci\"}}"
-    - echo "GitHub Actions triggered successfully"
+    - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured - skipping GitHub Actions trigger" && exit 0)
+    - echo "Triggering GitHub Actions with repository dispatch on $GITHUB_REPO..."
+    - curl -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/$GITHUB_REPO/dispatches -d "{\"event_type\":\"gitlab-ci-success\",\"client_payload\":{\"gitlab_pipeline_id\":\"$CI_PIPELINE_ID\",\"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",\"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",\"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",\"trigger_source\":\"gitlab-ci\"}}"
+    - echo "GitHub Actions triggered successfully on $GITHUB_REPO"
   when: on_success
   allow_failure: true
   needs: ["sync-to-github"]
