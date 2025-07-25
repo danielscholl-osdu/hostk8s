@@ -67,10 +67,52 @@ github-gitops-test:
   stage: test
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
-    GIT_STRATEGY: none
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 2
   before_script:
-    - tdnf install -y curl ca-certificates
+    - tdnf install -y curl ca-certificates git
   script:
+    - echo "Checking if GitHub Actions testing is needed..."
+    - |
+      # Check if changes affect core functionality
+      NEEDS_FULL_TEST="false"
+
+      # Get list of changed files since last commit
+      CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
+
+      echo "📂 Changed files:"
+      echo "$CHANGED_FILES" | sed 's/^/  - /'
+      echo ""
+
+      # Check for files that require full testing
+      for file in $CHANGED_FILES; do
+        case "$file" in
+          infra/*|software/*|Makefile|.github/*|.gitlab-ci.yml|.yamllint.yaml|.pre-commit-config.yaml)
+            echo "🎯 Found core change: $file"
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+          docs/*|README.md|CLAUDE.md|*.md)
+            echo "📖 Documentation change: $file (skip full test)"
+            ;;
+          *)
+            echo "🔧 Other change: $file"
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+        esac
+      done
+
+      if [ "$NEEDS_FULL_TEST" = "false" ]; then
+        echo ""
+        echo "✅ Only documentation/non-core changes detected"
+        echo "⏭️  Skipping expensive GitHub Actions testing"
+        echo "💡 GitLab CI validation is sufficient for these changes"
+        exit 0
+      fi
+
+      echo ""
+      echo "🚀 Core changes detected - full GitHub Actions testing required"
     - echo "Waiting for GitHub sync to complete..."
     - sleep 30
     - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured" && exit 0)
@@ -109,7 +151,10 @@ github-status-info:
   stage: report
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
-    GIT_STRATEGY: none
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 2
+  before_script:
+    - tdnf install -y git
   script:
     - |
       echo "📊 Hybrid CI/CD Pipeline Status Report"
@@ -121,7 +166,27 @@ github-status-info:
       echo "   • YAML files validated"
       echo "   • Code synced to GitHub"
       echo ""
-      if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_REPO" ]; then
+
+      # Check what type of changes were made
+      CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
+      NEEDS_FULL_TEST="false"
+
+      for file in $CHANGED_FILES; do
+        case "$file" in
+          infra/*|software/*|Makefile|.github/*|.gitlab-ci.yml|.yamllint.yaml|.pre-commit-config.yaml)
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+          docs/*|README.md|CLAUDE.md|*.md)
+            ;;
+          *)
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+        esac
+      done
+
+      if [ "$NEEDS_FULL_TEST" = "true" ] && [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_REPO" ]; then
         echo "🚀 GitHub Actions: GitOps reconciliation tests triggered"
         echo "   • Tests are running comprehensive Kubernetes validation"
         echo "   • Results will appear as commit status when complete"
@@ -132,16 +197,22 @@ github-status-info:
         echo "   2. Or visit: https://github.com/$GITHUB_REPO/actions"
         echo ""
         echo "⏱️  Results typically available within 5-10 minutes"
-      else
+      elif [ "$NEEDS_FULL_TEST" = "false" ]; then
+        echo "📖 Documentation-only changes detected"
+        echo "   • Skipped expensive GitHub Actions testing"
+        echo "   • GitLab CI validation sufficient for these changes"
+        echo "   • No Kubernetes/GitOps validation needed"
+      elif [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_REPO" ]; then
         echo "ℹ️  GitHub Actions integration not configured"
         echo "   • GITHUB_TOKEN or GITHUB_REPO variables missing"
         echo "   • Only GitLab CI validation completed"
       fi
       echo ""
-      echo "🔗 This approach provides:"
+      echo "🔗 This intelligent approach provides:"
       echo "   • Fast feedback via GitLab CI (< 4 minutes)"
-      echo "   • Comprehensive validation via GitHub Actions"
-      echo "   • No waiting or timeout issues"
+      echo "   • Smart triggering based on changed files"
+      echo "   • Full validation only when needed"
+      echo "   • Cost optimization for documentation changes"
   when: on_success
   allow_failure: false
   needs: ["github-gitops-test"]
