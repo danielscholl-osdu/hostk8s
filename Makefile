@@ -37,6 +37,12 @@ install: ## Install required dependencies (kind, kubectl, helm, flux)
 		command -v kubectl >/dev/null 2>&1 || (echo "❌ kubectl not found" && exit 1); \
 		command -v helm >/dev/null 2>&1 || (echo "❌ helm not found" && exit 1); \
 		command -v flux >/dev/null 2>&1 || (echo "❌ flux not found" && exit 1); \
+	elif command -v apt >/dev/null 2>&1; then \
+		echo "Ubuntu/Debian environment detected - dependencies should be pre-installed"; \
+		command -v kind >/dev/null 2>&1 || (echo "❌ kind not found" && exit 1); \
+		command -v kubectl >/dev/null 2>&1 || (echo "❌ kubectl not found" && exit 1); \
+		command -v helm >/dev/null 2>&1 || (echo "❌ helm not found" && exit 1); \
+		command -v flux >/dev/null 2>&1 || (echo "❌ flux not found" && exit 1); \
 	else \
 		echo "❌ Unsupported environment. Please install tools manually or use macOS with Homebrew."; \
 		exit 1; \
