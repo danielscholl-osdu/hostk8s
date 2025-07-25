@@ -1,14 +1,26 @@
 stages:
-  - check-docker-socket
+  - test-podman-kind
 
-check-docker-socket:
-  stage: check-docker-socket
-  image: docker:27.0.3
+test-podman-kind:
+  stage: test-podman-kind
+  image: alpine:3.20
+  before_script:
+    # Install basic dependencies
+    - apk add --no-cache bash curl jq make podman
+
+    # Install Kind (latest release)
+    - |
+      KIND_REPO="kubernetes-sigs/kind"
+      KIND_VERSION=$(curl -fsSL "https://api.github.com/repos/${KIND_REPO}/releases/latest" | jq -r '.tag_name')
+      curl -fsSL "https://github.com/${KIND_REPO}/releases/download/${KIND_VERSION}/kind-linux-amd64" -o /usr/local/bin/kind
+      chmod +x /usr/local/bin/kind
+
+    # Verify versions
+    - kind version
+    - podman info
   script:
-    - echo "Checking if /var/run/docker.sock exists..."
-    - if [ -S /var/run/docker.sock ]; then
-        echo "✅ Docker socket exists.";
-        docker version || echo "⚠️ Docker CLI present but cannot talk to daemon.";
-      else
-        echo "❌ No Docker socket available.";
-      fi
+    # Attempt to create a Kind cluster using Podman backend
+    - echo "Creating Kind cluster with Podman..."
+    - kind create cluster --name ci-test --image kindest/node:v1.29.0 --container-runtime podman || echo "Kind cluster creation failed"
+    - kind get clusters || echo "No clusters found"
+    - kind delete cluster --name ci-test || echo "Cleanup failed"
