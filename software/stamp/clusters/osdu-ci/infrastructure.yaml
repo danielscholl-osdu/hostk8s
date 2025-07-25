@@ -9,7 +9,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: osdu-ci-self
-  path: "./infrastructure/osdu-ci"
+  path: "./software/stamp/sources"
   prune: true
   wait: true
   timeout: 5m
