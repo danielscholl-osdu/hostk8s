@@ -25,13 +25,24 @@ help: ## Show this help message
 
 install: ## Install required dependencies (kind, kubectl, helm, flux)
 	@echo "🔧 Checking dependencies..."
-	@command -v brew >/dev/null 2>&1 || (echo "❌ Homebrew required on Mac" && exit 1)
-	@command -v kind >/dev/null 2>&1 || (echo "Installing kind..." && brew install kind)
-	@command -v kubectl >/dev/null 2>&1 || (echo "Installing kubectl..." && brew install kubectl)
-	@command -v helm >/dev/null 2>&1 || (echo "Installing helm..." && brew install helm)
-	@command -v flux >/dev/null 2>&1 || (echo "Installing flux..." && brew install fluxcd/tap/flux)
-	@command -v docker >/dev/null 2>&1 || (echo "❌ Install Docker Desktop from docker.com" && exit 1)
-	@echo "✅ All dependencies installed"
+	@if command -v brew >/dev/null 2>&1; then \
+		echo "Using Homebrew (macOS)..."; \
+		command -v kind >/dev/null 2>&1 || (echo "Installing kind..." && brew install kind); \
+		command -v kubectl >/dev/null 2>&1 || (echo "Installing kubectl..." && brew install kubectl); \
+		command -v helm >/dev/null 2>&1 || (echo "Installing helm..." && brew install helm); \
+		command -v flux >/dev/null 2>&1 || (echo "Installing flux..." && brew install fluxcd/tap/flux); \
+	elif command -v apk >/dev/null 2>&1; then \
+		echo "CI environment detected - dependencies should be pre-installed"; \
+		command -v kind >/dev/null 2>&1 || (echo "❌ kind not found" && exit 1); \
+		command -v kubectl >/dev/null 2>&1 || (echo "❌ kubectl not found" && exit 1); \
+		command -v helm >/dev/null 2>&1 || (echo "❌ helm not found" && exit 1); \
+		command -v flux >/dev/null 2>&1 || (echo "❌ flux not found" && exit 1); \
+	else \
+		echo "❌ Unsupported environment. Please install tools manually or use macOS with Homebrew."; \
+		exit 1; \
+	fi
+	@command -v docker >/dev/null 2>&1 || (echo "❌ Docker not available" && exit 1)
+	@echo "✅ All dependencies verified"
 
 clean: ## Complete cleanup (destroy cluster and data)
 	@echo "🧹 Cleaning up everything..."

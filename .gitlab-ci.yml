@@ -62,7 +62,7 @@ test-gitops-experience:
       EOF
     
     - echo "Tools ready - testing OSDU-CI workflow"
-    - kind version && kubectl version --client --short && docker version
+    - kind version && kubectl version --client && docker version
     
   script:
     - echo "Step 1 - Creating GitOps-enabled cluster with CI config"
