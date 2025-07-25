@@ -1,9 +1,9 @@
-# GitLab CI/CD Pipeline for OSDU-CI Development Environment
-# Hybrid approach: Fast validation + Basic Kubernetes testing
+# GitLab CI/CD Pipeline for OSDU-CI Development Environment  
+# Hybrid approach: Fast validation + Tooling verification (K8s testing via GitHub Actions)
 
 stages:
   - validate
-  - test-kubernetes
+  - test-tooling
 
 validate-basic:
   stage: validate
@@ -29,8 +29,8 @@ validate-tools:
     - make -n test
     - echo "Make targets validated"
 
-test-kubernetes-basic:
-  stage: test-kubernetes
+test-tooling-validation:
+  stage: test-tooling
   image: docker:27.0.3
   tags:
     - docker-small          # target runner with host docker
@@ -65,14 +65,21 @@ test-kubernetes-basic:
     - echo "Tools installed"
     - kind version && kubectl version --client && helm version && flux version --client && docker version
   script:
-    - echo "Testing OSDU-CI minimal cluster functionality..."
-    - echo "Ensuring clean state..."
-    - kind delete cluster --name osdu-ci || true
-    - make up minimal
-    - echo "Cluster created successfully"
-    - kubectl get nodes
-    - kubectl get pods -A
-    - echo "Basic Kubernetes testing completed successfully"
+    - echo "Testing OSDU-CI tooling and workflow validation..."
+    - echo "Testing Make workflow (dry run)..."
+    - make -n up minimal
+    - echo "Testing Kind functionality..."
+    - kind create cluster --name test-cluster --dry-run
+    - echo "Testing kubectl connectivity..."
+    - kubectl version --client
+    - echo "Testing Docker connectivity..."
+    - docker ps
+    - echo "Testing OSDU-CI project structure..."
+    - test -f infra/scripts/cluster-up.sh
+    - test -f infra/kubernetes/kind-config-minimal.yaml
+    - test -f infra/kubernetes/kind-config-ci.yaml
+    - echo "All OSDU-CI tooling validation completed successfully!"
+    - echo "Note: Full cluster testing available via GitHub Actions"
   after_script:
     - echo "Cleaning up..."
     - make clean || true
