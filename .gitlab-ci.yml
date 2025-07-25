@@ -4,21 +4,10 @@
 
 stages:
   - validate
+  - deploy
   - test
-  - report
 
-validate-structure:
-  stage: validate
-  image: mcr.microsoft.com/azurelinux/base/core:3.0
-  script:
-    - echo "Validating project structure..."
-    - test -f Makefile
-    - test -f README.md
-    - test -d infra/scripts
-    - test -d software
-    - echo "✅ Project structure validated"
-
-validate-makefile:
+make:
   stage: validate
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   before_script:
@@ -30,7 +19,7 @@ validate-makefile:
     - make -n test
     - echo "✅ Makefile syntax validated"
 
-validate-yaml:
+yaml:
   stage: validate
   image: mcr.microsoft.com/azurelinux/base/python:3.12
   before_script:
@@ -46,8 +35,8 @@ validate-yaml:
     - find infra -name "*.yaml" -o -name "*.yml" | xargs yamllint -c .yamllint.yaml
     - echo "✅ All YAML files validated with relaxed rules"
 
-github-sync:
-  stage: test
+github:
+  stage: deploy
   image: mcr.microsoft.com/azurelinux/base/python:3.12
   variables:
     GIT_STRATEGY: clone
@@ -63,7 +52,7 @@ github-sync:
   when: on_success
   allow_failure: false
 
-github-gitops-test:
+execute:
   stage: test
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
@@ -145,10 +134,10 @@ github-gitops-test:
       \"context\": \"github-actions/gitops-testing\"}" || echo "Failed to set pending status (non-blocking)"
   when: on_success
   allow_failure: true
-  needs: ["github-sync"]
+  needs: ["github"]
 
-github-status-info:
-  stage: report
+status:
+  stage: test
   image: mcr.microsoft.com/azurelinux/base/core:3.0
   variables:
     GIT_STRATEGY: clone
@@ -215,4 +204,4 @@ github-status-info:
       echo "   • Cost optimization for documentation changes"
   when: on_success
   allow_failure: false
-  needs: ["github-gitops-test"]
+  needs: ["execute"]

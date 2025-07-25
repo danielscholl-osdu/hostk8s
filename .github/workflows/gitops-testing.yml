@@ -1,4 +1,6 @@
-name: GitOps Reconciliation Testing
+name: OSDU-CI Cluster Testing
+
+run-name: ${{ github.event_name == 'repository_dispatch' && format('GitLab Pipeline {0} - Cluster Testing', github.event.client_payload.gitlab_pipeline_id) || 'OSDU-CI Cluster Testing' }}
 
 on:
   repository_dispatch:
@@ -16,7 +18,7 @@ on:
           - gitops
 
 jobs:
-  test-flux-minimal:
+  cluster-minimal:
     runs-on: ubuntu-latest
     timeout-minutes: 8
     outputs:
@@ -97,7 +99,7 @@ jobs:
             exit 1
           fi
 
-  test-flux-full-gitops:
+  cluster-default:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     if: ${{ github.event.inputs.test_scenario != 'minimal' }}
@@ -283,9 +285,9 @@ jobs:
             echo "✅ Complete GitOps reconciliation successful"
           fi
 
-  report-gitops-results:
+  notify:
     runs-on: ubuntu-latest
-    needs: [test-flux-minimal, test-flux-full-gitops]
+    needs: [cluster-minimal, cluster-default]
     if: always()
 
     steps:
@@ -295,18 +297,18 @@ jobs:
           echo "========================================"
           echo ""
 
-          echo "🔹 Minimal Flux Test: ${{ needs.test-flux-minimal.result }}"
-          echo "   Status: ${{ needs.test-flux-minimal.outputs.flux_status }}"
+          echo "🔹 Minimal Cluster Test: ${{ needs.cluster-minimal.result }}"
+          echo "   Status: ${{ needs.cluster-minimal.outputs.flux_status }}"
           echo ""
 
-          echo "🔹 Full GitOps Test: ${{ needs.test-flux-full-gitops.result }}"
-          echo "   Status: ${{ needs.test-flux-full-gitops.outputs.gitops_status }}"
-          echo "   Summary: ${{ needs.test-flux-full-gitops.outputs.reconciliation_summary }}"
+          echo "🔹 Default Cluster Test: ${{ needs.cluster-default.result }}"
+          echo "   Status: ${{ needs.cluster-default.outputs.gitops_status }}"
+          echo "   Summary: ${{ needs.cluster-default.outputs.reconciliation_summary }}"
           echo ""
 
           # Overall status
           overall_status="success"
-          if [ "${{ needs.test-flux-minimal.result }}" != "success" ] || [ "${{ needs.test-flux-full-gitops.result }}" != "success" ]; then
+          if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
             overall_status="failed"
           fi
 
@@ -340,7 +342,7 @@ jobs:
         run: |
           # Overall status
           overall_status="success"
-          if [ "${{ needs.test-flux-minimal.result }}" != "success" ] || [ "${{ needs.test-flux-full-gitops.result }}" != "success" ]; then
+          if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
             overall_status="failed"
           fi
 
