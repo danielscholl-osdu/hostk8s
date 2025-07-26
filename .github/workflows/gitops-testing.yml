@@ -214,7 +214,7 @@ jobs:
 
           # Skip static sources and create PR-specific source with highest priority
           echo "🔗 Creating PR-specific GitRepository source (overriding any static sources)..."
-          flux create source git osdu-ci-pr-test \
+          flux create source git osdu-ci-self \
             --url="$GITOPS_REPO" \
             --branch="$GITOPS_BRANCH" \
             --interval=30s \
@@ -227,7 +227,7 @@ jobs:
 
           # Wait for the PR-specific source to be ready
           echo "⏳ Waiting for PR GitRepository source to be ready..."
-          kubectl wait --for=condition=ready gitrepository/osdu-ci-pr-test -n flux-system --timeout=120s
+          kubectl wait --for=condition=ready gitrepository/osdu-ci-self -n flux-system --timeout=120s
 
           # Verify what we're actually testing
           echo "🔍 Verifying GitOps sources:"
@@ -251,7 +251,7 @@ jobs:
           sleep 60
 
           echo "🔄 Triggering reconciliations with PR-specific source..."
-          flux reconcile source git osdu-ci-pr-test --timeout=120s || true
+          flux reconcile source git osdu-ci-self --timeout=120s || true
           flux reconcile source helm bitnami --timeout=120s || true
           flux reconcile source helm nginx-stable --timeout=120s || true
           flux reconcile source helm prometheus-community --timeout=120s || true
@@ -260,8 +260,8 @@ jobs:
           echo "📊 GitOps reconciliation status:"
           echo "================================"
 
-          echo "🎯 PR-Specific GitRepository Source Status:"
-          flux get sources git osdu-ci-pr-test -n flux-system || echo "PR-specific source not found"
+          echo "🎯 Branch-Specific GitRepository Source Status:"
+          flux get sources git osdu-ci-self -n flux-system || echo "Branch-specific source not found"
           echo ""
 
           echo "📋 All Git Sources (for comparison):"
@@ -280,16 +280,16 @@ jobs:
           flux get all
           echo ""
 
-          # Verify PR source is working
-          echo "🔍 PR Source Verification:"
-          if flux get sources git osdu-ci-pr-test -n flux-system | grep -q "True"; then
-            PR_REVISION=$(flux get sources git osdu-ci-pr-test -n flux-system -o yaml | grep revision | head -1 | awk '{print $2}')
-            echo "✅ PR-specific source is ready"
-            echo "   Revision: $PR_REVISION"
+          # Verify branch-specific source is working
+          echo "🔍 Branch Source Verification:"
+          if flux get sources git osdu-ci-self -n flux-system | grep -q "True"; then
+            BRANCH_REVISION=$(flux get sources git osdu-ci-self -n flux-system -o yaml | grep revision | head -1 | awk '{print $2}')
+            echo "✅ Branch-specific source is ready"
+            echo "   Revision: $BRANCH_REVISION"
             echo "   Repository: $GITOPS_REPO"
             echo "   Branch: $GITOPS_BRANCH"
           else
-            echo "❌ PR-specific source is not ready"
+            echo "❌ Branch-specific source is not ready"
           fi
           echo ""
 
@@ -298,9 +298,9 @@ jobs:
           summary=""
 
           # Check PR-specific source first
-          if ! flux get sources git osdu-ci-pr-test -n flux-system | grep -q "True"; then
+          if ! flux get sources git osdu-ci-self -n flux-system | grep -q "True"; then
             reconciliation_status="failed"
-            summary="PR-specific GitRepository source (osdu-ci-pr-test) failed to reconcile"
+            summary="Branch-specific GitRepository source (osdu-ci-self) failed to reconcile"
           # Check other Git sources for failures
           elif flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
