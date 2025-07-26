@@ -75,14 +75,18 @@ execute:
 
       # Check for files that require full testing
       for file in $CHANGED_FILES; do
+        # Check if file is documentation-only
+        if [[ "$file" == docs/* ]] || [[ "$file" == "README.md" ]] || [[ "$file" == "CLAUDE.md" ]] || [[ "$file" == *.md ]]; then
+          echo "📖 Documentation change: $file (skip full test)"
+          continue
+        fi
+
+        # Check for core files that require full testing
         case "$file" in
           infra/*|software/*|Makefile|.github/*|.gitlab-ci.yml|.yamllint.yaml|.pre-commit-config.yaml)
             echo "🎯 Found core change: $file"
             NEEDS_FULL_TEST="true"
             break
-            ;;
-          docs/*|README.md|CLAUDE.md|*.md)
-            echo "📖 Documentation change: $file (skip full test)"
             ;;
           *)
             echo "🔧 Other change: $file"
