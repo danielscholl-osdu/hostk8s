@@ -121,6 +121,18 @@ jobs:
           flux get all
           echo ""
 
+          echo "🎯 Test Scope: GitRepository Source Validation Only"
+          echo "==============================================="
+          echo "✅ Flux system installation: TESTED"
+          echo "✅ GitRepository source creation: TESTED"
+          echo "✅ Source reconciliation: TESTED"
+          echo "❌ Kustomizations: NOT APPLIED (intentional - this is a minimal smoke test)"
+          echo "❌ Application deployments: NOT TESTED"
+          echo ""
+          echo "📝 This test validates basic Flux infrastructure without GitOps applications."
+          echo "   For full GitOps testing with Kustomizations, see cluster-default job."
+          echo ""
+
           # Check for reconciliation success
           if flux get sources git | grep -q "True"; then
             echo "status=success" >> $GITHUB_OUTPUT
@@ -256,18 +268,47 @@ jobs:
           echo "🔍 Verifying GitOps sources:"
           flux get sources git
 
+          echo "🎯 GitOps Configuration Application Scope"
+          echo "========================================="
+          echo "✅ Flux system installation: COMPLETED"
+          echo "✅ GitRepository source (osdu-ci-self): COMPLETED"
+          echo "⏳ Kustomizations: APPLYING NOW..."
+          echo "⏳ Application deployments: APPLYING NOW..."
+          echo ""
+
           # Apply GitOps application configurations
           echo "📦 Applying GitOps application configurations..."
           if [ -d "software/stamp/apps" ]; then
+            echo "🔍 Files to be applied from software/stamp/apps:"
+            find software/stamp/apps -name "*.yaml" ! -name "kustomization.yaml" -exec echo "   - {}" \;
+            echo ""
             # Apply only the actual Kubernetes resources, not kustomization.yaml
-            find software/stamp/apps -name "*.yaml" ! -name "kustomization.yaml" -exec kubectl apply -f {} \; || echo "No apps directory found, skipping"
+            find software/stamp/apps -name "*.yaml" ! -name "kustomization.yaml" -exec echo "📄 Applying: {}" \; -exec kubectl apply -f {} \; || echo "No apps directory found, skipping"
+          else
+            echo "📂 No software/stamp/apps directory found, skipping application configs"
           fi
+          echo ""
 
           # Apply cluster-specific configurations
           echo "🎯 Applying cluster-specific configurations..."
           if [ -d "software/stamp/clusters/osdu-ci" ]; then
-            kubectl apply -f software/stamp/clusters/osdu-ci/ || echo "No cluster-specific configs found, skipping"
+            echo "🔍 Files to be applied from software/stamp/clusters/osdu-ci:"
+            find software/stamp/clusters/osdu-ci -name "*.yaml" -exec echo "   - {}" \;
+            echo ""
+            find software/stamp/clusters/osdu-ci -name "*.yaml" -exec echo "📄 Applying: {}" \; -exec kubectl apply -f {} \; || echo "No cluster-specific configs found, skipping"
+          else
+            echo "📂 No software/stamp/clusters/osdu-ci directory found, skipping cluster configs"
           fi
+          echo ""
+
+          echo "📊 Applied Kustomizations Summary:"
+          echo "================================"
+          kubectl get kustomizations -A --no-headers 2>/dev/null | while read ns name rest; do
+            echo "✅ Kustomization: $name (namespace: $ns)"
+            echo "   GitRepository source: $(kubectl get kustomization $name -n $ns -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo 'unknown')"
+            echo "   Path: $(kubectl get kustomization $name -n $ns -o jsonpath='{.spec.path}' 2>/dev/null || echo 'unknown')"
+            echo ""
+          done || echo "❌ No Kustomizations found after application"
 
           # Wait for reconciliations
           echo "⏳ Waiting for source reconciliations..."
