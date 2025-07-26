@@ -366,19 +366,10 @@ jobs:
           fi
           echo ""
 
-          # Overall status
+          # Overall status - simple logic that was working before
           overall_status="success"
-
-          # For main branch: check both jobs
-          if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-            if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
-              overall_status="failed"
-            fi
-          # For PR branches: only check minimal (default is skipped)
-          else
-            if [ "${{ needs.cluster-minimal.result }}" != "success" ]; then
-              overall_status="failed"
-            fi
+          if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
+            overall_status="failed"
           fi
 
           if [ "$overall_status" = "success" ]; then
@@ -409,32 +400,23 @@ jobs:
       - name: Report status back to GitLab
         if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
         run: |
-          # Overall status - both jobs must pass for all branches
+          # Overall status - simple logic that was working before
           overall_status="success"
           if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
             overall_status="failed"
           fi
 
-          # Prepare status message based on branch and result
+          # Prepare status message - simple version that was working
           if [ "$overall_status" = "success" ]; then
             state="success"
-            if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-              description="GitOps tests passed: Standard validation (minimal + default clusters)"
-            else
-              description="GitOps tests passed: PR validation with branch-specific GitOps - Branch: ${{ github.event.client_payload.gitlab_ref }}"
-            fi
+            description="GitOps reconciliation tests passed: Flux healthy, sources reconciled"
           else
             state="failed"
-            if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
-              description="GitOps tests failed: Check standard validation logs for details"
-            else
-              description="GitOps tests failed: Check PR validation logs - Branch: ${{ github.event.client_payload.gitlab_ref }}"
-            fi
+            description="GitOps reconciliation tests failed: Check logs for details"
           fi
 
           echo "📤 Reporting status back to GitLab..."
           echo "Commit: ${{ github.event.client_payload.gitlab_commit_sha }}"
-          echo "Branch: ${{ github.event.client_payload.gitlab_ref }}"
           echo "Status: $state"
           echo "Description: $description"
 
