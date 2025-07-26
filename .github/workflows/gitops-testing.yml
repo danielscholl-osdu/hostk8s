@@ -98,6 +98,29 @@ jobs:
           flux get sources git
           echo ""
 
+          echo "📊 Enhanced GitOps reconciliation status:"
+          echo "================================"
+
+          echo "🎯 GitRepository Source Details:"
+          flux get sources git osdu-ci-source -n flux-system || echo "GitRepository source not found"
+          echo ""
+
+          echo "📋 All Git Sources:"
+          flux get sources git -A
+          echo ""
+
+          echo "📋 Helm Sources:"
+          flux get sources helm -A || echo "No Helm sources configured"
+          echo ""
+
+          echo "📋 Kustomizations:"
+          flux get kustomizations -A || echo "No Kustomizations configured"
+          echo ""
+
+          echo "📋 Complete GitOps Status:"
+          flux get all
+          echo ""
+
           # Check for reconciliation success
           if flux get sources git | grep -q "True"; then
             echo "status=success" >> $GITHUB_OUTPUT
