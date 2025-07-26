@@ -17,6 +17,10 @@ log() {
     echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"
 }
 
+log_pr_test() {
+    echo -e "${GREEN}[$(date +'%H:%M:%S')] PR-WORKFLOW-TEST:${NC} $*"
+}
+
 warn() {
     echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $*"
 }
@@ -93,9 +97,22 @@ else
     fi
 fi
 
-# Test 4: Check sample deployment (simple mode only)
+# Test 4: PR workflow validation test
+log_pr_test "✓ PR Workflow Test: Validating hybrid CI/CD integration..."
+if [ -n "${CI_COMMIT_REF_NAME:-}" ]; then
+    log_pr_test "Branch: ${CI_COMMIT_REF_NAME}"
+    if [ "${CI_COMMIT_REF_NAME}" != "main" ]; then
+        log_pr_test "PR branch detected - This should trigger minimal GitHub Actions testing"
+    else
+        log_pr_test "Main branch detected - This should trigger full GitHub Actions testing"
+    fi
+else
+    log_pr_test "Local validation - CI variables not available"
+fi
+
+# Test 5: Check sample deployment (simple mode only)
 if [ "$SIMPLE_MODE" = true ]; then
-    log "✓ Test 4: Checking sample application..."
+    log "✓ Test 5: Checking sample application..."
     if kubectl get deployment sample-app >/dev/null 2>&1; then
         ready_replicas=$(kubectl get deployment sample-app -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
         desired_replicas=$(kubectl get deployment sample-app -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "0")
@@ -107,7 +124,7 @@ if [ "$SIMPLE_MODE" = true ]; then
     else
         log "ℹ️ No sample application deployed"
     fi
-    
+
     log "✅ Cluster validation completed successfully!"
     log ""
     log "Access your applications:"
