@@ -109,22 +109,30 @@ kubectl run debug --image=busybox --rm -it --restart=Never -- sh
 
 ## CI/CD Integration
 
-OSDU-CI uses a **hybrid testing strategy** for optimal development velocity:
+OSDU-CI uses a **branch-aware hybrid testing strategy** for optimal development velocity:
 
-### 🚀 Fast Track (GitLab CI)
+### 🚀 Fast Track (GitLab CI) - Always Runs
 - **Duration**: 2-3 minutes
-- **Purpose**: Quick feedback during development
-- **Tests**: Project structure, Makefile interface, tool installation
+- **Purpose**: Quick feedback and GitHub sync
+- **Tests**: Project structure, Makefile interface, YAML validation
+- **Smart**: Only triggers GitHub Actions for core file changes
 
-### 🔍 Comprehensive Track (GitHub Actions)
-- **Duration**: 5-10 minutes
-- **Purpose**: Full Kubernetes and GitOps validation
-- **Tests**: Complete cluster creation, application deployment, connectivity
+### 🔍 Comprehensive Track (GitHub Actions) - Branch Aware
 
-### How it works:
-1. Push code → GitLab CI runs fast validation
-2. On success → Automatically triggers GitHub Actions
-3. GitHub Actions runs comprehensive Kubernetes testing
+#### PR Branches (Fast Validation)
+- **Duration**: ~5 minutes
+- **Focus**: cluster-minimal only (Flux + GitRepository validation)
+- **Purpose**: Quick PR feedback without full GitOps overhead
+
+#### Main Branch (Full Validation)
+- **Duration**: ~8-10 minutes
+- **Focus**: cluster-minimal + cluster-default (full GitOps testing)
+- **Purpose**: Complete validation with Kustomizations and applications
+
+### Enhanced Logging
+Both testing tracks now include detailed logging to show exactly what's being tested:
+- **cluster-minimal**: Clearly states "GitRepository source validation only"
+- **cluster-default**: Shows Kustomization application and GitOps reconciliation details
 
 See [docs/HYBRID-CI.md](docs/HYBRID-CI.md) for detailed setup and configuration.
 
@@ -157,8 +165,26 @@ kubectl get pods -A
 
 ---
 
-## PR Workflow Testing
+## Advanced Features
 
-This repository includes a comprehensive hybrid CI/CD pipeline that intelligently handles:
-- **PR branches**: Fast validation with minimal cluster testing
-- **Main branch**: Full validation with comprehensive GitOps testing
+### Branch-Aware Testing
+- **PR branches**: Fast GitRepository source validation (~5 min)
+- **Main branch**: Full GitOps testing with Kustomizations (~8-10 min)
+- **Smart triggering**: Only tests when core files change
+- **Enhanced logging**: Clear visibility into what's being tested
+
+### GitOps Integration
+```bash
+# Enable GitOps and test full workflow
+FLUX_ENABLED=true make up
+kubectl apply -f software/stamp/sources/
+kubectl apply -f software/stamp/clusters/osdu-ci/
+flux get all
+```
+
+### Multi-App Deployment
+```bash
+make deploy app1  # Basic NodePort app
+make deploy app2  # Advanced app with MetalLB + Ingress
+make deploy app3  # Multi-service microservices demo
+```

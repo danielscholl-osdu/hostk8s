@@ -53,7 +53,7 @@ OSDU-CI provides a **host-mode Kubernetes development environment** using Kind (
 ### Host Tools Layer
 **Required Dependencies:**
 - **Kind**: Cluster creation and management
-- **kubectl**: Kubernetes API interaction  
+- **kubectl**: Kubernetes API interaction
 - **Helm**: Package management
 - **Docker**: Container runtime (Docker Desktop)
 
@@ -219,16 +219,32 @@ Kind Network (172.18.0.0/16)
 
 ## Integration Points
 
-### CI/CD Integration
+### Hybrid CI/CD Integration
+
+**GitLab CI (Fast Track)**
 ```yaml
-# GitHub Actions example
-- name: Test with Kind
-  run: |
-    make install
-    make up
-    make test
-    make clean
+# GitLab CI pipeline
+stages:
+  - validate    # YAML, Makefile validation (2-3 min)
+  - deploy      # GitHub sync and branch management
+  - test        # Smart GitHub Actions triggering
 ```
+
+**GitHub Actions (Comprehensive Track)**
+```yaml
+# Branch-aware cluster testing
+strategy:
+  matrix:
+    cluster_type: [minimal, default]
+jobs:
+  cluster-minimal:    # Always runs (GitRepository validation)
+  cluster-default:    # Main branch only (full GitOps)
+```
+
+**Integration Flow**
+1. **GitLab CI**: Fast validation + GitHub sync
+2. **GitHub Actions**: Branch-aware comprehensive testing
+3. **Status Reporting**: Results reported back to GitLab
 
 ### IDE Integration
 ```bash
@@ -270,6 +286,10 @@ make restart      # Reset for iteration
 - ✅ **Security Improvements**: Environment variable exposure protection
 - ✅ **Consolidated Scripts**: Flattened directory structure for better maintainability
 - ✅ **Flux GitOps Integration**: Complete GitOps workflow (flux CLI via `make install`)
+- ✅ **Hybrid CI/CD Pipeline**: Branch-aware testing with GitLab CI + GitHub Actions
+- ✅ **Enhanced Logging**: Detailed GitOps reconciliation status and debugging
+- ✅ **Smart Testing**: PR branches get fast validation, main branch gets full testing
+- ✅ **Status Reporting**: GitHub Actions reports comprehensive results back to GitLab
 
 ## Future Considerations
 
