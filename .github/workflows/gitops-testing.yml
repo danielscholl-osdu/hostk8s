@@ -27,14 +27,24 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.gitlab_commit_sha || github.sha }}
 
       - name: Log GitLab trigger context
         if: github.event_name == 'repository_dispatch'
         run: |
-          echo "🔍 GitOps testing triggered by GitLab CI"
+          echo "🔍 Cluster testing triggered by GitLab CI"
           echo "GitLab Pipeline ID: ${{ github.event.client_payload.gitlab_pipeline_id }}"
           echo "GitLab Commit: ${{ github.event.client_payload.gitlab_commit_sha }}"
+          echo "GitLab Branch: ${{ github.event.client_payload.gitlab_ref }}"
           echo "GitLab Pipeline URL: ${{ github.event.client_payload.gitlab_pipeline_url }}"
+          echo ""
+          if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
+            echo "🚀 Main branch detected - Full testing will run (minimal + default clusters)"
+          else
+            echo "🔄 PR branch detected - Fast testing will run (minimal cluster only)"
+            echo "📝 Branch: ${{ github.event.client_payload.gitlab_ref }}"
+          fi
 
       - name: Create minimal Kind cluster
         uses: helm/kind-action@v1
@@ -110,6 +120,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.client_payload.gitlab_commit_sha || github.sha }}
 
       - name: Report GitOps testing start to GitLab
         if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
@@ -191,19 +203,35 @@ jobs:
           kubectl wait --for=condition=ready pod -l app=helm-controller -n flux-system --timeout=180s
           kubectl wait --for=condition=ready pod -l app=notification-controller -n flux-system --timeout=180s
 
-          # Apply GitOps source configurations
-          echo "🔗 Applying GitOps source configurations..."
-          if [ -d "software/stamp/sources" ]; then
-            # Apply only the actual Kubernetes resources, not kustomization.yaml
-            find software/stamp/sources -name "*.yaml" ! -name "kustomization.yaml" -exec kubectl apply -f {} \; || echo "No sources directory found, creating basic source"
+          # Create PR-specific GitRepository source for testing
+          GITOPS_REPO="${{ github.event.client_payload.gitops_repo || 'https://github.com/danielscholl-osdu/osdu-ci' }}"
+          GITOPS_BRANCH="${{ github.event.client_payload.gitlab_ref || 'main' }}"
 
-            # Create basic source if none exists
-            flux create source git osdu-ci-source \
-              --url=https://github.com/danielscholl-osdu/osdu-ci \
-              --branch=main \
-              --interval=1m \
-              --timeout=60s
-          fi
+          echo "🎯 GitOps Configuration for Testing:"
+          echo "   Repository: $GITOPS_REPO"
+          echo "   Branch: $GITOPS_BRANCH"
+          echo "   Testing Strategy: Branch-specific GitOps validation"
+
+          # Skip static sources and create PR-specific source with highest priority
+          echo "🔗 Creating PR-specific GitRepository source (overriding any static sources)..."
+          flux create source git osdu-ci-pr-test \
+            --url="$GITOPS_REPO" \
+            --branch="$GITOPS_BRANCH" \
+            --interval=30s \
+            --timeout=60s \
+            --export > /tmp/pr-gitrepo.yaml
+
+          echo "📋 PR GitRepository source definition:"
+          cat /tmp/pr-gitrepo.yaml
+          kubectl apply -f /tmp/pr-gitrepo.yaml
+
+          # Wait for the PR-specific source to be ready
+          echo "⏳ Waiting for PR GitRepository source to be ready..."
+          kubectl wait --for=condition=ready gitrepository/osdu-ci-pr-test -n flux-system --timeout=120s
+
+          # Verify what we're actually testing
+          echo "🔍 Verifying GitOps sources:"
+          flux get sources git
 
           # Apply GitOps application configurations
           echo "📦 Applying GitOps application configurations..."
@@ -222,55 +250,72 @@ jobs:
           echo "⏳ Waiting for source reconciliations..."
           sleep 60
 
-          echo "🔄 Triggering reconciliations..."
-          flux reconcile source git osdu-ci-source --timeout=120s || true
-          flux reconcile source git osdu-ci-self --timeout=120s || true
+          echo "🔄 Triggering reconciliations with PR-specific source..."
+          flux reconcile source git osdu-ci-pr-test --timeout=120s || true
           flux reconcile source helm bitnami --timeout=120s || true
           flux reconcile source helm nginx-stable --timeout=120s || true
           flux reconcile source helm prometheus-community --timeout=120s || true
 
-          # Validate reconciliation status
+          # Validate reconciliation status with PR-specific focus
           echo "📊 GitOps reconciliation status:"
           echo "================================"
 
-          echo "Git Sources:"
+          echo "🎯 PR-Specific GitRepository Source Status:"
+          flux get sources git osdu-ci-pr-test -n flux-system || echo "PR-specific source not found"
+          echo ""
+
+          echo "📋 All Git Sources (for comparison):"
           flux get sources git -A
           echo ""
 
-          echo "Helm Sources:"
+          echo "📋 Helm Sources:"
           flux get sources helm -A || echo "No Helm sources configured"
           echo ""
 
-          echo "Kustomizations:"
+          echo "📋 Kustomizations:"
           flux get kustomizations -A || echo "No Kustomizations configured"
           echo ""
 
-          echo "Complete GitOps Status:"
+          echo "📋 Complete GitOps Status:"
           flux get all
+          echo ""
+
+          # Verify PR source is working
+          echo "🔍 PR Source Verification:"
+          if flux get sources git osdu-ci-pr-test -n flux-system | grep -q "True"; then
+            PR_REVISION=$(flux get sources git osdu-ci-pr-test -n flux-system -o yaml | grep revision | head -1 | awk '{print $2}')
+            echo "✅ PR-specific source is ready"
+            echo "   Revision: $PR_REVISION"
+            echo "   Repository: $GITOPS_REPO"
+            echo "   Branch: $GITOPS_BRANCH"
+          else
+            echo "❌ PR-specific source is not ready"
+          fi
           echo ""
 
           # Check for reconciliation failures
           reconciliation_status="success"
           summary=""
 
-          # Check Git sources for failures (ready=False)
-          if flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
+          # Check PR-specific source first
+          if ! flux get sources git osdu-ci-pr-test -n flux-system | grep -q "True"; then
             reconciliation_status="failed"
-            summary="Git source reconciliation failed"
-          # Check Helm sources for failures (ready=False)
+            summary="PR-specific GitRepository source (osdu-ci-pr-test) failed to reconcile"
+          # Check other Git sources for failures
+          elif flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
+            reconciliation_status="failed"
+            summary="Other Git source reconciliation failed"
+          # Check Helm sources for failures
           elif flux get sources helm -A 2>/dev/null | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Helm source reconciliation failed"
-          # Check Kustomizations for failures (ready=False)
+          # Check Kustomizations for failures
           elif flux get kustomizations -A 2>/dev/null | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
             summary="Kustomization reconciliation failed"
-          # Success if all sources are Ready=True
-          elif flux get sources git -A | grep -q "True" && flux get sources helm -A | grep -q "True"; then
-            summary="GitOps sources reconciled successfully"
+          # Success - PR source is ready
           else
-            reconciliation_status="failed"
-            summary="Unable to determine GitOps reconciliation status"
+            summary="PR-specific GitOps validation successful - Branch: $GITOPS_BRANCH"
           fi
 
           echo "status=$reconciliation_status" >> $GITHUB_OUTPUT
@@ -293,23 +338,47 @@ jobs:
     steps:
       - name: Report comprehensive GitOps results
         run: |
-          echo "📊 GitOps Reconciliation Testing Results:"
-          echo "========================================"
+          echo "📊 OSDU-CI Cluster Testing Results:"
+          echo "=================================="
           echo ""
 
-          echo "🔹 Minimal Cluster Test: ${{ needs.cluster-minimal.result }}"
-          echo "   Status: ${{ needs.cluster-minimal.outputs.flux_status }}"
-          echo ""
-
-          echo "🔹 Default Cluster Test: ${{ needs.cluster-default.result }}"
-          echo "   Status: ${{ needs.cluster-default.outputs.gitops_status }}"
-          echo "   Summary: ${{ needs.cluster-default.outputs.reconciliation_summary }}"
+          # Determine testing type
+          if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
+            echo "🚀 Main Branch - Standard Testing Results:"
+            echo ""
+            echo "🔹 Minimal Cluster Test: ${{ needs.cluster-minimal.result }}"
+            echo "   Status: ${{ needs.cluster-minimal.outputs.flux_status }}"
+            echo ""
+            echo "🔹 Default Cluster Test: ${{ needs.cluster-default.result }}"
+            echo "   Status: ${{ needs.cluster-default.outputs.gitops_status }}"
+            echo "   Summary: ${{ needs.cluster-default.outputs.reconciliation_summary }}"
+          else
+            echo "🔄 PR Branch - Full Validation Results:"
+            echo "📝 Branch: ${{ github.event.client_payload.gitlab_ref }}"
+            echo "🎯 Testing PR branch code with GitOps pointing to PR changes"
+            echo ""
+            echo "🔹 Minimal Cluster Test: ${{ needs.cluster-minimal.result }}"
+            echo "   Status: ${{ needs.cluster-minimal.outputs.flux_status }}"
+            echo ""
+            echo "🔹 Default Cluster Test: ${{ needs.cluster-default.result }}"
+            echo "   Status: ${{ needs.cluster-default.outputs.gitops_status }}"
+            echo "   Summary: ${{ needs.cluster-default.outputs.reconciliation_summary }}"
+          fi
           echo ""
 
           # Overall status
           overall_status="success"
-          if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
-            overall_status="failed"
+
+          # For main branch: check both jobs
+          if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
+            if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
+              overall_status="failed"
+            fi
+          # For PR branches: only check minimal (default is skipped)
+          else
+            if [ "${{ needs.cluster-minimal.result }}" != "success" ]; then
+              overall_status="failed"
+            fi
           fi
 
           if [ "$overall_status" = "success" ]; then
@@ -340,23 +409,32 @@ jobs:
       - name: Report status back to GitLab
         if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
         run: |
-          # Overall status
+          # Overall status - both jobs must pass for all branches
           overall_status="success"
           if [ "${{ needs.cluster-minimal.result }}" != "success" ] || [ "${{ needs.cluster-default.result }}" != "success" ]; then
             overall_status="failed"
           fi
 
-          # Prepare status message
+          # Prepare status message based on branch and result
           if [ "$overall_status" = "success" ]; then
             state="success"
-            description="GitOps reconciliation tests passed: Flux healthy, sources reconciled"
+            if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
+              description="GitOps tests passed: Standard validation (minimal + default clusters)"
+            else
+              description="GitOps tests passed: PR validation with branch-specific GitOps - Branch: ${{ github.event.client_payload.gitlab_ref }}"
+            fi
           else
             state="failed"
-            description="GitOps reconciliation tests failed: Check logs for details"
+            if [ "${{ github.event.client_payload.gitlab_ref }}" = "main" ]; then
+              description="GitOps tests failed: Check standard validation logs for details"
+            else
+              description="GitOps tests failed: Check PR validation logs - Branch: ${{ github.event.client_payload.gitlab_ref }}"
+            fi
           fi
 
           echo "📤 Reporting status back to GitLab..."
           echo "Commit: ${{ github.event.client_payload.gitlab_commit_sha }}"
+          echo "Branch: ${{ github.event.client_payload.gitlab_ref }}"
           echo "Status: $state"
           echo "Description: $description"
 

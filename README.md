@@ -154,3 +154,11 @@ kubectl get pods -A
 * Try GitOps: `FLUX_ENABLED=true make up` then see [software/stamp/](software/stamp/)
 * Read [docs/architecture.md](docs/architecture.md) for detailed design
 * File issues or contribute via GitHub pull requests
+
+---
+
+## PR Workflow Testing
+
+This repository includes a comprehensive hybrid CI/CD pipeline that intelligently handles:
+- **PR branches**: Fast validation with minimal cluster testing
+- **Main branch**: Full validation with comprehensive GitOps testing

@@ -24,7 +24,19 @@ git remote add github https://$GITHUB_ENCODED_TOKEN@github.com/$GITHUB_REPO.git 
 
 git remote -v
 
-echo "Pushing to GitHub (force)..."
-git push github HEAD:main --force
+echo "Pushing to GitHub..."
+# Push current branch to same branch name on GitHub
+# For main branch: pushes to main
+# For PR branches: pushes to the PR branch name
+CURRENT_BRANCH=${CI_COMMIT_REF_NAME:-main}
+echo "Pushing branch: $CURRENT_BRANCH"
 
-echo "Code synced successfully to $GITHUB_REPO"
+if [ "$CURRENT_BRANCH" = "main" ]; then
+    echo "Main branch detected - pushing to main"
+    git push github HEAD:refs/heads/main --force
+else
+    echo "PR branch detected - pushing to branch: $CURRENT_BRANCH"
+    git push github HEAD:refs/heads/$CURRENT_BRANCH --force
+fi
+
+echo "Code synced successfully to $GITHUB_REPO (branch: $CURRENT_BRANCH)"
