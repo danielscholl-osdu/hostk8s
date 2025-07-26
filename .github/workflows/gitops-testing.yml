@@ -392,10 +392,8 @@ jobs:
             echo "🔗 Original GitLab Pipeline: ${{ github.event.client_payload.gitlab_pipeline_url }}"
           fi
 
-          # Set exit code for GitLab feedback
-          if [ "$overall_status" = "failed" ]; then
-            exit 1
-          fi
+          # Don't exit here - need to report to GitLab first
+          echo "Overall status: $overall_status"
 
       - name: Report status back to GitLab
         if: github.event_name == 'repository_dispatch' && github.event.client_payload.gitlab_commit_sha
@@ -431,3 +429,9 @@ jobs:
               \"description\": \"$description\",
               \"context\": \"github-actions/cluster-testing\"
             }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
+
+          # Exit with failure code AFTER reporting to GitLab
+          if [ "$overall_status" = "failed" ]; then
+            echo "❌ Exiting with failure code after reporting to GitLab"
+            exit 1
+          fi
