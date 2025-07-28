@@ -97,13 +97,16 @@ kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.ku
 
 # Only create GitRepository and Kustomization if a stamp is specified
 if [ -n "$GITOPS_STAMP" ]; then
+    # Extract repository name from URL for better naming
+    REPO_NAME=$(basename "$GITOPS_REPO" .git)
+
     # Create a GitRepository source using configured repository
     log "Creating GitRepository source..."
     cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create GitRepository"
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: osdu-ci
+  name: $REPO_NAME-repo
   namespace: flux-system
 spec:
   interval: 1m
@@ -123,7 +126,7 @@ EOF
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: osdu-ci-stamp
+  name: stamp-$GITOPS_STAMP
   namespace: flux-system
 spec:
   interval: 5m
@@ -131,7 +134,7 @@ spec:
   prune: true
   sourceRef:
     kind: GitRepository
-    name: osdu-ci
+    name: $REPO_NAME-repo
 EOF
 else
     log "No stamp specified - Flux installed without GitOps configuration"
@@ -152,17 +155,14 @@ if [ -n "$GITOPS_STAMP" ]; then
     log "   Path: ./software/stamp/$GITOPS_STAMP"
     log ""
     log "🔧 Management commands:"
-    log "1. Check status: flux get all"
+    log "1. Check status: make status"
     log "2. Monitor logs: flux logs --follow"
-    log "3. Switch stamp: export GITOPS_STAMP=new-stamp && make restart"
+    log "3. Switch stamp: make restart <stamp-name>"
     log "4. View resources: kubectl get all --all-namespaces"
 else
     log "🔧 Flux installed - ready for GitOps configuration"
     log "Next steps:"
-    log "1. Configure stamp: export GITOPS_STAMP=sample && make restart"
-    log "2. Or use shortcut: make restart sample"
-    log "3. Check status: flux get all"
-    log "4. Monitor logs: flux logs --follow"
+    log "1. Configure stamp: make restart sample"
+    log "2. Check status: make status"
+    log "3. Monitor logs: flux logs --follow"
 fi
-log ""
-log "📖 Documentation: https://fluxcd.io/flux/get-started/"
