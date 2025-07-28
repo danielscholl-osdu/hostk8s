@@ -117,8 +117,8 @@ if [ -n "$GITOPS_STAMP" ]; then
     # Export variables for template substitution
     export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
-    # Define template directory path
-    TEMPLATE_DIR="software/stamp/$GITOPS_STAMP/flux-templates"
+    # Define shared template directory path
+    TEMPLATE_DIR="software/flux-templates"
 
     # Apply GitRepository template
     apply_flux_template "$TEMPLATE_DIR/gitrepository.yaml" "Creating GitRepository source..."
