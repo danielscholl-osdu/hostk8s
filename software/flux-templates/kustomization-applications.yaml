@@ -11,6 +11,4 @@ spec:
     kind: GitRepository
     name: ${REPO_NAME}-repo
   dependsOn:
-    - name: component-cert-manager
-    - name: component-cert-manager-certs
-    - name: component-registry
+    - name: stamp-${GITOPS_STAMP}-components

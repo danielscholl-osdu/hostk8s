@@ -1,12 +1,15 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: stamp-${GITOPS_STAMP}
+  name: stamp-${GITOPS_STAMP}-components
   namespace: flux-system
 spec:
   interval: 5m
-  path: "./software/stamp/${GITOPS_STAMP}"
-  prune: true
+  retryInterval: 1m
+  timeout: 5m
   sourceRef:
     kind: GitRepository
     name: ${REPO_NAME}-repo
+  path: ./software/stamp/${GITOPS_STAMP}/components
+  prune: true
+  wait: true
