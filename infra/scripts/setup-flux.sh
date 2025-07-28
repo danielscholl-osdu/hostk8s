@@ -51,12 +51,16 @@ detect_kubeconfig
 # Set GitOps repository defaults
 GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/osdu-ci"}
 GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
-GITOPS_STAMP=${GITOPS_STAMP:-"sample"}
+GITOPS_STAMP=${GITOPS_STAMP:-""}
 
 log "Setting up Flux GitOps..."
 log "GitOps Repository: $GITOPS_REPO"
 log "GitOps Branch: $GITOPS_BRANCH"
-log "GitOps Stamp: $GITOPS_STAMP"
+if [ -n "$GITOPS_STAMP" ]; then
+    log "GitOps Stamp: $GITOPS_STAMP"
+else
+    log "GitOps Stamp: Not configured (Flux only)"
+fi
 
 # Check if Flux is already installed
 if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace flux-system >/dev/null 2>&1; then
@@ -91,9 +95,11 @@ flux install \
 log "Waiting for Flux controllers to be ready..."
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
 
-# Create a GitRepository source using configured repository
-log "Creating GitRepository source..."
-cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create GitRepository"
+# Only create GitRepository and Kustomization if a stamp is specified
+if [ -n "$GITOPS_STAMP" ]; then
+    # Create a GitRepository source using configured repository
+    log "Creating GitRepository source..."
+    cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create GitRepository"
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
@@ -111,9 +117,9 @@ spec:
     !/software/stamp/
 EOF
 
-# Create a Kustomization for the specified stamp directory
-log "Creating Kustomization for stamp: $GITOPS_STAMP"
-cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create Kustomization"
+    # Create a Kustomization for the specified stamp directory
+    log "Creating Kustomization for stamp: $GITOPS_STAMP"
+    cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create Kustomization"
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -127,6 +133,10 @@ spec:
     kind: GitRepository
     name: osdu-ci
 EOF
+else
+    log "No stamp specified - Flux installed without GitOps configuration"
+    log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
+fi
 
 # Show Flux installation status
 log "Flux installation completed! Checking status..."
@@ -134,16 +144,25 @@ flux get all || log "WARNING: Could not get flux status"
 
 log "✅ Flux GitOps setup complete!"
 log ""
-log "🚀 Active Configuration:"
-log "   Repository: $GITOPS_REPO"
-log "   Branch: $GITOPS_BRANCH"
-log "   Stamp: $GITOPS_STAMP"
-log "   Path: ./software/stamp/$GITOPS_STAMP"
-log ""
-log "🔧 Management commands:"
-log "1. Check status: flux get all"
-log "2. Monitor logs: flux logs --follow"
-log "3. Switch stamp: export GITOPS_STAMP=new-stamp && make restart"
-log "4. View resources: kubectl get all --all-namespaces"
+if [ -n "$GITOPS_STAMP" ]; then
+    log "🚀 Active Configuration:"
+    log "   Repository: $GITOPS_REPO"
+    log "   Branch: $GITOPS_BRANCH"
+    log "   Stamp: $GITOPS_STAMP"
+    log "   Path: ./software/stamp/$GITOPS_STAMP"
+    log ""
+    log "🔧 Management commands:"
+    log "1. Check status: flux get all"
+    log "2. Monitor logs: flux logs --follow"
+    log "3. Switch stamp: export GITOPS_STAMP=new-stamp && make restart"
+    log "4. View resources: kubectl get all --all-namespaces"
+else
+    log "🔧 Flux installed - ready for GitOps configuration"
+    log "Next steps:"
+    log "1. Configure stamp: export GITOPS_STAMP=sample && make restart"
+    log "2. Or use shortcut: make restart sample"
+    log "3. Check status: flux get all"
+    log "4. Monitor logs: flux logs --follow"
+fi
 log ""
 log "📖 Documentation: https://fluxcd.io/flux/get-started/"

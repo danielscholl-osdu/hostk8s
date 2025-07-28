@@ -79,12 +79,20 @@ prepare: ## Setup development environment (pre-commit, yamllint, hooks)
 
 ##@ Cluster Operations
 
-up: install ## Start cluster with dependencies check (Usage: make up [minimal|simple|default])
+up: install ## Start cluster with dependencies check (Usage: make up [minimal|simple|default|sample])
 	@echo "🚀 Starting cluster..."
-	@if [ "$(filter-out up,$@)" ]; then \
-		KIND_CONFIG="$(filter-out up,$@)" ./infra/scripts/cluster-up.sh; \
-	elif [ -n "$(word 2,$(MAKECMDGOALS))" ]; then \
-		KIND_CONFIG="$(word 2,$(MAKECMDGOALS))" ./infra/scripts/cluster-up.sh; \
+	@# Determine if argument is a Kind config or GitOps stamp
+	@ARG="$(word 2,$(MAKECMDGOALS))"; \
+	if [ "$$ARG" = "sample" ] || [ "$$ARG" = "osdu-ci" ]; then \
+		echo "🎯 Detected GitOps stamp: $$ARG"; \
+		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-up.sh; \
+	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
+		echo "🎯 Detected Kind config: $$ARG"; \
+		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
+	elif [ -n "$$ARG" ]; then \
+		echo "❌ Unknown argument: $$ARG"; \
+		echo "Valid options: minimal, simple, default (Kind configs) | sample, osdu-ci (GitOps stamps)"; \
+		exit 1; \
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
 	fi
@@ -93,17 +101,28 @@ up: install ## Start cluster with dependencies check (Usage: make up [minimal|si
 	@echo ""
 	@kubectl get nodes
 
-# Handle config arguments as targets to avoid "No rule to make target" errors
-minimal simple default:
+# Handle arguments as targets to avoid "No rule to make target" errors
+minimal simple default sample osdu-ci:
 	@:
 
 down: ## Stop the Kind cluster (preserves data)
 	@echo "🛑 Stopping cluster..."
 	@./infra/scripts/cluster-down.sh
 
-restart: ## Quick cluster reset for development iteration
+restart: ## Quick cluster reset for development iteration (Usage: make restart [sample])
 	@echo "🔄 Restarting cluster..."
-	@./infra/scripts/cluster-restart.sh
+	@# Determine if argument is a GitOps stamp
+	@ARG="$(word 2,$(MAKECMDGOALS))"; \
+	if [ "$$ARG" = "sample" ] || [ "$$ARG" = "osdu-ci" ]; then \
+		echo "🎯 Restarting with GitOps stamp: $$ARG"; \
+		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-restart.sh; \
+	elif [ -n "$$ARG" ]; then \
+		echo "❌ Unknown stamp: $$ARG"; \
+		echo "Valid stamps: sample, osdu-ci"; \
+		exit 1; \
+	else \
+		./infra/scripts/cluster-restart.sh; \
+	fi
 
 clean: ## Complete cleanup (destroy cluster and data)
 	@echo "🧹 Cleaning up everything..."
