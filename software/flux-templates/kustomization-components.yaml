@@ -1,0 +1,81 @@
+######################
+## Cert-Manager Component
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-cert-manager
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: ${REPO_NAME}-repo
+  path: ./software/components/cert-manager
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cert-manager
+      namespace: cert-manager
+    - kind: Deployment
+      name: cert-manager-cainjector
+      namespace: cert-manager
+    - kind: Deployment
+      name: cert-manager-webhook
+      namespace: cert-manager
+
+######################
+## Cert-Manager Certificates Component
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-cert-manager-certs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-cert-manager
+  interval: 5m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: ${REPO_NAME}-repo
+  path: ./software/components/cert-manager-certs
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Certificate
+      name: ca-certificate
+      namespace: cert-manager
+
+######################
+## Registry Component
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-registry
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-cert-manager-certs
+  interval: 5m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: ${REPO_NAME}-repo
+  path: ./software/components/registry
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: registry
+      namespace: registry

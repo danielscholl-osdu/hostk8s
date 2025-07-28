@@ -123,8 +123,11 @@ if [ -n "$GITOPS_STAMP" ]; then
     # Apply GitRepository template
     apply_flux_template "$TEMPLATE_DIR/gitrepository.yaml" "Creating GitRepository source..."
 
-    # Apply stamp Kustomization template (will orchestrate components → applications)
-    apply_flux_template "$TEMPLATE_DIR/kustomization-stamp.yaml" "Creating stamp Kustomization for: $GITOPS_STAMP"
+    # Apply component Flux Kustomizations (cert-manager → cert-manager-certs → registry)
+    apply_flux_template "$TEMPLATE_DIR/kustomization-components.yaml" "Creating component Kustomizations..."
+
+    # Apply applications Kustomization (depends on all components)
+    apply_flux_template "$TEMPLATE_DIR/kustomization-applications.yaml" "Creating applications Kustomization for: $GITOPS_STAMP"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
