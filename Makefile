@@ -293,16 +293,12 @@ status: ## Show cluster health and running services
 
 ##@ Tools
 
-deploy: ## Deploy application (Usage: make deploy [sample/app1|sample/app2] or APP_DEPLOY=sample/app1)
+deploy: ## Deploy application (Usage: make deploy [sample/app1|sample/app2|sample/app3])
 	$(call check_cluster)
 	@echo "📦 Deploying application..."
 	@# Determine which app to deploy
-	@if [ "$(filter-out deploy,$@)" ]; then \
-		APP_NAME="$(filter-out deploy,$@)"; \
-	elif [ -n "$(word 2,$(MAKECMDGOALS))" ]; then \
+	@if [ -n "$(word 2,$(MAKECMDGOALS))" ]; then \
 		APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	elif [ -n "${APP_DEPLOY}" ]; then \
-		APP_NAME="${APP_DEPLOY}"; \
 	else \
 		APP_NAME="sample/app1"; \
 	fi; \
