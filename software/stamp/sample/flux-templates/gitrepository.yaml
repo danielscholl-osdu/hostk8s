@@ -11,5 +11,5 @@ spec:
   ignore: |
     # exclude all
     /*
-    # include only GitOps stamp directory
-    !/software/stamp/
+    # include GitOps directories (stamps and shared components)
+    !/software/

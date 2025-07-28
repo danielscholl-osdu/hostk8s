@@ -13,8 +13,8 @@ kind: Kustomization
 # Component resources - deployed in order
 resources:
   # Shared platform components (optional) - order matters for dependencies
-  - ../../../components/cert-manager
-  - ../../../components/registry
+  - software/stamp/sample/components/cert-manager
+  - software/stamp/sample/components/registry
 
   # Stamp-specific components
   - ingress-nginx/namespace.yaml
