@@ -4,10 +4,13 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Component resources - deployed in order
+# Component resources - deployed in order with dependencies
 resources:
-  # Shared platform components (optional) - order matters for dependencies
+  # Phase 1: Install cert-manager (CRDs, controllers)
   - ../../../components/cert-manager
+  # Phase 2: Apply cert-manager certificates (after CRDs ready)
+  - ../../../components/cert-manager/certs
+  # Phase 3: Registry with HTTPS certificates
   - ../../../components/registry
 
   # Stamp-specific components
