@@ -123,16 +123,8 @@ if [ -n "$GITOPS_STAMP" ]; then
     # Apply GitRepository template
     apply_flux_template "$TEMPLATE_DIR/gitrepository.yaml" "Creating GitRepository source..."
 
-    # Apply component-owned Flux Kustomizations (phased with dependencies)
-    log "Creating cert-manager component Kustomization..."
-    kubectl apply -f software/components/cert-manager/flux-kustomization.yaml
-    log "Creating cert-manager certificates Kustomization..."
-    kubectl apply -f software/components/cert-manager/certs/flux-kustomization.yaml
-    log "Creating registry component Kustomization..."
-    kubectl apply -f software/components/registry/flux-kustomization.yaml
-
-    # Apply Applications Kustomization template
-    apply_flux_template "$TEMPLATE_DIR/kustomization-applications.yaml" "Creating Applications Kustomization for stamp: $GITOPS_STAMP"
+    # Apply stamp Kustomization template (will orchestrate components → applications)
+    apply_flux_template "$TEMPLATE_DIR/kustomization-stamp.yaml" "Creating stamp Kustomization for: $GITOPS_STAMP"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
