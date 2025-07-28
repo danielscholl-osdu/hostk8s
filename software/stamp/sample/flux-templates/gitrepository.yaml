@@ -1,0 +1,15 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: ${REPO_NAME}-repo
+  namespace: flux-system
+spec:
+  interval: 1m
+  url: ${GITOPS_REPO}
+  ref:
+    branch: ${GITOPS_BRANCH}
+  ignore: |
+    # exclude all
+    /*
+    # include only GitOps stamp directory
+    !/software/stamp/

@@ -95,47 +95,39 @@ flux install \
 log "Waiting for Flux controllers to be ready..."
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
 
+# Function to apply Flux templates with variable substitution
+apply_flux_template() {
+    local template_file="$1"
+    local description="$2"
+
+    if [ -f "$template_file" ]; then
+        log "$description"
+        # Use envsubst to substitute variables in template
+        envsubst < "$template_file" | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to apply $description"
+    else
+        log "WARNING: Template not found: $template_file"
+    fi
+}
+
 # Only create GitRepository and Kustomization if a stamp is specified
 if [ -n "$GITOPS_STAMP" ]; then
     # Extract repository name from URL for better naming
     REPO_NAME=$(basename "$GITOPS_REPO" .git)
 
-    # Create a GitRepository source using configured repository
-    log "Creating GitRepository source..."
-    cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create GitRepository"
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: $REPO_NAME-repo
-  namespace: flux-system
-spec:
-  interval: 1m
-  url: $GITOPS_REPO
-  ref:
-    branch: $GITOPS_BRANCH
-  ignore: |
-    # exclude all
-    /*
-    # include only GitOps stamp directory
-    !/software/stamp/
-EOF
+    # Export variables for template substitution
+    export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
-    # Create a Kustomization for the specified stamp directory
-    log "Creating Kustomization for stamp: $GITOPS_STAMP"
-    cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create Kustomization"
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: stamp-$GITOPS_STAMP
-  namespace: flux-system
-spec:
-  interval: 5m
-  path: "./software/stamp/$GITOPS_STAMP"
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: $REPO_NAME-repo
-EOF
+    # Define template directory path
+    TEMPLATE_DIR="software/stamp/$GITOPS_STAMP/flux-templates"
+
+    # Apply GitRepository template
+    apply_flux_template "$TEMPLATE_DIR/gitrepository.yaml" "Creating GitRepository source..."
+
+    # Apply Components Kustomization template
+    apply_flux_template "$TEMPLATE_DIR/kustomization-components.yaml" "Creating Components Kustomization for stamp: $GITOPS_STAMP"
+
+    # Apply Applications Kustomization template
+    apply_flux_template "$TEMPLATE_DIR/kustomization-applications.yaml" "Creating Applications Kustomization for stamp: $GITOPS_STAMP"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
