@@ -1,8 +1,22 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
-
-# Cert-manager certificates phase
-# Applied after cert-manager is installed and ready
-
-resources:
-  - certificates.yaml
+metadata:
+  name: cert-manager-certs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cert-manager
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  path: "./software/components/cert-manager/certs"
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: osdu-ci-repo
+  healthChecks:
+    - apiVersion: v1
+      kind: Secret
+      name: ca-key-pair
+      namespace: cert-manager

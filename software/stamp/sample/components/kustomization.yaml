@@ -1,22 +1,13 @@
 # Components Layer - Infrastructure Services
 # These are foundational services that applications consume
 #
+# NOTE: Components are now self-managed via their own Flux Kustomizations
+# This file is kept for potential stamp-specific component overrides
+#
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Component resources - deployed in order with dependencies
-resources:
-  # Phase 1: Install cert-manager (CRDs, controllers)
-  - ../../../components/cert-manager
-  # Phase 2: Apply cert-manager certificates (after CRDs ready)
-  - ../../../components/cert-manager/certs
-  # Phase 3: Registry with HTTPS certificates
-  - ../../../components/registry
-
-  # Stamp-specific components
-  # - ingress-nginx/namespace.yaml
-  # - ingress-nginx/source.yaml
-  # - ingress-nginx/release.yaml
-  # - database/namespace.yaml
-  # - database/source.yaml
-  # - database/release.yaml
+# Stamp-specific component configurations (if any)
+resources: []
+  # Add stamp-specific component overrides here if needed
+  # Components (cert-manager, registry) are managed by their own Flux Kustomizations

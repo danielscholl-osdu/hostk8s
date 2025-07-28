@@ -1,9 +1,26 @@
-apiVersion: kustomize.config.k8s.io/v1beta1
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
-
-resources:
-- namespace.yaml
-- pvc.yaml
-- certificate.yaml
-- deployment.yaml
-- service.yaml
+metadata:
+  name: registry
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: cert-manager-certs
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  path: "./software/components/registry"
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: osdu-ci-repo
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: registry
+      namespace: registry
+    - apiVersion: v1
+      kind: Secret
+      name: registry-tls-secret
+      namespace: registry
