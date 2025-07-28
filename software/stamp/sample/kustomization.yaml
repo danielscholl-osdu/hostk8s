@@ -1,16 +1,41 @@
-# Sample Stamp - GitOps Pattern Demonstration
-# This demonstrates the component/application separation pattern
-#
-# Architecture:
-# 1. Components (Infrastructure): cert-manager, registry, ingress-nginx, database
-# 2. Applications (Business Logic): api, website
-#
-# Orchestration: Components deploy first, then applications
-#
-apiVersion: kustomize.config.k8s.io/v1beta1
+######################
+## Sample Stamp Components
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
+metadata:
+  name: stamp-sample-components
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: ${REPO_NAME}-repo
+  path: ./software/stamp/sample/components
+  prune: true
+  wait: true
 
-# Main stamp orchestration - components first, then applications
-resources:
-  - components
-  - applications
+######################
+## Sample Stamp Applications
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: stamp-sample-applications
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: stamp-sample-components
+  interval: 5m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: ${REPO_NAME}-repo
+  path: ./software/stamp/sample/applications
+  prune: true
+  wait: true
