@@ -11,4 +11,4 @@ spec:
     kind: GitRepository
     name: ${REPO_NAME}-repo
   dependsOn:
-    - name: stamp-${GITOPS_STAMP}-components
+    - name: registry

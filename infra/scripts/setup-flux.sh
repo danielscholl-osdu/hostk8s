@@ -125,11 +125,11 @@ if [ -n "$GITOPS_STAMP" ]; then
 
     # Apply component-owned Flux Kustomizations (phased with dependencies)
     log "Creating cert-manager component Kustomization..."
-    kubectl apply -f software/components/cert-manager/kustomization.yaml
+    kubectl apply -f software/components/cert-manager/flux-kustomization.yaml
     log "Creating cert-manager certificates Kustomization..."
-    kubectl apply -f software/components/cert-manager/certs/kustomization.yaml
+    kubectl apply -f software/components/cert-manager/certs/flux-kustomization.yaml
     log "Creating registry component Kustomization..."
-    kubectl apply -f software/components/registry/kustomization.yaml
+    kubectl apply -f software/components/registry/flux-kustomization.yaml
 
     # Apply Applications Kustomization template
     apply_flux_template "$TEMPLATE_DIR/kustomization-applications.yaml" "Creating Applications Kustomization for stamp: $GITOPS_STAMP"
