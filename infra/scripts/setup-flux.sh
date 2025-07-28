@@ -145,12 +145,6 @@ if [ -n "$GITOPS_STAMP" ]; then
     log "   Branch: $GITOPS_BRANCH"
     log "   Stamp: $GITOPS_STAMP"
     log "   Path: ./software/stamp/$GITOPS_STAMP"
-    log ""
-    log "🔧 Management commands:"
-    log "1. Check status: make status"
-    log "2. Monitor logs: flux logs --follow"
-    log "3. Switch stamp: make restart <stamp-name>"
-    log "4. View resources: kubectl get all --all-namespaces"
 else
     log "🔧 Flux installed - ready for GitOps configuration"
     log "Next steps:"

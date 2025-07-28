@@ -1,12 +1,6 @@
 # Components Layer - Infrastructure Services
 # These are foundational services that applications consume
 #
-# Components included:
-# - cert-manager: Certificate management for HTTPS (from shared components)
-# - registry: Shared Docker registry with HTTPS support (from shared components)
-# - ingress-nginx: Ingress controller for HTTP routing
-# - database: PostgreSQL database service
-
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
@@ -17,9 +11,9 @@ resources:
   - ../../components/registry
 
   # Stamp-specific components
-  - ingress-nginx/namespace.yaml
-  - ingress-nginx/source.yaml
-  - ingress-nginx/release.yaml
-  - database/namespace.yaml
-  - database/source.yaml
-  - database/release.yaml
+  # - ingress-nginx/namespace.yaml
+  # - ingress-nginx/source.yaml
+  # - ingress-nginx/release.yaml
+  # - database/namespace.yaml
+  # - database/source.yaml
+  # - database/release.yaml

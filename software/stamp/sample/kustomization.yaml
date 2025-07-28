@@ -14,4 +14,4 @@ kind: Kustomization
 # Main stamp orchestration - components first, then applications
 resources:
   - components
-  - applications
+  # - applications
