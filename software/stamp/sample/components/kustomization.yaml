@@ -2,6 +2,8 @@
 # These are foundational services that applications consume
 #
 # Components included:
+# - cert-manager: Certificate management for HTTPS (from shared components)
+# - registry: Shared Docker registry with HTTPS support (from shared components)
 # - ingress-nginx: Ingress controller for HTTP routing
 # - database: PostgreSQL database service
 
@@ -10,6 +12,11 @@ kind: Kustomization
 
 # Component resources - deployed in order
 resources:
+  # Shared platform components (optional) - order matters for dependencies
+  - ../../../components/cert-manager
+  - ../../../components/registry
+
+  # Stamp-specific components
   - ingress-nginx/namespace.yaml
   - ingress-nginx/source.yaml
   - ingress-nginx/release.yaml

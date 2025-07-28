@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install clean up down restart prepare test status deploy logs port-forward
+.PHONY: help install clean up down restart prepare test status deploy logs port-forward build
 
 # Environment setup
 KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
@@ -315,7 +315,11 @@ deploy: ## Deploy application (Usage: make deploy [sample/app1|sample/app2|sampl
 	fi
 
 # Handle app arguments as targets to avoid "No rule to make target" errors
-app1 app2 app3 sample/app1 sample/app2 sample/app3:
+app1 app2 app3 sample/app1 sample/app2 sample/app3 sample/registry-demo:
+	@:
+
+# Handle src/* arguments as targets to avoid "No rule to make target" errors
+src/%:
 	@:
 
 test: ## Run comprehensive cluster validation tests
@@ -337,3 +341,43 @@ port-forward: ## Port forward a service (make port-forward SVC=myservice PORT=80
 	else \
 		./infra/scripts/utils.sh forward "$$SVC" "$$PORT"; \
 	fi
+
+##@ Source Code Operations
+
+build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
+	$(call check_cluster)
+	@if [ -z "$(word 2,$(MAKECMDGOALS))" ]; then \
+		echo "Usage: make build src/APP_NAME"; \
+		echo ""; \
+		echo "Available applications:"; \
+		find src/ -name "docker-compose.yml" -exec dirname {} \; | sort || echo "  No applications found in src/"; \
+		exit 1; \
+	fi
+	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
+	if [ ! -d "$$APP_PATH" ]; then \
+		echo "❌ Directory not found: $$APP_PATH"; \
+		echo "Available applications:"; \
+		find src/ -name "docker-compose.yml" -exec dirname {} \; | sort || echo "  No applications found in src/"; \
+		exit 1; \
+	fi; \
+	if [ ! -f "$$APP_PATH/docker-compose.yml" ]; then \
+		echo "❌ No docker-compose.yml found in $$APP_PATH"; \
+		echo "Expected: $$APP_PATH/docker-compose.yml"; \
+		exit 1; \
+	fi; \
+	echo "🏗️ Building application: $$APP_PATH"; \
+	cd "$$APP_PATH" && \
+	export BUILD_DATE=$$(date -u +"%Y-%m-%dT%H:%M:%SZ") && \
+	export BUILD_VERSION="1.0.0" && \
+	echo "📅 Build date: $$BUILD_DATE" && \
+	echo "🏷️ Version: $$BUILD_VERSION" && \
+	docker compose build && \
+	echo "📤 Pushing to registry..." && \
+	docker compose push && \
+	echo "✅ Build and push complete"; \
+	echo ""; \
+	echo "Next steps:"; \
+	APP_NAME=$$(basename "$$APP_PATH"); \
+	echo "1. Deploy: make deploy sample/$$APP_NAME"; \
+	echo "2. Status: make status"; \
+	echo "3. Access: check software/apps/sample/$$APP_NAME/README.md"

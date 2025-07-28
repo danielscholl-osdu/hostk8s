@@ -53,8 +53,12 @@ make clean     # Full cleanup
 
 ```
 osdu-ci/
+├── src/             # Application source code (Docker images)
 ├── infra/           # Infrastructure (scripts + k8s configs)
-├── software/        # Sample apps and configs
+├── software/        # Deployment manifests and shared components
+│   ├── components/  # Shared platform components (registry, monitoring)
+│   ├── stamp/       # GitOps stamps for complete environments
+│   └── apps/        # Application deployment manifests
 ├── data/            # Auto-generated kubeconfig & data
 ├── docs/            # Detailed documentation
 └── .env.example     # Config template
@@ -105,6 +109,15 @@ Manual debugging:
 
 ```bash
 kubectl run debug --image=busybox --rm -it --restart=Never -- sh
+```
+
+**Build and deploy custom applications:**
+
+```bash
+make up sample                    # Start cluster with registry component
+make build src/registry-demo      # Build and push application from source
+make deploy sample/registry-demo  # Deploy application
+make status                       # Check deployment status
 ```
 
 ---

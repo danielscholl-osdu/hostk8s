@@ -1,0 +1,47 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-issuer
+  labels:
+    osdu-ci.component: cert-manager
+spec:
+  selfSigned: {}
+---
+# CA Issuer for creating a local CA certificate
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: ca-issuer
+  labels:
+    osdu-ci.component: cert-manager
+spec:
+  ca:
+    secretName: ca-key-pair
+---
+# Create a CA certificate that will be used to sign other certificates
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ca-certificate
+  namespace: cert-manager
+  labels:
+    osdu-ci.component: cert-manager
+spec:
+  isCA: true
+  commonName: "OSDU-CI Local CA"
+  subject:
+    organizationalUnits:
+      - "Local Development"
+    organizations:
+      - "OSDU-CI"
+    countries:
+      - "US"
+  secretName: ca-key-pair
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Registry Demo App</title>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; background: #f0f8ff; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .success { padding: 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724; margin: 20px 0; }
+        .info { background: #d1ecf1; padding: 15px; border-radius: 5px; color: #0c5460; margin: 20px 0; }
+        .warning { background: #fff3cd; padding: 15px; border-radius: 5px; color: #856404; margin: 20px 0; }
+        .code { background: #f8f9fa; padding: 15px; border-radius: 5px; font-family: monospace; margin: 10px 0; border-left: 4px solid #007bff; }
+        h1 { color: #007bff; text-align: center; }
+        h2 { color: #28a745; }
+        code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; color: #e83e8c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏗️ Registry Demo Application</h1>
+
+        <div class="success">
+            <h2>✅ Local Registry Integration Working!</h2>
+            <p>This application was built from a custom Dockerfile and deployed from the local registry at <code>localhost:5000</code>.</p>
+        </div>
+
+        <div class="info">
+            <h3>🎯 What This Demonstrates</h3>
+            <ul>
+                <li><strong>Custom Image Build:</strong> Built from local Dockerfile</li>
+                <li><strong>Registry Push:</strong> Pushed to localhost:5000 registry</li>
+                <li><strong>Kubernetes Pull:</strong> Deployed from internal registry service</li>
+                <li><strong>Shared Components:</strong> Uses shared registry component pattern</li>
+                <li><strong>GitOps Ready:</strong> Registry deployed via Flux stamp</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h3>🔧 Registry Workflow</h3>
+            <p>This demonstrates the complete workflow for custom image development:</p>
+            <div class="code">
+# 1. Build custom image<br>
+docker build -t localhost:5000/registry-demo:latest .<br>
+<br>
+# 2. Push to local registry<br>
+docker push localhost:5000/registry-demo:latest<br>
+<br>
+# 3. Deploy from registry<br>
+make deploy sample/registry-demo
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>🏗️ Architecture Details</h3>
+            <ul>
+                <li><strong>Registry Location:</strong> registry.registry.svc.cluster.local:5000</li>
+                <li><strong>External Access:</strong> NodePort 30500</li>
+                <li><strong>Storage:</strong> 10Gi persistent volume</li>
+                <li><strong>Component Type:</strong> Shared platform component</li>
+                <li><strong>Deployment:</strong> Optional via stamp configuration</li>
+            </ul>
+        </div>
+
+        <div class="info">
+            <h3>🧪 Validation Commands</h3>
+            <div class="code">
+# Check registry status<br>
+make registry-test<br>
+<br>
+# List registry contents<br>
+curl http://localhost:30500/v2/_catalog<br>
+<br>
+# Check pod image source<br>
+kubectl describe pod -l app=registry-demo
+            </div>
+        </div>
+
+        <div class="success">
+            <h3>🎓 Learning Outcomes</h3>
+            <ul>
+                <li>Understand shared vs stamp-specific components</li>
+                <li>Learn local registry integration patterns</li>
+                <li>Practice custom image development workflows</li>
+                <li>Experience GitOps-managed infrastructure components</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
