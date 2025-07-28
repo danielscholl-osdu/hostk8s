@@ -1,13 +1,10 @@
 # Components Layer - Infrastructure Services
 # These are foundational services that applications consume
 #
-# NOTE: Components are now self-managed via their own Flux Kustomizations
-# This file is kept for potential stamp-specific component overrides
-#
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Stamp-specific component configurations (if any)
-resources: []
-  # Add stamp-specific component overrides here if needed
-  # Components (cert-manager, registry) are managed by their own Flux Kustomizations
+# Reference global components that this stamp needs
+resources:
+  - ../../components/cert-manager
+  - ../../components/registry
