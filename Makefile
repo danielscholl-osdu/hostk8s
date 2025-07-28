@@ -178,9 +178,43 @@ status: ## Show cluster health and running services
 			done; \
 		fi; \
 	fi; \
+	gitops_apps=$$(kubectl get deployments -l osdu-ci.application --all-namespaces -o jsonpath='{.items[*].metadata.labels.osdu-ci\.application}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' '); \
+	if [ -n "$$gitops_apps" ]; then \
+		echo "$$(date +'[%H:%M:%S]') === GitOps Applications ==="; \
+		ingress_controller_ready=$$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found"); \
+		if [ "$$ingress_controller_ready" = "ready" ]; then \
+			echo "🌐 Ingress Controller: ingress-nginx (Ready ✅)"; \
+			echo "   Access: http://localhost:8080, https://localhost:8443"; \
+		else \
+			echo "🌐 Ingress Controller: ingress-nginx ($$ingress_controller_ready ⚠️)"; \
+		fi; \
+		echo; \
+		for app in $$gitops_apps; do \
+			echo "📱 GitOps Application: $$app"; \
+			kubectl get deployments -l osdu-ci.application=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do \
+				echo "   Deployment: $$name ($$ready ready, $$ns namespace)"; \
+			done; \
+			kubectl get services -l osdu-ci.application=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do \
+				echo "   Service: $$name ($$type, $$ns namespace)"; \
+			done; \
+			kubectl get ingress -l osdu-ci.application=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name class hosts address ports age; do \
+				if [ "$$hosts" = "localhost" ]; then \
+					path=$$(kubectl get ingress $$name -n $$ns -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null); \
+					if [ "$$path" = "/" ]; then \
+						echo "   Access: http://localhost:8080/ ($$name ingress)"; \
+					else \
+						echo "   Access: http://localhost:8080$$path ($$name ingress)"; \
+					fi; \
+				else \
+					echo "   Ingress: $$name (hosts: $$hosts)"; \
+				fi; \
+			done; \
+			echo; \
+		done; \
+	fi; \
 	deployed_apps=$$(kubectl get all -l osdu-ci.app --all-namespaces -o jsonpath='{.items[*].metadata.labels.osdu-ci\.app}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' '); \
 	if [ -n "$$deployed_apps" ]; then \
-		echo "$$(date +'[%H:%M:%S]') === Deployed Apps ==="; \
+		echo "$$(date +'[%H:%M:%S]') === Manual Deployed Apps ==="; \
 		for app in $$deployed_apps; do \
 			echo "📱 $$app"; \
 			kubectl get deployments -l osdu-ci.app=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do \
@@ -259,7 +293,7 @@ status: ## Show cluster health and running services
 
 ##@ Tools
 
-deploy: ## Deploy application (Usage: make deploy [app1|app2] or APP_DEPLOY=appX)
+deploy: ## Deploy application (Usage: make deploy [sample/app1|sample/app2] or APP_DEPLOY=sample/app1)
 	$(call check_cluster)
 	@echo "📦 Deploying application..."
 	@# Determine which app to deploy
@@ -270,7 +304,7 @@ deploy: ## Deploy application (Usage: make deploy [app1|app2] or APP_DEPLOY=appX
 	elif [ -n "${APP_DEPLOY}" ]; then \
 		APP_NAME="${APP_DEPLOY}"; \
 	else \
-		APP_NAME="app1"; \
+		APP_NAME="sample/app1"; \
 	fi; \
 	echo "🎯 Deploying app: $$APP_NAME"; \
 	if [ -f "software/apps/$$APP_NAME/app.yaml" ]; then \
@@ -280,12 +314,12 @@ deploy: ## Deploy application (Usage: make deploy [app1|app2] or APP_DEPLOY=appX
 	else \
 		echo "❌ App not found: $$APP_NAME"; \
 		echo "Available apps:"; \
-		ls -1 software/apps/ | grep -v README.md || echo "  No apps found"; \
+		find software/apps/ -name "app.yaml" -exec dirname {} \; | sed 's|software/apps/||' | sort || echo "  No apps found"; \
 		exit 1; \
 	fi
 
 # Handle app arguments as targets to avoid "No rule to make target" errors
-app1 app2 app3:
+app1 app2 app3 sample/app1 sample/app2 sample/app3:
 	@:
 
 test: ## Run comprehensive cluster validation tests
