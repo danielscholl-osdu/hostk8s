@@ -1,15 +1,46 @@
-# Stamp - GitOps with Flux
+# GitOps Stamps
 
-This directory contains examples for using Flux GitOps with OSDU-CI. "Stamp" represents the practice of stamping consistent, declarative deployments across environments.
+This directory contains **GitOps Stamp Patterns** for different deployment scenarios. "Stamp" represents the practice of stamping consistent, declarative deployments across environments.
+
+## Available Stamps
+
+### `sample/` - GitOps Pattern Demonstration
+- **Purpose**: Demonstrates component/application separation pattern
+- **Components**: ingress-nginx, postgresql
+- **Applications**: sample-api, sample-website
+- **Use Case**: Learning GitOps patterns, development reference
+
+### `osdu-ci/` - (Future) Full OSDU Platform
+- **Purpose**: Complete OSDU platform deployment
+- **Components**: TBD (istio, elasticsearch, postgresql, etc.)
+- **Applications**: TBD (osdu-core services)
+- **Use Case**: Production OSDU deployment
+
+## Stamp Selection
+
+Control which stamp is deployed via environment variables:
+
+```bash
+# Use sample stamp (default)
+export GITOPS_STAMP=sample
+make up
+
+# Use osdu-ci stamp (when available)
+export GITOPS_STAMP=osdu-ci
+make up
+
+# Or set in .env file
+GITOPS_STAMP=sample
+```
 
 ## Overview
 
-Flux is a GitOps operator for Kubernetes that keeps your cluster in sync with Git repositories. It's perfect for:
+Flux is a GitOps operator for Kubernetes that keeps your cluster in sync with Git repositories. Each stamp provides:
 
-- **Declarative deployments**: Define your applications in Git
+- **Declarative deployments**: Infrastructure and applications defined in Git
+- **Component separation**: Infrastructure (ingress, database) vs applications (API, web)
 - **Automated deployments**: Changes in Git trigger cluster updates
-- **Rollback capabilities**: Easy rollbacks using Git history
-- **Multi-environment management**: Different branches for different environments
+- **Environment consistency**: Same stamp pattern across dev/staging/prod
 
 ## Getting Started
 

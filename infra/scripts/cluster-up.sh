@@ -40,13 +40,13 @@ error() {
 # Validate required tools are installed
 check_dependencies() {
     local missing_tools=()
-    
+
     for tool in kind kubectl helm docker; do
         if ! command -v "$tool" >/dev/null 2>&1; then
             missing_tools+=("$tool")
         fi
     done
-    
+
     if [ ${#missing_tools[@]} -ne 0 ]; then
         error "Missing required tools: ${missing_tools[*]}"
         log "Install missing tools:"
@@ -58,7 +58,7 @@ check_dependencies() {
         done
         exit 1
     fi
-    
+
     # Check if Docker is running
     if ! docker info >/dev/null 2>&1; then
         error "Docker is not running. Please start Docker Desktop first."
@@ -69,30 +69,30 @@ check_dependencies() {
 # Validate Docker resource allocation
 validate_docker_resources() {
     log "Checking Docker resource allocation..."
-    
+
     # Get Docker system info
     local docker_info=$(docker system info --format 'json' 2>/dev/null)
-    
+
     if [ -n "$docker_info" ]; then
         local memory_bytes=$(echo "$docker_info" | jq -r '.MemTotal // 0' 2>/dev/null || echo "0")
         local cpus=$(echo "$docker_info" | jq -r '.NCPU // 0' 2>/dev/null || echo "0")
-        
+
         # Convert bytes to GB
         local memory_gb=$((memory_bytes / 1024 / 1024 / 1024))
-        
+
         log "Docker resources: ${memory_gb}GB memory, ${cpus} CPUs"
-        
+
         # Validate minimum requirements
         if [ "$memory_gb" -lt 4 ]; then
             warn "Docker has only ${memory_gb}GB memory allocated. Recommend 4GB+ for better performance"
             warn "Increase in Docker Desktop -> Settings -> Resources -> Memory"
         fi
-        
+
         if [ "$cpus" -lt 2 ]; then
             warn "Docker has only ${cpus} CPUs allocated. Recommend 2+ for better performance"
             warn "Increase in Docker Desktop -> Settings -> Resources -> CPUs"
         fi
-        
+
         # Check available disk space (cross-platform)
         local available_space
         if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -133,18 +133,18 @@ retry_with_backoff() {
     local attempt=1
     local description="$1"
     shift
-    
+
     while [ $attempt -le $max_attempts ]; do
         log "Attempt $attempt: $description"
         if "$@"; then
             return 0
         fi
-        
+
         if [ $attempt -eq $max_attempts ]; then
             error "Failed after $max_attempts attempts: $description"
             return 1
         fi
-        
+
         warn "Attempt $attempt failed, retrying in ${delay}s..."
         sleep $delay
         delay=$((delay * 2))
@@ -272,8 +272,3 @@ log ""
 log "Access your cluster:"
 log "  export KUBECONFIG=\$(pwd)/data/kubeconfig/config"
 log "  kubectl get nodes"
-log ""
-log "Deploy sample app:"
-log "  kubectl apply -f software/apps/sample-app.yaml"
-log ""
-log "Access services via NodePort at: http://localhost:8080"

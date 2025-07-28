@@ -1,4 +1,7 @@
-# Multi-Service Application - 3-tier architecture demo
+# App3: Production patterns with MetalLB + Ingress + Multi-tier architecture
+# Requires: METALLB_ENABLED=true AND INGRESS_ENABLED=true
+# Access: http://localhost/app3/ (ingress) AND LoadBalancer external IPs
+# Demonstrates: Service mesh, LoadBalancer services, production networking
 # Frontend Application
 apiVersion: apps/v1
 kind: Deployment
@@ -6,6 +9,7 @@ metadata:
   name: frontend
   labels:
     app: frontend
+    osdu-ci.app: app3
     tier: frontend
 spec:
   replicas: 2
@@ -20,7 +24,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: mcr.microsoft.com/azurelinux/base/nginx
+        image: nginx:alpine
         ports:
         - containerPort: 80
         env:
@@ -45,12 +49,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: frontend-content
+  labels:
+    osdu-ci.app: app3
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
         <title>Multi-Service Demo</title>
+        <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }
             .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -117,20 +124,21 @@ data:
     </body>
     </html>
 ---
+# Frontend LoadBalancer Service (external access)
 apiVersion: v1
 kind: Service
 metadata:
-  name: frontend
+  name: frontend-lb
   labels:
     tier: frontend
+    osdu-ci.app: app3
 spec:
   selector:
     app: frontend
   ports:
   - port: 80
     targetPort: 80
-    nodePort: 30080
-  type: NodePort
+  type: LoadBalancer
 ---
 # API Service
 apiVersion: apps/v1
@@ -139,6 +147,7 @@ metadata:
   name: api
   labels:
     app: api
+    osdu-ci.app: app3
     tier: api
 spec:
   replicas: 2
@@ -153,7 +162,7 @@ spec:
     spec:
       containers:
       - name: api
-        image: mcr.microsoft.com/azurelinux/base/nginx  # Placeholder - would be your API image
+        image: nginx:alpine  # Placeholder - would be your API image
         ports:
         - containerPort: 80
         env:
@@ -192,12 +201,15 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: api-config
+  labels:
+    osdu-ci.app: app3
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
         <title>API Service</title>
+        <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
             .container { max-width: 600px; margin: 0 auto; }
@@ -232,6 +244,7 @@ metadata:
   name: api
   labels:
     tier: api
+    osdu-ci.app: app3
 spec:
   selector:
     app: api
@@ -240,6 +253,22 @@ spec:
     targetPort: 80
   type: ClusterIP
 ---
+# API LoadBalancer Service (external access)
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-lb
+  labels:
+    tier: api
+    osdu-ci.app: app3
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 80
+    targetPort: 80
+  type: LoadBalancer
+---
 # PostgreSQL Database
 apiVersion: apps/v1
 kind: Deployment
@@ -247,6 +276,7 @@ metadata:
   name: database
   labels:
     app: database
+    osdu-ci.app: app3
     tier: database
 spec:
   replicas: 1
@@ -261,7 +291,7 @@ spec:
     spec:
       containers:
       - name: postgres
-        image: mcr.microsoft.com/azurelinux/base/postgres:15
+        image: postgres:15-alpine
         ports:
         - containerPort: 5432
         env:
@@ -291,6 +321,7 @@ metadata:
   name: database
   labels:
     tier: database
+    osdu-ci.app: app3
 spec:
   selector:
     app: database
@@ -298,3 +329,33 @@ spec:
   - port: 5432
     targetPort: 5432
   type: ClusterIP
+---
+# Production Ingress with multiple path routing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app3-ingress
+  labels:
+    osdu-ci.app: app3
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /app3/frontend(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+      - path: /app3/api(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: api
+            port:
+              number: 80

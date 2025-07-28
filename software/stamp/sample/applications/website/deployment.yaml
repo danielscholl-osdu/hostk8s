@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-website
+  namespace: sample-website
+  labels:
+    app: sample-website
+    osdu-ci.application: website
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sample-website
+  template:
+    metadata:
+      labels:
+        app: sample-website
+        osdu-ci.application: website
+    spec:
+      containers:
+      - name: website
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_URL
+          value: "http://sample-api.sample-api.svc.cluster.local"
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+        volumeMounts:
+        - name: website-content
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: website-content
+        configMap:
+          name: sample-website-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-website-content
+  namespace: sample-website
+  labels:
+    osdu-ci.application: website
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Sample Website</title>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
+            .container { max-width: 800px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .stamp-info { padding: 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; margin: 20px 0; }
+            .component { background: #e2e3e5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+            .application { background: #d1ecf1; padding: 15px; margin: 10px 0; border-radius: 5px; }
+            h1 { color: #495057; text-align: center; }
+            code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; }
+            .test-btn { background: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin: 5px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🏢 Sample Website - GitOps Stamp Pattern</h1>
+
+            <div class="stamp-info">
+                <h2>✅ GitOps Stamp Successfully Deployed!</h2>
+                <p>This demonstrates the <strong>Component/Application</strong> separation pattern managed by Flux.</p>
+            </div>
+
+            <h3>🧱 Components (Infrastructure)</h3>
+            <div class="component">
+                <h4>Ingress-NGINX Controller</h4>
+                <p><strong>Purpose:</strong> HTTP routing and load balancing</p>
+                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
+                <p><strong>Source:</strong> kubernetes.github.io/ingress-nginx</p>
+            </div>
+
+            <div class="component">
+                <h4>PostgreSQL Database</h4>
+                <p><strong>Purpose:</strong> Data persistence layer</p>
+                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
+                <p><strong>Source:</strong> charts.bitnami.com/bitnami</p>
+            </div>
+
+            <h3>🚀 Applications (Business Logic)</h3>
+            <div class="application">
+                <h4>Sample API</h4>
+                <p><strong>Purpose:</strong> Backend service</p>
+                <p><strong>Access:</strong> <a href="/api">http://localhost:8080/api</a></p>
+                <p><strong>Database:</strong> Connects to PostgreSQL component</p>
+            </div>
+
+            <div class="application">
+                <h4>Sample Website (This Page)</h4>
+                <p><strong>Purpose:</strong> Frontend interface</p>
+                <p><strong>Access:</strong> <a href="/">http://localhost:8080/</a></p>
+                <p><strong>API:</strong> Communicates with API component</p>
+            </div>
+
+            <div style="margin-top: 30px; padding: 20px; background: #e9ecef; border-radius: 5px;">
+                <h3>🧪 Test the Architecture</h3>
+                <p>Verify the GitOps stamp pattern:</p>
+                <ul>
+                    <li><code>flux get sources helm</code> - View Helm repositories</li>
+                    <li><code>flux get helmreleases</code> - View component deployments</li>
+                    <li><code>kubectl get pods --all-namespaces</code> - View all resources</li>
+                    <li><button class="test-btn" onclick="testAPI()">Test API Connection</button></li>
+                </ul>
+            </div>
+        </div>
+
+        <script>
+            function testAPI() {
+                // In a real app, this would make an actual API call
+                alert('Testing API connection to:\\nhttp://sample-api.sample-api.svc.cluster.local\\n\\nIn the GitOps pattern, services communicate via Kubernetes DNS!');
+            }
+        </script>
+    </body>
+    </html>

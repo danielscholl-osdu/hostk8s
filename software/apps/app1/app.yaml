@@ -6,6 +6,7 @@ metadata:
   namespace: default
   labels:
     app: sample-app
+    osdu-ci.app: app1
 spec:
   replicas: 2
   selector:
@@ -18,7 +19,7 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: mcr.microsoft.com/azurelinux/base/nginx
+        image: mcr.microsoft.com/azurelinux/base/nginx:1.25
         ports:
         - containerPort: 80
         resources:
@@ -41,12 +42,15 @@ kind: ConfigMap
 metadata:
   name: sample-app-html
   namespace: default
+  labels:
+    osdu-ci.app: app1
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
         <title>OSDU-CI Sample App</title>
+        <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
             .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -94,11 +98,37 @@ kind: Service
 metadata:
   name: sample-app
   namespace: default
+  labels:
+    osdu-ci.app: app1
 spec:
   selector:
     app: sample-app
   ports:
   - port: 80
     targetPort: 80
-    nodePort: 30080
+    nodePort: 30081
   type: NodePort
+---
+# Ingress for app1 (when INGRESS_ENABLED=true)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sample-app
+  namespace: default
+  labels:
+    osdu-ci.app: app1
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /app1
+        pathType: Prefix
+        backend:
+          service:
+            name: sample-app
+            port:
+              number: 80

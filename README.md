@@ -1,4 +1,4 @@
-# OSDU-CI: Host-Mode Kubernetes Development Environment
+# Host-Mode Kubernetes CI Development Environment
 
 A lightweight Kubernetes development setup using **Kind** directly on your host. Perfect for rapid development, testing, and CI/CD pipelines without heavy infrastructure.
 
@@ -19,10 +19,11 @@ A lightweight Kubernetes development setup using **Kind** directly on your host.
 
 ### Software Requirements
 
-* **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+ (or [Docker Engine](https://docs.docker.com/engine/install/))
+* **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
 * **[Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)** v0.25+
 * **[kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)** v1.33+
 * **[Helm](https://helm.sh/docs/intro/install/)** v3+
+* **[Make](https://www.gnu.org/software/make/)** v3.81+
 
 > **Note:** We assume these tools are already installed. Click the links above for official installation guides.
 
@@ -31,15 +32,16 @@ A lightweight Kubernetes development setup using **Kind** directly on your host.
 ## Quick Start (Using Make)
 
 ```bash
-make prepare   # Setup development environment (pre-commit, yamllint)
-make up        # Install dependencies + start cluster
-make deploy    # Deploy default app (app1)
+make up        # Start cluster
+make deploy    # Manually deploy an app
 make status    # Check cluster health
 ```
 
-**Common development commands:**
+**Development commands:**
 
 ```bash
+make install   # Install required tools (kind, kubectl, helm, flux)
+make prepare   # Setup development environment git precommits
 make restart   # Quick reset during development
 make test      # Run validation tests
 make clean     # Full cleanup

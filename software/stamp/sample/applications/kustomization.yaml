@@ -1,0 +1,20 @@
+# Applications Layer - Business Logic Services
+# These applications consume the infrastructure components
+#
+# Applications included:
+# - api: Backend API service
+# - website: Frontend web service
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Application resources - can be deployed in parallel
+resources:
+  - api/namespace.yaml
+  - api/deployment.yaml
+  - api/service.yaml
+  - api/ingress.yaml
+  - website/namespace.yaml
+  - website/deployment.yaml
+  - website/service.yaml
+  - website/ingress.yaml

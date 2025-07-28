@@ -16,7 +16,7 @@ define check_cluster
 	fi
 endef
 
-##@ Standard Targets
+##@ Setup
 
 help: ## Show this help message
 	@echo "OSDU-CI Development Environment"
@@ -50,53 +50,6 @@ install: ## Install required dependencies (kind, kubectl, helm, flux)
 	@command -v docker >/dev/null 2>&1 || (echo "❌ Docker not available" && exit 1)
 	@echo "✅ All dependencies verified"
 
-clean: ## Complete cleanup (destroy cluster and data)
-	@echo "🧹 Cleaning up everything..."
-	@./infra/scripts/cluster-down.sh 2>/dev/null || true
-	@kind delete cluster --name osdu-ci 2>/dev/null || true
-	@rm -rf data/kubeconfig/ 2>/dev/null || true
-	@docker system prune -f >/dev/null 2>&1 || true
-	@echo "✅ Cleanup complete"
-
-##@ Cluster Operations
-
-up: install ## Start cluster with dependencies check (Usage: make up [minimal|simple|default])
-	@echo "🚀 Starting cluster..."
-	@if [ "$(filter-out up,$@)" ]; then \
-		KIND_CONFIG="$(filter-out up,$@)" ./infra/scripts/cluster-up.sh; \
-	elif [ -n "$(word 2,$(MAKECMDGOALS))" ]; then \
-		KIND_CONFIG="$(word 2,$(MAKECMDGOALS))" ./infra/scripts/cluster-up.sh; \
-	else \
-		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
-	fi
-	@echo ""
-	@echo "🎯 Cluster ready! Next steps:"
-	@echo "  make deploy    - Deploy application (default: app1)"
-	@echo "  make deploy app1  - Deploy basic sample app"
-	@echo "  make deploy app2  - Deploy advanced sample app"
-	@echo "  make deploy app3  - Deploy multi-service app"
-	@echo "  make status    - Check cluster health"
-	@echo "  make test      - Run validation tests"
-	@echo ""
-	@echo "💡 To use kubectl in this session, run:"
-	@echo "  export KUBECONFIG=\$$(pwd)/data/kubeconfig/config"
-	@echo ""
-	@kubectl get nodes
-
-# Handle config arguments as targets to avoid "No rule to make target" errors
-minimal simple default:
-	@:
-
-down: ## Stop the Kind cluster (preserves data)
-	@echo "🛑 Stopping cluster..."
-	@./infra/scripts/cluster-down.sh
-
-restart: ## Quick cluster reset for development iteration
-	@echo "🔄 Restarting cluster..."
-	@./infra/scripts/cluster-restart.sh
-
-##@ Development
-
 prepare: ## Setup development environment (pre-commit, yamllint, hooks)
 	@echo "🛠️  Setting up OSDU-CI development environment..."
 	@# Install pre-commit if not available
@@ -123,23 +76,169 @@ prepare: ## Setup development environment (pre-commit, yamllint, hooks)
 	@echo "Installing pre-commit hooks..."
 	@pre-commit install
 	@echo "✅ Development environment setup complete!"
-	@echo ""
-	@echo "📋 Available commands:"
-	@echo "  make help                    # Show project targets"
-	@echo "  pre-commit run --all-files   # Run all linting checks"
-	@echo "  yamllint .                   # Check YAML files manually"
-	@echo "  make up                      # Start development cluster"
-	@echo ""
-	@echo "💡 Pre-commit hooks will now run automatically on git commit"
 
-test: ## Run comprehensive cluster validation tests
-	$(call check_cluster)
-	@echo "🧪 Running comprehensive validation tests..."
-	@./infra/scripts/validate-cluster.sh
+##@ Cluster Operations
+
+up: install ## Start cluster with dependencies check (Usage: make up [minimal|simple|default])
+	@echo "🚀 Starting cluster..."
+	@if [ "$(filter-out up,$@)" ]; then \
+		KIND_CONFIG="$(filter-out up,$@)" ./infra/scripts/cluster-up.sh; \
+	elif [ -n "$(word 2,$(MAKECMDGOALS))" ]; then \
+		KIND_CONFIG="$(word 2,$(MAKECMDGOALS))" ./infra/scripts/cluster-up.sh; \
+	else \
+		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
+	fi
+	@echo ""
+	@echo "💡 export KUBECONFIG=\$$(pwd)/data/kubeconfig/config"
+	@echo ""
+	@kubectl get nodes
+
+# Handle config arguments as targets to avoid "No rule to make target" errors
+minimal simple default:
+	@:
+
+down: ## Stop the Kind cluster (preserves data)
+	@echo "🛑 Stopping cluster..."
+	@./infra/scripts/cluster-down.sh
+
+restart: ## Quick cluster reset for development iteration
+	@echo "🔄 Restarting cluster..."
+	@./infra/scripts/cluster-restart.sh
+
+clean: ## Complete cleanup (destroy cluster and data)
+	@echo "🧹 Cleaning up everything..."
+	@./infra/scripts/cluster-down.sh 2>/dev/null || true
+	@kind delete cluster --name osdu-ci 2>/dev/null || true
+	@rm -rf data/kubeconfig/ 2>/dev/null || true
+	@docker system prune -f >/dev/null 2>&1 || true
+	@echo "✅ Cleanup complete"
 
 status: ## Show cluster health and running services
-	$(call check_cluster)
-	@./infra/scripts/utils.sh status
+	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then \
+		echo "⚠️  No cluster found. Run 'make up' to start a cluster."; \
+		exit 0; \
+	fi
+	@export KUBECONFIG="$(KUBECONFIG_PATH)"; \
+	if ! kubectl cluster-info >/dev/null 2>&1; then \
+		echo "⚠️  Cluster not running. Run 'make up' to start the cluster."; \
+		exit 0; \
+	fi; \
+	echo "💡 export KUBECONFIG=\$$(pwd)/data/kubeconfig/config"; \
+	echo; \
+	if kubectl get namespace flux-system >/dev/null 2>&1; then \
+		echo "$$(date +'[%H:%M:%S]') === GitOps Status (Flux) ==="; \
+		if command -v flux >/dev/null 2>&1; then \
+			flux get sources git 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
+				repo_url=$$(kubectl get gitrepository.source.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown"); \
+				branch=$$(kubectl get gitrepository.source.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.ref.branch}' 2>/dev/null || echo "unknown"); \
+				echo "📁 Repository: $$name"; \
+				echo "   URL: $$repo_url"; \
+				echo "   Branch: $$branch"; \
+				echo "   Revision: $$revision"; \
+				echo "   Ready: $$ready"; \
+				echo "   Suspended: $$suspended"; \
+				[ "$$message" != "-" ] && echo "   Message: $$message"; \
+				echo; \
+			done; \
+			flux get kustomizations 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
+				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
+				echo "⚙️  Kustomization: $$name"; \
+				echo "   Source: $$source_ref"; \
+				echo "   Revision: $$revision"; \
+				echo "   Ready: $$ready"; \
+				echo "   Suspended: $$suspended"; \
+				[ "$$message" != "-" ] && echo "   Message: $$message"; \
+				echo; \
+			done; \
+		else \
+			echo "flux CLI not available - showing basic status:"; \
+			kubectl get gitrepositories.source.toolkit.fluxcd.io -A --no-headers 2>/dev/null | while read -r ns name ready status age; do \
+				repo_url=$$(kubectl get gitrepository.source.toolkit.fluxcd.io $$name -n $$ns -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown"); \
+				echo "Repository: $$name ($$repo_url)"; \
+				echo "Ready: $$ready"; \
+			done; \
+		fi; \
+	fi; \
+	deployed_apps=$$(kubectl get all -l osdu-ci.app --all-namespaces -o jsonpath='{.items[*].metadata.labels.osdu-ci\.app}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' '); \
+	if [ -n "$$deployed_apps" ]; then \
+		echo "$$(date +'[%H:%M:%S]') === Deployed Apps ==="; \
+		for app in $$deployed_apps; do \
+			echo "📱 $$app"; \
+			kubectl get deployments -l osdu-ci.app=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do \
+				echo "   Deployment: $$name ($$ready ready, $$ns namespace)"; \
+			done; \
+			kubectl get services -l osdu-ci.app=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do \
+				if [ "$$type" = "NodePort" ]; then \
+					nodeport=$$(echo "$$ports" | grep -o '[0-9]*:3[0-9]*/' | cut -d: -f2 | cut -d/ -f1); \
+					if [ "$$nodeport" = "30080" ]; then \
+						echo "   Service: $$name ($$type, http://localhost:8080)"; \
+					elif [ "$$nodeport" = "30443" ]; then \
+						echo "   Service: $$name ($$type, https://localhost:8443)"; \
+					else \
+						echo "   Service: $$name ($$type, NodePort $$nodeport - not mapped to localhost)"; \
+					fi; \
+				elif [ "$$type" = "LoadBalancer" ]; then \
+					if [ "$$external_ip" != "<none>" ] && [ "$$external_ip" != "<pending>" ]; then \
+						port=$$(echo "$$ports" | cut -d: -f1); \
+						echo "   Service: $$name ($$type, http://$$external_ip:$$port)"; \
+					else \
+						echo "   Service: $$name ($$type, $$external_ip)"; \
+					fi; \
+				elif [ "$$type" = "ClusterIP" ]; then \
+					echo "   Service: $$name ($$type, internal only)"; \
+				else \
+					echo "   Service: $$name ($$type)"; \
+				fi; \
+			done; \
+			kubectl get ingress -l osdu-ci.app=$$app --all-namespaces --no-headers 2>/dev/null | while read -r ns name class hosts address ports age; do \
+				if [ "$$hosts" = "localhost" ]; then \
+					paths=$$(kubectl get ingress $$name -n $$ns -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>/dev/null); \
+					if [ "$$app" = "app1" ]; then \
+						echo "   Ingress: $$name (http://localhost:8080/app1)"; \
+					elif [ "$$app" = "app2" ]; then \
+						echo "   Ingress: $$name (http://localhost:8080/frontend, /api)"; \
+					elif [ "$$app" = "app3" ]; then \
+						echo "   Ingress: $$name (http://localhost:8080/app3/frontend, /app3/api)"; \
+					else \
+						echo "   Ingress: $$name (http://localhost:8080)"; \
+					fi; \
+				else \
+					echo "   Ingress: $$name (hosts: $$hosts)"; \
+				fi; \
+			done; \
+			echo; \
+		done; \
+		echo "$$(date +'[%H:%M:%S]') === Health Check ==="; \
+		issues_found=0; \
+		kubectl get services -l osdu-ci.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do \
+			if [ "$$type" = "LoadBalancer" ] && [ "$$external_ip" = "<pending>" ]; then \
+				echo "⚠️  LoadBalancer $$name is pending (MetalLB not installed?)"; \
+				exit 1; \
+			fi; \
+		done && \
+		kubectl get deployments -l osdu-ci.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do \
+			ready_count=$$(echo "$$ready" | cut -d/ -f1); \
+			total_count=$$(echo "$$ready" | cut -d/ -f2); \
+			if [ "$$ready_count" != "$$total_count" ]; then \
+				echo "⚠️  Deployment $$name not fully ready ($$ready_count/$$total_count)"; \
+				exit 1; \
+			fi; \
+		done && \
+		kubectl get pods -l osdu-ci.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready status restarts age; do \
+			if [ "$$status" != "Running" ] && [ "$$status" != "Completed" ]; then \
+				echo "⚠️  Pod $$name in $$status state"; \
+				exit 1; \
+			fi; \
+		done || issues_found=1; \
+		if [ "$$issues_found" = "0" ]; then \
+			echo "✅ All deployed apps are healthy"; \
+		fi; \
+		echo; \
+	fi; \
+	echo "$$(date +'[%H:%M:%S]') === Cluster Status ==="; \
+	kubectl get nodes
+
+##@ Tools
 
 deploy: ## Deploy application (Usage: make deploy [app1|app2] or APP_DEPLOY=appX)
 	$(call check_cluster)
@@ -170,7 +269,10 @@ deploy: ## Deploy application (Usage: make deploy [app1|app2] or APP_DEPLOY=appX
 app1 app2 app3:
 	@:
 
-##@ Utilities
+test: ## Run comprehensive cluster validation tests
+	$(call check_cluster)
+	@echo "🧪 Running comprehensive validation tests..."
+	@./infra/scripts/validate-cluster.sh
 
 logs: ## View recent cluster events and logs
 	$(call check_cluster)

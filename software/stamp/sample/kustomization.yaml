@@ -1,0 +1,17 @@
+# Sample Stamp - GitOps Pattern Demonstration
+# This demonstrates the component/application separation pattern
+#
+# Architecture:
+# 1. Components (Infrastructure): ingress-nginx, database
+# 2. Applications (Business Logic): api, website
+#
+# Usage:
+#   kubectl apply -k software/stamp/sample/
+
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Main stamp orchestration - components first, then applications
+resources:
+  - components
+  - applications
