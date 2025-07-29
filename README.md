@@ -4,23 +4,22 @@
 
 A lightweight Kubernetes development platform built on **Kind**. Deploy complete environments instantly using **GitOps** stamps.
 
-## Overview
+## Why HostK8s?
 
-HostK8s addresses common issues in Kubernetes development setups:
+HostK8s addresses common pain points in Kubernetes development:
 
-* **High overhead** from Docker-in-Docker or VM-based tools.
-* **Slow startup** and resource waste during local testing.
-* **Instability** from nested container layers.
+* **Manual environment setup** - repeatedly configuring the same development stacks.
+* **Environment drift** - inconsistent setups across team members and projects.
+* **Heavy tooling overhead** - resource-intensive solutions like Docker Desktop or VM-based tools.
 
-By running Kind directly on your host and adopting a GitOps-driven environment pattern, HostK8s provides a **stable, low-overhead** workflow for Kubernetes development.
+By combining Kind's lightweight approach with GitOps environment stamps, HostK8s provides **reproducible, efficient** Kubernetes development workflows.
 
-## Benefits at a Glance
+**Key advantages:**
 
-* **Fast startup** – no VM boot times.
-* **Low resource usage** – 4GB RAM typical.
-* **Faster development inner loops** – quick cluster restarts and reliable iteration cycles.
-* **Configurable** – loosely coupled abstractions work across multiple software stacks.
-* **Environment-as-code** – deploy full stacks with GitOps stamps.
+* **Environment-as-code** – deploy full stacks with GitOps stamps, no more setup scripts.
+* **Team consistency** – everyone gets identical environments from the same stamp.
+* **Fast startup** – Kind's direct host execution with no VM boot times.
+* **Low resource usage** – 4GB RAM typical vs heavier alternatives.
 * **Stack agnostic** – works with any language or framework.
 
 ## Key Concepts
