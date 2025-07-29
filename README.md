@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-A lightweight Kubernetes development platform built on **Kind**, optimized for direct host integration. Quickly deploy complete environments using **GitOps stamps** – ideal for development, testing, and CI/CD workflows without heavy infrastructure.
+A lightweight Kubernetes development platform built on **Kind** with direct host integration. Deploy complete environments instantly using **GitOps stamps** – no heavy infrastructure required.
 
 ## Overview
 
