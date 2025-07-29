@@ -108,7 +108,7 @@ apply_stamp_yaml() {
     fi
 }
 
-# Only create GitRepository and Kustomization if a stamp is specified
+# Only create GitOps configuration if a stamp is specified
 if [ -n "$GITOPS_STAMP" ]; then
     # Extract repository name from URL for better naming
     REPO_NAME=$(basename "$GITOPS_REPO" .git)
@@ -116,9 +116,11 @@ if [ -n "$GITOPS_STAMP" ]; then
     # Export variables for template substitution
     export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
-    # Apply stamp GitRepository and Kustomizations (components → applications with dependencies)
+    # Apply stamp GitRepository first
     apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Creating GitRepository for stamp: $GITOPS_STAMP"
-    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/kustomization.yaml" "Creating Flux Kustomizations (components → applications) for stamp: $GITOPS_STAMP"
+
+    # Apply universal bootstrap kustomization that manages all stamps
+    apply_stamp_yaml "software/stamp/bootstrap.yaml" "Creating universal bootstrap kustomization for all stamps"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
