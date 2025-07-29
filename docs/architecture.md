@@ -1,8 +1,10 @@
-# OSDU-CI Architecture
+# HostK8s Architecture
 
 ## Overview
 
-OSDU-CI provides a **host-mode Kubernetes development environment** using Kind (Kubernetes in Docker) running directly on the host Docker daemon. The architecture prioritizes stability, simplicity, and rapid development iteration by eliminating Docker-in-Docker complexity.
+HostK8s provides a **host-mode Kubernetes development platform** using Kind (Kubernetes in Docker) running directly on the host Docker daemon. The architecture prioritizes stability, simplicity, and rapid development iteration by eliminating Docker-in-Docker complexity.
+
+**Key Innovation:** GitOps stamp pattern for deploying complete, declarative environments. The platform is application-agnostic - the "sample" stamp demonstrates the pattern, while future stamps (like OSDU-CI) will provide domain-specific complete environments.
 
 ## System Architecture
 
@@ -108,30 +110,74 @@ make clean       # Complete cleanup
 - **app3/**: Multi-service microservices (Frontend → API → Database, 5 replicas)
 - **Convention-based**: Each app in own folder with `app.yaml` and `README.md`
 
-**GitOps Examples (`software/stamp/`)**
-- Flux GitOps configuration examples
-- GitRepository and Kustomization templates
-- Helm Release deployment patterns
-- Multi-environment GitOps structures
+**GitOps Stamps (`software/stamp/`)**
+- **Stamp Pattern**: Declarative deployment templates for complete environments
+- **Component/Application Separation**: Infrastructure vs application deployment patterns
+- **Bootstrap Workflow**: Universal bootstrap kustomization manages all stamps
+- **Selective Sync**: Git ignore patterns for efficient synchronization
 
 ```bash
-make deploy           # Deploy default app (app1)
-make deploy app2      # Deploy advanced app
-make deploy app3      # Deploy multi-service app
-APP_DEPLOY=app3 make deploy  # Environment variable approach
+# Manual application deployment
+make deploy           # Deploy default app (sample/app1)
+make deploy sample/app2      # Deploy advanced app
+make deploy sample/app3      # Deploy multi-service app
+
+# GitOps stamp deployment
+make up sample        # Start cluster with sample stamp
+make restart sample   # Restart cluster with sample stamp
 ```
 
-### Optional Services Layer
+### GitOps Stamp Architecture
 
-**Docker Compose (`docker-compose.yml`)**
-- **Registry**: Local container registry (port 5000)
-- **Monitoring**: Prometheus stack (port 9090)
-- **Profile-based**: Only start what you need
+**Stamp Pattern Structure**
 
-```bash
-docker compose --profile registry up -d
-docker compose --profile monitoring up -d
 ```
+software/stamp/
+├── README.md              # GitOps stamps documentation
+├── bootstrap.yaml         # Universal bootstrap kustomization
+└── sample/                # Sample stamp (GitOps demonstration)
+    ├── kustomization.yaml # Stamp entry point
+    ├── repository.yaml    # GitRepository source definition
+    ├── stamp.yaml         # Component deployments (infrastructure)
+    ├── components/        # Infrastructure components (Helm releases)
+    │   ├── database/      # PostgreSQL deployment
+    │   └── ingress-nginx/ # NGINX Ingress controller
+    └── applications/      # Application deployments (GitOps apps)
+        ├── api/           # Sample API service
+        └── website/       # Sample website service
+```
+
+**Stamp Deployment Flow**
+
+```
+1. Bootstrap Kustomization (bootstrap.yaml)
+   └── Points to specific stamp path (e.g., ./software/stamp/sample)
+
+2. Stamp Kustomization (sample/kustomization.yaml)
+   ├── repository.yaml     # Creates GitRepository source
+   └── stamp.yaml          # Deploys infrastructure components
+
+3. Component Dependencies (stamp.yaml)
+   ├── component-certs     # Certificate management (cert-manager)
+   ├── component-certs-ca  # Root CA certificate
+   └── component-certs-issuer # Certificate issuer
+
+4. Infrastructure Helm Releases (components/)
+   ├── database/           # PostgreSQL via Helm
+   └── ingress-nginx/      # NGINX Ingress via Helm
+
+5. Application Manifests (applications/)
+   ├── api/               # GitOps-managed API deployment
+   └── website/           # GitOps-managed website deployment
+```
+
+### Component Services Layer
+
+**Flux-Managed Components (`software/components/`)**
+- **Registry**: Container registry deployed via Flux (available in stamps)
+- **Certificate Management**: cert-manager for TLS certificates
+- **Ingress**: NGINX Ingress controller for HTTP routing
+- **All services**: Declaratively managed through GitOps
 
 ## Design Principles
 
@@ -254,13 +300,24 @@ kubectl get pods
 ```
 
 ### Local Development
+
+**Manual App Deployment:**
 ```bash
-# Standard workflow
-make up           # Start environment
-make deploy app1  # Deploy basic application
-make deploy app2  # Deploy advanced app (requires MetalLB/Ingress)
+make up           # Start basic cluster
+make deploy sample/app1  # Deploy basic application
+make deploy sample/app2  # Deploy advanced app (requires MetalLB/Ingress)
 make logs         # Debug issues
 make restart      # Reset for iteration
+```
+
+**GitOps Stamp Deployment:**
+```bash
+make up sample    # Start cluster with sample GitOps stamp
+make status       # Monitor GitOps reconciliation
+make sync         # Force Flux reconciliation
+flux get all      # Check Flux resources
+flux logs --follow # Watch GitOps sync logs
+make restart sample # Reset with stamp configuration
 ```
 
 ## Migration from Docker-in-Docker
@@ -285,7 +342,9 @@ make restart      # Reset for iteration
 - ✅ **IPv4 Network Detection**: Robust Docker subnet detection for MetalLB
 - ✅ **Security Improvements**: Environment variable exposure protection
 - ✅ **Consolidated Scripts**: Flattened directory structure for better maintainability
+- ✅ **GitOps Stamp Pattern**: Component/application separation with bootstrap workflow
 - ✅ **Flux GitOps Integration**: Complete GitOps workflow (flux CLI via `make install`)
+- ✅ **Selective Git Sync**: Efficient synchronization with ignore patterns
 - ✅ **Hybrid CI/CD Pipeline**: Branch-aware testing with GitLab CI + GitHub Actions
 - ✅ **Enhanced Logging**: Detailed GitOps reconciliation status and debugging
 - ✅ **Smart Testing**: PR branches get fast validation, main branch gets full testing
@@ -294,6 +353,7 @@ make restart      # Reset for iteration
 ## Future Considerations
 
 ### Potential Enhancements
+- **Additional Stamps**: OSDU-CI stamp, microservices demo stamp, etc.
 - **Multi-cluster support**: For advanced testing scenarios
 - **Advanced GitOps patterns**: Multi-tenant configurations, progressive delivery
 - **Security hardening**: RBAC templates for production migration
@@ -301,3 +361,30 @@ make restart      # Reset for iteration
 
 ### Stability Focus
 The architecture prioritizes **stability over features**. Each component serves a clear purpose, and complexity is only added when it provides significant developer value. This approach ensures the environment remains reliable and maintainable as requirements evolve.
+
+---
+
+## Architecture Decision Records
+
+For detailed rationale behind key design choices, see our Architecture Decision Records:
+
+### Foundation Decisions
+- **[ADR-001: Host-Mode Architecture](adr/001-host-mode-architecture.md)** - Why eliminate Docker-in-Docker complexity
+- **[ADR-002: Kind Technology Selection](adr/002-kind-technology-selection.md)** - Why Kind over minikube, k3s, etc.
+
+### Developer Experience  
+- **[ADR-003: Make Interface Standardization](adr/003-make-interface-standardization.md)** - Why standardize on Make wrapper
+
+### Advanced Capabilities
+- **[ADR-004: GitOps Stamp Pattern](adr/004-gitops-stamp-pattern.md)** - Complete environment deployment innovation
+- **[ADR-005: Hybrid CI/CD Strategy](adr/005-hybrid-ci-cd-strategy.md)** - Branch-aware testing approach
+
+Each ADR documents the context, decision, alternatives considered, and consequences - providing the "why" behind HostK8s's unique architecture.
+
+---
+
+## Navigation
+
+- **← [Back to README](../README.md)** - Getting started guide
+- **→ [ADR Catalog](adr/README.md)** - All architecture decisions
+- **→ [Sample Apps](../software/apps/README.md)** - Available applications

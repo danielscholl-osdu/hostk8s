@@ -1,4 +1,4 @@
-# OSDU-CI Host-Mode Kubernetes Development Environment
+# HostK8s - Host-Mode Kubernetes Development Platform
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
@@ -19,7 +19,7 @@ endef
 ##@ Setup
 
 help: ## Show this help message
-	@echo "OSDU-CI Development Environment"
+	@echo "HostK8s - Host-Mode Kubernetes Development Platform"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
@@ -51,7 +51,7 @@ install: ## Install required dependencies (kind, kubectl, helm, flux)
 	@echo "✅ All dependencies verified"
 
 prepare: ## Setup development environment (pre-commit, yamllint, hooks)
-	@echo "🛠️  Setting up OSDU-CI development environment..."
+	@echo "🛠️  Setting up HostK8s development environment..."
 	@# Install pre-commit if not available
 	@if ! command -v pre-commit >/dev/null 2>&1; then \
 		echo "Installing pre-commit..."; \
@@ -83,7 +83,7 @@ up: install ## Start cluster with dependencies check (Usage: make up [minimal|si
 	@echo "🚀 Starting cluster..."
 	@# Determine if argument is a Kind config or GitOps stamp
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "sample" ] || [ "$$ARG" = "osdu-ci" ]; then \
+	if [ "$$ARG" = "sample" ]; then \
 		echo "🎯 Detected GitOps stamp: $$ARG"; \
 		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
@@ -91,7 +91,7 @@ up: install ## Start cluster with dependencies check (Usage: make up [minimal|si
 		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ -n "$$ARG" ]; then \
 		echo "❌ Unknown argument: $$ARG"; \
-		echo "Valid options: minimal, simple, default (Kind configs) | sample, osdu-ci (GitOps stamps)"; \
+		echo "Valid options: minimal, simple, default (Kind configs) | sample (GitOps stamp)"; \
 		exit 1; \
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
@@ -102,7 +102,7 @@ up: install ## Start cluster with dependencies check (Usage: make up [minimal|si
 	@kubectl get nodes
 
 # Handle arguments as targets to avoid "No rule to make target" errors
-minimal simple default sample osdu-ci:
+minimal simple default sample:
 	@:
 
 down: ## Stop the Kind cluster (preserves data)
@@ -113,12 +113,12 @@ restart: ## Quick cluster reset for development iteration (Usage: make restart [
 	@echo "🔄 Restarting cluster..."
 	@# Determine if argument is a GitOps stamp
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "sample" ] || [ "$$ARG" = "osdu-ci" ]; then \
+	if [ "$$ARG" = "sample" ]; then \
 		echo "🎯 Restarting with GitOps stamp: $$ARG"; \
 		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-restart.sh; \
 	elif [ -n "$$ARG" ]; then \
 		echo "❌ Unknown stamp: $$ARG"; \
-		echo "Valid stamps: sample, osdu-ci"; \
+		echo "Valid stamps: sample"; \
 		exit 1; \
 	else \
 		./infra/scripts/cluster-restart.sh; \
