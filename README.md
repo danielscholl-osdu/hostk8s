@@ -2,7 +2,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-A lightweight Kubernetes development platform built on **Kind**. Deploy complete environments instantly using **GitOps stamps**.
+A lightweight Kubernetes development platform built on **Kind**. Deploy complete environments instantly using **GitOps** stamps.
 
 ## Overview
 
