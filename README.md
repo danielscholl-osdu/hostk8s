@@ -96,6 +96,7 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 
 | Variable          | Description                                   | Default   |
 | ----------------- | --------------------------------------------- | --------- |
+| `LOG_LEVEL`       | Logging verbosity (debug, info, warn, error) | `debug`   |
 | `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
 | `K8S_VERSION`     | Kubernetes version to use                     | `latest`  |
 | `KIND_CONFIG`     | Kind config preset (minimal, simple, default) | `default` |
