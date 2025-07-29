@@ -1,11 +1,12 @@
 ######################
-## Cert-Manager Component
+## Sample Stamp Components
+## These must complete before applications
 ######################
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-cert-manager
+  name: sample-cert-manager
   namespace: flux-system
 spec:
   interval: 5m
@@ -21,25 +22,16 @@ spec:
     - kind: Deployment
       name: cert-manager
       namespace: cert-manager
-    - kind: Deployment
-      name: cert-manager-cainjector
-      namespace: cert-manager
-    - kind: Deployment
-      name: cert-manager-webhook
-      namespace: cert-manager
 
-######################
-## Cert-Manager Certificates Component
-######################
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-cert-manager-certs
+  name: sample-cert-manager-certs
   namespace: flux-system
 spec:
   dependsOn:
-    - name: component-cert-manager
+    - name: sample-cert-manager
   interval: 5m
   retryInterval: 1m
   timeout: 5m
@@ -54,18 +46,15 @@ spec:
       name: ca-certificate
       namespace: cert-manager
 
-######################
-## Registry Component
-######################
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-registry
+  name: sample-registry
   namespace: flux-system
 spec:
   dependsOn:
-    - name: component-cert-manager-certs
+    - name: sample-cert-manager-certs
   interval: 5m
   retryInterval: 1m
   timeout: 5m
@@ -79,3 +68,28 @@ spec:
     - kind: Deployment
       name: registry
       namespace: registry
+
+######################
+## Sample Stamp Applications
+## These depend on all components being ready
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sample-applications
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: sample-cert-manager
+    - name: sample-cert-manager-certs
+    - name: sample-registry
+  interval: 5m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: sample-repo
+  path: ./software/stamp/sample/applications
+  prune: true
+  wait: true

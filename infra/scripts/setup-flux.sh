@@ -116,10 +116,9 @@ if [ -n "$GITOPS_STAMP" ]; then
     # Export variables for template substitution
     export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
-    # Apply stamp GitRepository and Kustomizations
+    # Apply stamp GitRepository and Kustomizations (components → applications with dependencies)
     apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Creating GitRepository for stamp: $GITOPS_STAMP"
-    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/components/kustomization.yaml" "Creating components Kustomizations for stamp: $GITOPS_STAMP"
-    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/applications/kustomization.yaml" "Creating applications Kustomizations for stamp: $GITOPS_STAMP"
+    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/kustomization.yaml" "Creating Flux Kustomizations (components → applications) for stamp: $GITOPS_STAMP"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
