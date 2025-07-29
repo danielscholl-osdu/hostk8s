@@ -7,44 +7,44 @@
 HostK8s consists of multiple shell scripts for cluster management, each with different calling conventions and environment requirements. Developers needed a consistent, discoverable interface that handles environment setup (KUBECONFIG), validation, and provides standardized commands regardless of the underlying script complexity.
 
 ## Decision
-Implement a **standardized Make interface** that wraps all operational scripts with consistent conventions, automatic environment management, and universal command patterns.
+Implement a **Make interface as thin orchestration layer** that provides consistent command patterns while delegating complex operations to dedicated, purpose-built bash scripts. Make handles interface concerns (argument parsing, environment setup, dependency chains) while scripts handle operational complexity.
 
 ## Rationale
-1. **Universal Familiarity**: Make is available on all development platforms (Mac, Linux, Windows)
-2. **Standard Conventions**: `make up`, `make test`, `make clean` patterns developers expect
-3. **Environment Management**: Automatic KUBECONFIG handling eliminates common errors
-4. **Discoverability**: `make help` provides self-documenting interface
-5. **Validation**: Built-in dependency and state checking before operations
-6. **Consistency**: Same command syntax regardless of underlying script complexity
+1. **Separation of Concerns**: Make excels at interface/orchestration; bash excels at complex operations
+2. **Universal Familiarity**: Standard `make up`, `make test`, `make clean` patterns developers expect
+3. **Maintainability**: Complex logic in dedicated scripts is easier to test, debug, and modify
+4. **Discoverability**: `make help` provides consistent interface while scripts offer detailed help
+5. **Platform Consistency**: Same Make interface across all platforms, regardless of script complexity
+6. **Evolution**: Scripts can be enhanced independently without changing user interface
 
-## Interface Design
+## Architecture Design
 
-### Standard Command Patterns
-```bash
-make help      # Self-documenting help system
-make up        # Start/create resources
-make down      # Stop resources (preserve data)
-make restart   # Quick reset for development
-make clean     # Complete cleanup
-make test      # Validation and testing
-make status    # Health and status information
-make deploy    # Application deployment
-make logs      # Debug information
+### Make Responsibilities (Thin Layer)
+- **Command Interface**: Standard `make <command>` patterns
+- **Argument Parsing**: Extract and validate arguments using Make's `$(word)` functions
+- **Environment Setup**: KUBECONFIG management and variable passing to scripts
+- **Dependency Chains**: Ensure prerequisite operations (`up: install`)
+- **Script Orchestration**: Route commands to appropriate dedicated scripts
+
+### Script Responsibilities (Complex Operations)
+- **Operational Logic**: All complex bash operations, validations, and integrations
+- **Error Handling**: Detailed error messages and recovery suggestions
+- **Help Systems**: Comprehensive usage documentation with examples
+- **Shared Utilities**: Common functions for logging, validation, and kubectl operations
+- **Independent Testing**: Each script can be tested and debugged in isolation
+
+### Division of Labor Example
+```makefile
+# Make handles interface and routing
+deploy: ## Deploy application (Usage: make deploy [sample/app1])
+	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	./infra/scripts/deploy.sh "$$APP_NAME"
 ```
 
-### Automatic Environment Management
-```makefile
-# Automatic KUBECONFIG management
-KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
-export KUBECONFIG := $(KUBECONFIG_PATH)
-
-# Pre-flight checks
-define check_cluster
-	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then \
-		echo "⚠️  Cluster not found. Run 'make up' first."; \
-		exit 1; \
-	fi
-endef
+```bash
+# Script handles all operational complexity
+# - App validation, kubectl operations, error handling, help system
+./infra/scripts/deploy.sh sample/app2
 ```
 
 ## Alternatives Considered
@@ -127,46 +127,33 @@ up: ## Start cluster (Usage: make up [minimal|simple|default|sample])
 ## Consequences
 
 **Positive:**
-- **Developer Experience**: Consistent, discoverable commands across all operations
-- **Error Prevention**: Automatic environment validation prevents common mistakes
-- **Onboarding**: New developers immediately understand available operations
-- **Documentation**: Self-documenting help system stays current with implementation
-- **Platform Consistency**: Same commands work identically across Mac, Linux, Windows
-- **Script Evolution**: Underlying scripts can change without affecting user interface
+- **Clear Separation**: Make handles interface concerns, scripts handle operational complexity
+- **Maintainability**: 68% reduction in Makefile size (424→137 lines) with improved script organization
+- **Testability**: Complex operations in dedicated scripts can be tested independently
+- **Developer Experience**: Consistent `make` interface with detailed script-level help
+- **Evolution**: Scripts can be enhanced without changing user-facing interface
+- **Debugging**: Issues isolated to either interface layer (Make) or operational layer (scripts)
 
 **Negative:**
-- **Abstraction Layer**: Adds indirection between user and actual implementation
-- **Make Dependency**: Requires Make (though universally available)
-- **Argument Limitations**: Make's argument handling is less flexible than dedicated CLI
-- **Debugging Complexity**: Errors may require understanding both Make and script layers
+- **Two-Layer System**: Understanding requires familiarity with both Make patterns and script organization
+- **Indirection**: Simple operations now route through script calls
+- **Dependency**: Requires both Make and bash capabilities across platforms
 
-## Design Patterns
+## Implementation Results
 
-### Dependency Chain Management
-```makefile
-up: install          # Automatically ensures dependencies
-deploy: up           # Ensures cluster exists before deployment
-test: deploy         # Ensures application deployed before testing
-```
+### Script Organization
+- `infra/scripts/common.sh` - Shared utilities (logging, validation, kubectl helpers)
+- `infra/scripts/install.sh` - Dependency installation and validation
+- `infra/scripts/prepare.sh` - Development environment setup
+- `infra/scripts/status.sh` - Comprehensive cluster status reporting
+- `infra/scripts/deploy.sh` - Application deployment with validation
+- `infra/scripts/sync.sh` - Flux reconciliation operations
+- `infra/scripts/build.sh` - Docker application build and registry push
 
-### Error Handling
-```makefile
-clean: ## Complete cleanup
-	@./infra/scripts/cluster-down.sh 2>/dev/null || true
-	@kind delete cluster --name osdu-ci 2>/dev/null || true
-	@rm -rf data/kubeconfig/ 2>/dev/null || true
-	@echo "✅ Cleanup complete"
-```
-
-### Parallel Operations
-```makefile
-# Multiple operations in parallel where safe
-status:
-	@export KUBECONFIG="$(KUBECONFIG_PATH)"; \
-	kubectl get nodes & \
-	kubectl get pods -A & \
-	wait
-```
+### Makefile Simplification
+- **Original**: Complex inline bash logic, difficult to maintain and test
+- **Optimized**: Thin routing layer, 68% size reduction, consistent patterns
+- **Pattern**: `make target` → argument extraction → `./infra/scripts/target.sh args`
 
 ## Success Criteria
 - ✅ All operations accessible via consistent `make <command>` pattern

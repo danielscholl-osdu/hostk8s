@@ -57,9 +57,18 @@ flux logs --follow # Watch GitOps sync logs
 - `infra/scripts/utils.sh` - Development utilities
 
 ### Configuration Files
-- `Makefile` - Standard conventions wrapper around scripts
+- `Makefile` - Simplified wrapper around dedicated scripts (137 lines, reduced from 424)
 - `infra/kubernetes/kind-config*.yaml` - Cluster configurations
 - `.env` - Environment variables (METALLB_ENABLED, INGRESS_ENABLED, FLUX_ENABLED, APP_DEPLOY)
+
+### Script Architecture
+- `infra/scripts/common.sh` - Shared utilities (logging, validation, kubectl helpers)
+- `infra/scripts/install.sh` - Dependency installation (kind, kubectl, helm, flux)
+- `infra/scripts/prepare.sh` - Development environment setup (pre-commit, yamllint)
+- `infra/scripts/status.sh` - Comprehensive cluster status reporting
+- `infra/scripts/deploy.sh` - Application deployment with validation
+- `infra/scripts/sync.sh` - Flux reconciliation operations
+- `infra/scripts/build.sh` - Docker application build and registry push
 
 ### Applications
 - `software/apps/sample/app1/` - Basic sample app (NodePort)
@@ -121,6 +130,7 @@ Common issues that break pipelines:
 - **Single-node simplicity**: No multi-node complexity for development
 - **Progressive complexity**: Basic cluster by default, add-ons opt-in
 - **Host tool preference**: Use host tools, not containers for core operations
+- **Makefile simplicity**: Thin wrapper around dedicated, testable scripts (ADR-002 implementation)
 
 ## AI Usage Guidelines
 
