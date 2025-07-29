@@ -52,6 +52,7 @@ For a deeper understanding of the platform's design and decisions, see:
 ### Install Dependencies
 
 ```bash
+make help      # Display make options
 make install   # Install required dependencies (kind, kubectl, helm, flux)
 make prepare   # Setup development environment (pre-commit, yamllint, hooks)
 ```
@@ -105,83 +106,3 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `GITOPS_STAMP`    | Stamp to deploy (e.g., `sample`, `osdu-ci`)   | `sample`  |
-
----
-
-## Available Applications
-
-### Manual Deployment
-```bash
-make deploy sample/app1    # Basic NodePort app
-make deploy sample/app2    # Advanced app (MetalLB + Ingress)
-make deploy sample/app3    # Multi-service microservices demo
-```
-
-### GitOps Stamps
-```bash
-make up sample            # Sample stamp: demo apps + infrastructure
-# make up osdu-ci         # (Future) OSDU Community Implementation
-```
-
----
-
-## Common Commands
-
-```bash
-# Cluster Management
-make up [stamp]     # Start cluster (optionally with GitOps stamp)
-make status         # Health check and service access info
-make restart        # Quick development reset
-make down           # Stop cluster (preserve data)
-make clean          # Complete cleanup
-
-# Development
-make deploy <app>   # Deploy specific application
-make logs           # View recent cluster events
-make test           # Run validation tests
-make sync           # Force GitOps reconciliation
-
-# Debugging
-kubectl run debug --image=busybox --rm -it --restart=Never -- sh
-```
-
----
-
-## Troubleshooting
-
-**Common Issues:**
-- **Port conflicts** → Check with `netstat -tulpn`
-- **Slow startup** → Pre-pull image: `docker pull kindest/node:v1.33.1`
-- **Memory issues** → Increase Docker Desktop memory allocation
-
-**Diagnostics:**
-```bash
-make status    # Comprehensive health check
-make logs      # Recent cluster events
-flux get all   # GitOps status (if using stamps)
-```
-
----
-
-## Documentation
-
-### 📖 Learn More
-- **[Architecture Guide](docs/architecture.md)** - Deep dive into design decisions and implementation
-- **[ADR Catalog](docs/adr/README.md)** - Architecture Decision Records explaining key choices
-- **[Sample Apps](software/apps/README.md)** - Available applications and deployment patterns
-- **[GitOps Stamps](software/stamp/README.md)** - Creating and using environment stamps
-
-### 🏗️ Key Design Decisions
-- **[ADR-001: Host-Mode Architecture](docs/adr/001-host-mode-architecture.md)** - Why eliminate Docker-in-Docker
-- **[ADR-002: Kind Technology Selection](docs/adr/002-kind-technology-selection.md)** - Why Kind over alternatives
-- **[ADR-004: GitOps Stamp Pattern](docs/adr/004-gitops-stamp-pattern.md)** - Complete environment deployment innovation
-
-### 🔧 Development
-- **[Contributing](CONTRIBUTING.md)** - How to contribute to HostK8s
-- **[CI/CD Strategy](docs/adr/005-hybrid-ci-cd-strategy.md)** - Branch-aware testing approach
-
----
-
-## License
-
-Apache License 2.0 – see [LICENSE](LICENSE) for details.
