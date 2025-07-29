@@ -164,7 +164,8 @@ status: ## Show cluster health and running services
 				[ "$$message" != "-" ] && echo "   Message: $$message"; \
 				echo; \
 			done; \
-			flux get kustomizations 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
+			flux get kustomizations 2>/dev/null | grep -v "^NAME" | grep -v "^[[:space:]]*$$" | while IFS=$$'\t' read -r name revision suspended ready message; do \
+				[ -z "$$name" ] && continue; \
 				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
 				suspended_trim=$$(echo "$$suspended" | tr -d ' '); \
 				ready_trim=$$(echo "$$ready" | tr -d ' '); \
@@ -306,6 +307,30 @@ status: ## Show cluster health and running services
 	fi; \
 	echo "$$(date +'[%H:%M:%S]') === Cluster Status ==="; \
 	kubectl get nodes
+
+sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])
+	$(call check_cluster)
+	@echo "🔄 Forcing Flux reconciliation..."
+	@if [ -n "$(REPO)" ]; then \
+		echo "📁 Syncing GitRepository: $(REPO)"; \
+		flux reconcile source git $(REPO) || echo "❌ Failed to sync $(REPO)"; \
+	elif [ -n "$(KUSTOMIZATION)" ]; then \
+		echo "⚙️  Syncing Kustomization: $(KUSTOMIZATION)"; \
+		flux reconcile kustomization $(KUSTOMIZATION) || echo "❌ Failed to sync $(KUSTOMIZATION)"; \
+	else \
+		echo "📁 Syncing all GitRepositories..."; \
+		flux get sources git --no-header 2>/dev/null | awk '{print $$1}' | while read repo; do \
+			echo "  → Syncing $$repo"; \
+			flux reconcile source git $$repo || echo "  ❌ Failed to sync $$repo"; \
+		done; \
+		echo; \
+		echo "⚙️  Syncing all Kustomizations..."; \
+		flux get kustomizations --no-header 2>/dev/null | awk '{print $$1}' | while read kust; do \
+			echo "  → Syncing $$kust"; \
+			flux reconcile kustomization $$kust || echo "  ❌ Failed to sync $$kust"; \
+		done; \
+	fi
+	@echo "✅ Sync complete! Run 'make status' to check results."
 
 ##@ Tools
 
