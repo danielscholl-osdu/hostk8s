@@ -6,7 +6,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: sample-cert-manager
+  name: component-cert-manager
   namespace: flux-system
 spec:
   interval: 5m
@@ -14,7 +14,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: sample-repo
+    name: software-repo
   path: ./software/components/cert-manager
   prune: true
   wait: true
@@ -23,73 +23,73 @@ spec:
       name: cert-manager
       namespace: cert-manager
 
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: sample-cert-manager-certs
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: sample-cert-manager
-  interval: 5m
-  retryInterval: 1m
-  timeout: 5m
-  sourceRef:
-    kind: GitRepository
-    name: sample-repo
-  path: ./software/components/cert-manager-certs
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Certificate
-      name: ca-certificate
-      namespace: cert-manager
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: sample-cert-manager-certs
+#   namespace: flux-system
+# spec:
+#   dependsOn:
+#     - name: sample-cert-manager
+#   interval: 5m
+#   retryInterval: 1m
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: sample-repo
+#   path: ./software/components/cert-manager-certs
+#   prune: true
+#   wait: true
+#   healthChecks:
+#     - kind: Certificate
+#       name: ca-certificate
+#       namespace: cert-manager
 
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: sample-registry
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: sample-cert-manager-certs
-  interval: 5m
-  retryInterval: 1m
-  timeout: 5m
-  sourceRef:
-    kind: GitRepository
-    name: sample-repo
-  path: ./software/components/registry
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Deployment
-      name: registry
-      namespace: registry
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: sample-registry
+#   namespace: flux-system
+# spec:
+#   dependsOn:
+#     - name: sample-cert-manager-certs
+#   interval: 5m
+#   retryInterval: 1m
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: sample-repo
+#   path: ./software/components/registry
+#   prune: true
+#   wait: true
+#   healthChecks:
+#     - kind: Deployment
+#       name: registry
+#       namespace: registry
 
-######################
-## Sample Stamp Applications
-## These depend on all components being ready
-######################
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: sample-applications
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: sample-cert-manager
-    - name: sample-cert-manager-certs
-    - name: sample-registry
-  interval: 5m
-  retryInterval: 1m
-  timeout: 5m
-  sourceRef:
-    kind: GitRepository
-    name: sample-repo
-  path: ./software/stamp/sample/applications
-  prune: true
-  wait: true
+# ######################
+# ## Sample Stamp Applications
+# ## These depend on all components being ready
+# ######################
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: sample-applications
+#   namespace: flux-system
+# spec:
+#   dependsOn:
+#     - name: sample-cert-manager
+#     - name: sample-cert-manager-certs
+#     - name: sample-registry
+#   interval: 5m
+#   retryInterval: 1m
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: sample-repo
+#   path: ./software/stamp/sample/applications
+#   prune: true
+#   wait: true

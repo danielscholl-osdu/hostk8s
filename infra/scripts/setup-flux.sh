@@ -43,7 +43,7 @@ check_flux_cli() {
         error_exit "Flux CLI found but not working properly"
     fi
 
-    log "✅ Flux CLI verified: $flux_version"
+    log "Flux CLI verified: $flux_version"
 }
 
 detect_kubeconfig
