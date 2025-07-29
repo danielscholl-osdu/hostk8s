@@ -1,7 +1,7 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
-  name: software-repo
+  name: flux-system
   namespace: flux-system
 spec:
   interval: 5m

@@ -4,7 +4,5 @@ kind: Namespace
 metadata:
   name: cert-manager
   labels:
-    name: cert-manager
-    osdu-ci.component: cert-manager
     istio-injection: disabled
     toolkit.fluxcd.io/tenant: component

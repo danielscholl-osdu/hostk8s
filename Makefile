@@ -165,7 +165,8 @@ status: ## Show cluster health and running services
 				echo; \
 			done; \
 			flux get kustomizations 2>/dev/null | grep -v "^NAME" | grep -v "^[[:space:]]*$$" | while IFS=$$'\t' read -r name revision suspended ready message; do \
-				[ -z "$$name" ] && continue; \
+				name_trimmed=$$(echo "$$name" | tr -d ' '); \
+				[ -z "$$name_trimmed" ] && continue; \
 				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
 				suspended_trim=$$(echo "$$suspended" | tr -d ' '); \
 				ready_trim=$$(echo "$$ready" | tr -d ' '); \
