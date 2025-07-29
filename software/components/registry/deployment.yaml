@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  namespace: registry
+  labels:
+    app: registry
+    osdu-ci.component: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+        osdu-ci.component: registry
+    spec:
+      containers:
+      - name: registry
+        image: registry:2.7
+        ports:
+        - containerPort: 5000
+          name: http
+        - containerPort: 5443
+          name: https
+        env:
+        - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+          value: /var/lib/registry
+        - name: REGISTRY_HEALTH_STORAGEDRIVER_ENABLED
+          value: "true"
+        # HTTPS Configuration
+        - name: REGISTRY_HTTP_TLS_CERTIFICATE
+          value: /etc/ssl/certs/tls.crt
+        - name: REGISTRY_HTTP_TLS_KEY
+          value: /etc/ssl/certs/tls.key
+        - name: REGISTRY_HTTP_ADDR
+          value: ":5443"
+        # Also listen on HTTP for compatibility
+        - name: REGISTRY_HTTP_HTTP2_DISABLED
+          value: "false"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+        volumeMounts:
+        - name: registry-data
+          mountPath: /var/lib/registry
+        - name: tls-certs
+          mountPath: /etc/ssl/certs
+          readOnly: true
+        livenessProbe:
+          httpGet:
+            path: /v2/
+            port: 5443
+            scheme: HTTPS
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /v2/
+            port: 5443
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: registry-data
+        persistentVolumeClaim:
+          claimName: registry-data
+      - name: tls-certs
+        secret:
+          secretName: registry-tls-secret

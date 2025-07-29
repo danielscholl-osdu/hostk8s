@@ -31,7 +31,7 @@ Perfect for:
 ## Deploy
 ```bash
 make deploy app2
-# or  
+# or
 APP_DEPLOY=app2 make deploy
 ```
 

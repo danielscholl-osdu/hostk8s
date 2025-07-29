@@ -43,7 +43,7 @@ check_flux_cli() {
         error_exit "Flux CLI found but not working properly"
     fi
 
-    log "✅ Flux CLI verified: $flux_version"
+    log "Flux CLI verified: $flux_version"
 }
 
 detect_kubeconfig
@@ -95,47 +95,32 @@ flux install \
 log "Waiting for Flux controllers to be ready..."
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
 
-# Only create GitRepository and Kustomization if a stamp is specified
+# Function to apply stamp YAML files directly
+apply_stamp_yaml() {
+    local yaml_file="$1"
+    local description="$2"
+
+    if [ -f "$yaml_file" ]; then
+        log "$description"
+        kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log "WARNING: Failed to apply $description"
+    else
+        log "WARNING: YAML file not found: $yaml_file"
+    fi
+}
+
+# Only create GitOps configuration if a stamp is specified
 if [ -n "$GITOPS_STAMP" ]; then
     # Extract repository name from URL for better naming
     REPO_NAME=$(basename "$GITOPS_REPO" .git)
 
-    # Create a GitRepository source using configured repository
-    log "Creating GitRepository source..."
-    cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create GitRepository"
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: $REPO_NAME-repo
-  namespace: flux-system
-spec:
-  interval: 1m
-  url: $GITOPS_REPO
-  ref:
-    branch: $GITOPS_BRANCH
-  ignore: |
-    # exclude all
-    /*
-    # include only GitOps stamp directory
-    !/software/stamp/
-EOF
+    # Export variables for template substitution
+    export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
-    # Create a Kustomization for the specified stamp directory
-    log "Creating Kustomization for stamp: $GITOPS_STAMP"
-    cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to create Kustomization"
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: stamp-$GITOPS_STAMP
-  namespace: flux-system
-spec:
-  interval: 5m
-  path: "./software/stamp/$GITOPS_STAMP"
-  prune: true
-  sourceRef:
-    kind: GitRepository
-    name: $REPO_NAME-repo
-EOF
+    # Apply stamp GitRepository first
+    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Creating GitRepository for stamp: $GITOPS_STAMP"
+
+    # Apply universal bootstrap kustomization that manages all stamps
+    apply_stamp_yaml "software/stamp/bootstrap.yaml" "Creating universal bootstrap kustomization for all stamps"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
@@ -153,12 +138,6 @@ if [ -n "$GITOPS_STAMP" ]; then
     log "   Branch: $GITOPS_BRANCH"
     log "   Stamp: $GITOPS_STAMP"
     log "   Path: ./software/stamp/$GITOPS_STAMP"
-    log ""
-    log "🔧 Management commands:"
-    log "1. Check status: make status"
-    log "2. Monitor logs: flux logs --follow"
-    log "3. Switch stamp: make restart <stamp-name>"
-    log "4. View resources: kubectl get all --all-namespaces"
 else
     log "🔧 Flux installed - ready for GitOps configuration"
     log "Next steps:"
