@@ -166,19 +166,18 @@ status: ## Show cluster health and running services
 				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
 				if [ "$$suspended" = "True" ]; then \
 					status_icon="[PAUSED]"; \
-					status_text="Suspended"; \
 				elif [ "$$ready" = "True" ]; then \
 					status_icon="[OK]"; \
-					status_text="Ready"; \
 				elif [ "$$ready" = "False" ]; then \
 					status_icon="[FAIL]"; \
-					status_text="Failed"; \
 				else \
 					status_icon="[...]"; \
-					status_text="Reconciling"; \
 				fi; \
-				echo "$$status_icon Kustomization: $$name ($$status_text)"; \
-				echo "   Source: $$source_ref | Revision: $$revision"; \
+				echo "$$status_icon Kustomization: $$name"; \
+				echo "   Source: $$source_ref"; \
+				echo "   Revision: $$revision"; \
+				echo "   Ready: $$ready"; \
+				echo "   Suspended: $$suspended"; \
 				[ "$$message" != "-" ] && [ "$$message" != "" ] && echo "   Message: $$message"; \
 				echo; \
 			done; \
