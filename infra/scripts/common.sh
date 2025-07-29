@@ -14,33 +14,53 @@ RED='\033[0;31m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-# Logging functions with emoji patterns (matching Makefile style)
+# Logging functions with log levels
+# LOG_LEVEL can be: debug (default) or info
+# debug: shows all messages
+# info: shows only info, warn, error (hides debug messages)
+
+log_debug() {
+    # Only show debug messages if LOG_LEVEL is not set to info
+    if [ "${LOG_LEVEL:-debug}" != "info" ]; then
+        echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"
+    fi
+}
+
 log_info() {
-    echo -e "${GREEN}[$(date +'%H:%M:%S')] 💡${NC} $*"
+    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $*"
 }
 
 log_success() {
-    echo -e "${GREEN}[$(date +'%H:%M:%S')] ✅${NC} $*"
+    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $*"
 }
 
 log_warn() {
-    echo -e "${YELLOW}[$(date +'%H:%M:%S')] ⚠️${NC} $*"
+    if [ "${QUIET:-false}" = "true" ]; then
+        echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $*"
+    else
+        echo -e "${YELLOW}[$(date +'%H:%M:%S')] ⚠️${NC} $*"
+    fi
 }
 
 log_error() {
-    echo -e "${RED}[$(date +'%H:%M:%S')] ❌${NC} $*" >&2
+    if [ "${QUIET:-false}" = "true" ]; then
+        echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $*" >&2
+    else
+        echo -e "${RED}[$(date +'%H:%M:%S')] ❌${NC} $*" >&2
+    fi
 }
 
+# Convenience aliases for semantic actions
 log_start() {
-    echo -e "${BLUE}[$(date +'%H:%M:%S')] 🚀${NC} $*"
+    log_info "$@"
 }
 
 log_clean() {
-    echo -e "${BLUE}[$(date +'%H:%M:%S')] 🧹${NC} $*"
+    log_info "$@"
 }
 
 log_deploy() {
-    echo -e "${BLUE}[$(date +'%H:%M:%S')] 📦${NC} $*"
+    log_info "$@"
 }
 
 log_status() {

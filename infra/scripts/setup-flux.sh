@@ -130,16 +130,16 @@ fi
 log "Flux installation completed! Checking status..."
 flux get all || log "WARNING: Could not get flux status"
 
-log "✅ Flux GitOps setup complete!"
+log "Flux GitOps setup complete!"
 log ""
 if [ -n "$GITOPS_STAMP" ]; then
-    log "🚀 Active Configuration:"
+    log "Active Configuration:"
     log "   Repository: $GITOPS_REPO"
     log "   Branch: $GITOPS_BRANCH"
     log "   Stamp: $GITOPS_STAMP"
     log "   Path: ./software/stamp/$GITOPS_STAMP"
 else
-    log "🔧 Flux installed - ready for GitOps configuration"
+    log "Flux installed - ready for GitOps configuration"
     log "Next steps:"
     log "1. Configure stamp: make restart sample"
     log "2. Check status: make status"

@@ -7,7 +7,7 @@ spec:
   interval: 5m
   url: https://community.opengroup.org/danielscholl/osdu-ci
   ref:
-    branch: feature/https-registry
+    branch: main
   ignore: |
     # exclude all
     /*

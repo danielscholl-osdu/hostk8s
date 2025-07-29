@@ -23,12 +23,12 @@ check_tool() {
     local install_cmd="$2"
 
     if command -v "$tool" >/dev/null 2>&1; then
-        log_info "$tool already installed"
+        log_debug "$tool already installed"
         return 0
     fi
 
     if [ -n "$install_cmd" ]; then
-        log_info "Installing $tool..."
+        log_debug "Installing $tool..."
         eval "$install_cmd"
     else
         log_error "$tool not found"
@@ -37,7 +37,7 @@ check_tool() {
 }
 
 install_with_homebrew() {
-    log_info "Using Homebrew (macOS)..."
+    log_debug "Using Homebrew (macOS)..."
 
     local tools=(
         "kind:brew install kind"
@@ -55,7 +55,7 @@ install_with_homebrew() {
 
 validate_ci_environment() {
     local env_name="$1"
-    log_info "$env_name environment detected - dependencies should be pre-installed"
+    log_debug "$env_name environment detected - dependencies should be pre-installed"
 
     local tools=("kind" "kubectl" "helm" "flux")
     local missing_tools=()
