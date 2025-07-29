@@ -40,13 +40,13 @@ software/stamp/
 1. Bootstrap Kustomization (bootstrap.yaml)
    └── Points to specific stamp path
 
-2. Stamp Kustomization (kustomization.yaml)  
+2. Stamp Kustomization (kustomization.yaml)
    ├── repository.yaml     # Creates GitRepository source
    └── stamp.yaml          # Deploys infrastructure components
 
 3. Component Dependencies (stamp.yaml)
    ├── component-certs     # Certificate management
-   ├── component-certs-ca  # Root CA certificate  
+   ├── component-certs-ca  # Root CA certificate
    └── component-certs-issuer # Certificate issuer
 
 4. Infrastructure Components (components/)
@@ -144,7 +144,7 @@ spec:
 ### Stamp Deployment
 ```bash
 make up sample      # Deploy sample stamp
-make status         # Monitor reconciliation  
+make status         # Monitor reconciliation
 make sync           # Force reconciliation
 flux get all        # Check Flux resources
 ```

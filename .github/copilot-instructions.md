@@ -4,7 +4,7 @@ For comprehensive project guidance, **READ THE CLAUDE.md FILE** in the root dire
 
 The CLAUDE.md file contains all the essential information for working with this OSDU-CI repository:
 - Repository context and architecture
-- Development workflows and commands  
+- Development workflows and commands
 - Code quality standards and YAML validation requirements
 - File patterns and conventions
 - Git workflow guidelines

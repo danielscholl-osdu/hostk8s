@@ -1,4 +1,4 @@
-# ADR Catalog 
+# ADR Catalog
 
 Optimized ADR Index for Agent Context
 

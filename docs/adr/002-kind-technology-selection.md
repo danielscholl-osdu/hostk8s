@@ -24,7 +24,7 @@ Use **Kind (Kubernetes in Docker)** as the core Kubernetes runtime for local dev
 - **Cons**: VM-based by default, complex driver selection, resource overhead
 - **Decision**: Rejected due to virtualization complexity and resource requirements
 
-### 2. k3s/k3d  
+### 2. k3s/k3d
 - **Pros**: Lightweight, fast startup, low resource usage
 - **Cons**: Modified Kubernetes distribution, potential compatibility issues, limited ecosystem
 - **Decision**: Rejected due to non-standard Kubernetes distribution
@@ -49,7 +49,7 @@ Use **Kind (Kubernetes in Docker)** as the core Kubernetes runtime for local dev
 ### Kubernetes Conformance
 ```
 Kind:           ✅ Full conformance (upstream K8s)
-minikube:       ✅ Full conformance (upstream K8s)  
+minikube:       ✅ Full conformance (upstream K8s)
 k3s:            ⚠️  Modified distribution (some features removed)
 Docker Desktop: ✅ Full conformance (upstream K8s)
 MicroK8s:       ✅ Full conformance (upstream K8s)
@@ -59,7 +59,7 @@ MicroK8s:       ✅ Full conformance (upstream K8s)
 ```
 Kind:           2GB RAM, 1 CPU (minimum)
 minikube:       3GB RAM, 2 CPU (minimum)
-k3s:            1GB RAM, 1 CPU (minimum)  
+k3s:            1GB RAM, 1 CPU (minimum)
 Docker Desktop: 2GB RAM, 2 CPU (minimum)
 MicroK8s:       2GB RAM, 1 CPU (minimum)
 ```
@@ -69,7 +69,7 @@ MicroK8s:       2GB RAM, 1 CPU (minimum)
 Kind:           30-60 seconds
 minikube:       2-5 minutes (driver dependent)
 k3s:            15-30 seconds
-Docker Desktop: 1-2 minutes  
+Docker Desktop: 1-2 minutes
 MicroK8s:       1-3 minutes
 ```
 
@@ -89,7 +89,7 @@ Kind's design philosophy aligns perfectly with host-mode:
 ```bash
 # Kind cluster as single Docker container
 docker ps
-# CONTAINER ID   IMAGE                 COMMAND                  
+# CONTAINER ID   IMAGE                 COMMAND
 # abc123def456   kindest/node:v1.33.1  "/usr/local/bin/entr…"
 ```
 
@@ -152,7 +152,7 @@ Kind maintains compatibility with multiple Kubernetes versions:
 ```bash
 # Version matrix supported
 kind create cluster --image kindest/node:v1.31.1
-kind create cluster --image kindest/node:v1.32.1  
+kind create cluster --image kindest/node:v1.32.1
 kind create cluster --image kindest/node:v1.33.1
 ```
 

@@ -63,7 +63,7 @@ flux logs --follow # Watch GitOps sync logs
 
 ### Applications
 - `software/apps/sample/app1/` - Basic sample app (NodePort)
-- `software/apps/sample/app2/` - Advanced app (MetalLB + Ingress)  
+- `software/apps/sample/app2/` - Advanced app (MetalLB + Ingress)
 - `software/apps/sample/app3/` - Multi-service microservices demo
 - `software/stamp/` - GitOps stamp patterns for complete environments
 

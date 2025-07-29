@@ -23,7 +23,7 @@ Implement a **branch-aware hybrid CI/CD strategy** combining GitLab CI (fast tra
 - **Cons**: GitLab runners less suited for complex Kubernetes testing
 - **Decision**: Rejected due to runner limitations and cost
 
-### 2. GitHub Actions Only  
+### 2. GitHub Actions Only
 - **Pros**: Excellent Kubernetes tooling, powerful runners
 - **Cons**: Slower startup times, less integrated with GitLab workflow
 - **Decision**: Rejected due to development velocity impact
@@ -49,7 +49,7 @@ graph TD
 
 ### GitLab CI (Fast Track - 2-3 minutes)
 - Project structure validation
-- Makefile interface testing  
+- Makefile interface testing
 - Tool installation verification
 - Docker connectivity
 - Basic file structure checks

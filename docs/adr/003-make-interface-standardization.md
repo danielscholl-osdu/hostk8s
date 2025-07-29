@@ -145,7 +145,7 @@ up: ## Start cluster (Usage: make up [minimal|simple|default|sample])
 ### Dependency Chain Management
 ```makefile
 up: install          # Automatically ensures dependencies
-deploy: up           # Ensures cluster exists before deployment  
+deploy: up           # Ensures cluster exists before deployment
 test: deploy         # Ensures application deployed before testing
 ```
 

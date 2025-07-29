@@ -83,7 +83,7 @@ fi
 
 **Branch Naming Conventions**:
 - `feature/description` - New features
-- `fix/description` - Bug fixes  
+- `fix/description` - Bug fixes
 - `docs/description` - Documentation updates
 - `chore/description` - Maintenance tasks
 
@@ -124,7 +124,7 @@ I'll handle common scenarios gracefully:
 
 I'll analyze your changes based on file patterns:
 - `infra/` → infrastructure changes
-- `software/` → application/deployment changes  
+- `software/` → application/deployment changes
 - `.gitlab-ci.yml` → CI/CD pipeline changes
 - `docs/` → documentation updates
 - `Makefile` → build system changes

@@ -44,7 +44,7 @@ Adopt **host-mode architecture** using Kind (Kubernetes in Docker) running direc
 ### Resource Efficiency
 ```
 Host-Mode:     4GB RAM, 2 CPU cores (minimum)
-DinD:          8GB RAM, 4 CPU cores (minimum)  
+DinD:          8GB RAM, 4 CPU cores (minimum)
 Virtualized:   8GB RAM, 4 CPU cores (minimum)
 ```
 
@@ -94,7 +94,7 @@ Host Docker Daemon
 # Required host tools
 kind        # Cluster management
 kubectl     # Kubernetes CLI
-helm        # Package management  
+helm        # Package management
 docker      # Container runtime (Docker Desktop)
 ```
 

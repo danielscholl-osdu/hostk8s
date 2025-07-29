@@ -24,7 +24,7 @@ git diff --cached --stat
 
 Based on file patterns (detailed in CLAUDE.md):
 - `infra/` → infrastructure changes
-- `software/` → application/deployment changes  
+- `software/` → application/deployment changes
 - `.gitlab-ci.yml` → CI/CD pipeline changes
 - `docs/` → documentation updates
 - `Makefile` → build system changes
@@ -32,6 +32,6 @@ Based on file patterns (detailed in CLAUDE.md):
 ## Important
 
 - **Never include AI attribution** in commit messages
-- **Use existing git user configuration** 
+- **Use existing git user configuration**
 - **Follow GitLab workflow** (feature branches, merge requests)
 - **Validate YAML files** before committing (critical for CI/CD)

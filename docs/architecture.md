@@ -372,7 +372,7 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **[ADR-001: Host-Mode Architecture](adr/001-host-mode-architecture.md)** - Why eliminate Docker-in-Docker complexity
 - **[ADR-002: Kind Technology Selection](adr/002-kind-technology-selection.md)** - Why Kind over minikube, k3s, etc.
 
-### Developer Experience  
+### Developer Experience
 - **[ADR-003: Make Interface Standardization](adr/003-make-interface-standardization.md)** - Why standardize on Make wrapper
 
 ### Advanced Capabilities
