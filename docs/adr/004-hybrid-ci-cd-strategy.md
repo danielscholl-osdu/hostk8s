@@ -1,7 +1,7 @@
 # ADR-005: Hybrid CI/CD Strategy
 
 ## Status
-**Accepted** - 2025-01-20
+**Accepted** - 2025-07-28
 
 ## Context
 HostK8s requires comprehensive testing of Kubernetes environments, GitOps reconciliation, and cross-platform compatibility. Single CI/CD platforms face trade-offs between speed (developer feedback) and thoroughness (comprehensive validation). We needed a strategy that provides fast feedback for development velocity while ensuring comprehensive testing for production readiness.

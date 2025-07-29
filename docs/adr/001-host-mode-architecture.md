@@ -1,13 +1,13 @@
 # ADR-001: Host-Mode Architecture
 
 ## Status
-**Accepted** - 2025-01-10
+**Accepted** - 2025-07-28
 
 ## Context
 Local Kubernetes development environments face stability and performance challenges. Traditional approaches using Docker-in-Docker (DinD) or virtualized solutions suffer from resource overhead, complexity, and reliability issues. Developers need fast, stable, reproducible Kubernetes environments that integrate seamlessly with their existing Docker Desktop setup.
 
 ## Decision
-Adopt **host-mode architecture** using Kind (Kubernetes in Docker) running directly on the host Docker daemon, eliminating Docker-in-Docker complexity.
+Adopt **host-mode architecture** using Kind (Kubernetes in Docker) running directly on the host Docker daemon, eliminating Docker-in-Docker complexity. Kind was selected as the optimal technology for host-mode Kubernetes development due to its authentic K8s components and native host Docker integration.
 
 ## Rationale
 1. **Stability**: Eliminates Docker Desktop hanging issues common with DinD approaches

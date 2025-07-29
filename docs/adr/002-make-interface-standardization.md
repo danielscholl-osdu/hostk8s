@@ -1,7 +1,7 @@
 # ADR-003: Make Interface Standardization
 
 ## Status
-**Accepted** - 2025-01-15
+**Accepted** - 2025-07-28
 
 ## Context
 HostK8s consists of multiple shell scripts for cluster management, each with different calling conventions and environment requirements. Developers needed a consistent, discoverable interface that handles environment setup (KUBECONFIG), validation, and provides standardized commands regardless of the underlying script complexity.

@@ -1,7 +1,7 @@
 # ADR-004: GitOps Stamp Pattern
 
 ## Status
-**Accepted** - 2025-01-18
+**Accepted** - 2025-07-28
 
 ## Context
 HostK8s needed a way to deploy complete, declarative environments that go beyond simple application deployment. Users require consistent patterns for deploying infrastructure components (databases, ingress, certificates) alongside applications, with clear dependency management and environment-specific configurations. The solution must be platform-agnostic and reusable across different domain contexts.

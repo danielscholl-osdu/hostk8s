@@ -332,10 +332,9 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 | id  | title                               | status | details |
 | --- | ----------------------------------- | ------ | ------- |
 | 001 | Host-Mode Architecture              | acc    | [ADR-001](adr/001-host-mode-architecture.md) |
-| 002 | Kind Technology Selection          | acc    | [ADR-002](adr/002-kind-technology-selection.md) |
-| 003 | Make Interface Standardization     | acc    | [ADR-003](adr/003-make-interface-standardization.md) |
-| 004 | GitOps Stamp Pattern               | acc    | [ADR-004](adr/004-gitops-stamp-pattern.md) |
-| 005 | Hybrid CI/CD Strategy              | acc    | [ADR-005](adr/005-hybrid-ci-cd-strategy.md) |
+| 002 | Make Interface Standardization     | acc    | [ADR-002](adr/002-make-interface-standardization.md) |
+| 003 | GitOps Stamp Pattern               | acc    | [ADR-003](adr/003-gitops-stamp-pattern.md) |
+| 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](adr/004-hybrid-ci-cd-strategy.md) |
 
 ### ADR Summaries
 
@@ -344,22 +343,17 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Benefits**: Stability, 50% faster startup, lower resource usage (4GB vs 8GB), standard kubectl/kind workflow
 - **Tradeoffs**: Less isolation, Docker Desktop dependency, single-node limitation
 
-**ADR-002: Kind Technology Selection**
-- **Decision**: Use Kind (Kubernetes in Docker) as the core Kubernetes runtime for local development
-- **Benefits**: Authentic Kubernetes components, host-mode compatible, upstream conformance, mature and stable
-- **Tradeoffs**: Docker dependency, single-node limitation, larger images
-
-**ADR-003: Make Interface Standardization**
+**ADR-002: Make Interface Standardization**
 - **Decision**: Implement standardized Make interface wrapping all operational scripts with consistent conventions
 - **Benefits**: Universal familiarity, standard conventions, automatic KUBECONFIG handling, discoverability
 - **Tradeoffs**: Abstraction layer, Make dependency, argument limitations
 
-**ADR-004: GitOps Stamp Pattern**
+**ADR-003: GitOps Stamp Pattern**
 - **Decision**: Implement stamp pattern for deploying complete environments via Flux with component/application separation
 - **Benefits**: Complete environments, platform agnostic, dependency management, reusability
 - **Tradeoffs**: Learning curve, debugging complexity, bootstrap dependency
 
-**ADR-005: Hybrid CI/CD Strategy**
+**ADR-004: Hybrid CI/CD Strategy**
 - **Decision**: Branch-aware hybrid CI/CD combining GitLab CI (fast) with GitHub Actions (comprehensive)
 - **Benefits**: Fast feedback (2-3 min), comprehensive testing (8-10 min), branch-aware optimization
 - **Tradeoffs**: Dual platform complexity, sync overhead
