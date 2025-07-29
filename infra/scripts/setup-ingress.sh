@@ -48,10 +48,10 @@ kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f https://raw.githubusercontent.c
 # Check if MetalLB is installed and configure LoadBalancer service
 if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace metallb-system >/dev/null 2>&1; then
     log "MetalLB detected, configuring NGINX Ingress for LoadBalancer integration..."
-    
+
     # Wait for the ingress controller service to be created first
     kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n ingress-nginx --timeout=60s || log "WARNING: Ingress service not found"
-    
+
     # Patch the service to use LoadBalancer type with correct NodePorts for Kind
     kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n ingress-nginx -p '{
         "spec": {
@@ -62,14 +62,14 @@ if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace metallb-system >/dev/nu
             ]
         }
     }' || log "WARNING: Failed to patch ingress service for LoadBalancer"
-    
+
     log "Ingress controller configured for MetalLB LoadBalancer"
 else
     log "MetalLB not detected, configuring NodePort for Kind port mapping..."
-    
+
     # Wait for the ingress controller service to be created first
     kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n ingress-nginx --timeout=60s || log "WARNING: Ingress service not found"
-    
+
     # Patch the service to use specific NodePorts that match Kind port mapping (30080->8080, 30443->8443)
     kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n ingress-nginx -p '{
         "spec": {
@@ -80,7 +80,7 @@ else
             ]
         }
     }' || log "WARNING: Failed to patch ingress service for NodePort"
-    
+
     log "Ingress controller configured for Kind NodePort mapping (30080->8080, 30443->8443)"
 fi
 
@@ -89,7 +89,7 @@ log "Waiting for NGINX Ingress Controller to be ready..."
 
 # Increase timeout for CI environments
 INGRESS_TIMEOUT=300s
-if [ -n "$CI" ] || [ -n "$GITHUB_ACTIONS" ]; then
+if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
     log "CI environment detected, increasing timeout to 600s for Ingress readiness..."
     INGRESS_TIMEOUT=600s
 fi

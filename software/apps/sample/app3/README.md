@@ -27,7 +27,7 @@ Frontend (nginx) → API (nginx) → Database (postgresql)
 - **Environment**: `API_URL=http://api`
 
 ### 🔌 API Service (2 replicas)
-- **Purpose**: Business logic and database communication  
+- **Purpose**: Business logic and database communication
 - **Image**: mcr.microsoft.com/azurelinux/base/nginx (placeholder for real API)
 - **Internal Access**: `http://api` (ClusterIP)
 - **Environment**: `DATABASE_URL=postgresql://appuser:apppass@database:5432/appdb`
@@ -66,14 +66,14 @@ Perfect for:
 # Test frontend → API communication
 kubectl exec -it deployment/frontend -- wget -qO- http://api
 
-# Test API → database connectivity  
+# Test API → database connectivity
 kubectl exec -it deployment/api -- nc -zv database 5432
 
 # View all pod IPs and communication paths
 kubectl get pods -o wide -l 'tier in (frontend,api,database)'
 
 # Check logs
-kubectl logs deployment/api  
+kubectl logs deployment/api
 kubectl logs deployment/database
 ```
 
@@ -84,7 +84,7 @@ kubectl logs deployment/database
 kubectl scale deployment api --replicas=3
 
 # Scale frontend
-kubectl scale deployment frontend --replicas=1  
+kubectl scale deployment frontend --replicas=1
 
 # View updated deployment
 kubectl get pods -l tier=api
