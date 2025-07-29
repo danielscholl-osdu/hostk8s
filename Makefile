@@ -175,7 +175,11 @@ status: ## Show cluster health and running services
 				elif [ "$$ready_trim" = "True" ]; then \
 					status_icon="[OK]"; \
 				elif [ "$$ready_trim" = "False" ]; then \
-					status_icon="[FAIL]"; \
+					if echo "$$message" | grep -q "dependency.*is not ready"; then \
+						status_icon="[WAITING]"; \
+					else \
+						status_icon="[FAIL]"; \
+					fi; \
 				else \
 					status_icon="[...]"; \
 				fi; \
