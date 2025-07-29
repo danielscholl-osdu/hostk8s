@@ -16,7 +16,8 @@ By running Kind directly on your host and adopting a GitOps-driven environment p
 
 * **Fast startup** – no VM boot times.
 * **Low resource usage** – 4GB RAM typical.
-* **Stable development cycles** – avoids Docker Desktop hangs.
+* **Faster development inner loops** – quick cluster restarts and reliable iteration cycles.
+* **Configurable** – loosely coupled abstractions work across multiple software stacks.
 * **Environment-as-code** – deploy full stacks with GitOps stamps.
 * **Stack agnostic** – works with any language or framework.
 
