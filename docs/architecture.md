@@ -320,47 +320,6 @@ flux logs --follow # Watch GitOps sync logs
 make restart sample # Reset with stamp configuration
 ```
 
-## Migration from Docker-in-Docker
-
-### Architectural Changes
-1. **Eliminated**: Docker-in-Docker complexity
-2. **Added**: Host-mode Kind integration
-3. **Simplified**: Single-node cluster design
-4. **Improved**: Resource efficiency and stability
-
-### Benefits Achieved
-- ✅ **Stability**: No Docker Desktop hanging issues
-- ✅ **Performance**: 50% faster startup times
-- ✅ **Resources**: Lower memory requirements (4GB vs 8GB)
-- ✅ **Simplicity**: Standard kubectl/kind workflow
-- ✅ **Reliability**: Predictable behavior across platforms
-
-### Recent Enhancements (2025)
-- ✅ **MetalLB + Ingress Integration**: Seamless LoadBalancer and HTTP routing
-- ✅ **Convention-based Configuration**: Simplified Kind config selection (`minimal`, `simple`, `default`)
-- ✅ **Structured App Deployment**: Individual app folders with configurable deployment
-- ✅ **IPv4 Network Detection**: Robust Docker subnet detection for MetalLB
-- ✅ **Security Improvements**: Environment variable exposure protection
-- ✅ **Consolidated Scripts**: Flattened directory structure for better maintainability
-- ✅ **GitOps Stamp Pattern**: Component/application separation with bootstrap workflow
-- ✅ **Flux GitOps Integration**: Complete GitOps workflow (flux CLI via `make install`)
-- ✅ **Selective Git Sync**: Efficient synchronization with ignore patterns
-- ✅ **Hybrid CI/CD Pipeline**: Branch-aware testing with GitLab CI + GitHub Actions
-- ✅ **Enhanced Logging**: Detailed GitOps reconciliation status and debugging
-- ✅ **Smart Testing**: PR branches get fast validation, main branch gets full testing
-- ✅ **Status Reporting**: GitHub Actions reports comprehensive results back to GitLab
-
-## Future Considerations
-
-### Potential Enhancements
-- **Additional Stamps**: OSDU-CI stamp, microservices demo stamp, etc.
-- **Multi-cluster support**: For advanced testing scenarios
-- **Advanced GitOps patterns**: Multi-tenant configurations, progressive delivery
-- **Security hardening**: RBAC templates for production migration
-- **Observability stack**: Integrated monitoring and logging with GitOps
-
-### Stability Focus
-The architecture prioritizes **stability over features**. Each component serves a clear purpose, and complexity is only added when it provides significant developer value. This approach ensures the environment remains reliable and maintainable as requirements evolve.
 
 ---
 
@@ -368,16 +327,42 @@ The architecture prioritizes **stability over features**. Each component serves 
 
 For detailed rationale behind key design choices, see our Architecture Decision Records:
 
-### Foundation Decisions
-- **[ADR-001: Host-Mode Architecture](adr/001-host-mode-architecture.md)** - Why eliminate Docker-in-Docker complexity
-- **[ADR-002: Kind Technology Selection](adr/002-kind-technology-selection.md)** - Why Kind over minikube, k3s, etc.
+### ADR Index
 
-### Developer Experience
-- **[ADR-003: Make Interface Standardization](adr/003-make-interface-standardization.md)** - Why standardize on Make wrapper
+| id  | title                               | status | details |
+| --- | ----------------------------------- | ------ | ------- |
+| 001 | Host-Mode Architecture              | acc    | [ADR-001](adr/001-host-mode-architecture.md) |
+| 002 | Kind Technology Selection          | acc    | [ADR-002](adr/002-kind-technology-selection.md) |
+| 003 | Make Interface Standardization     | acc    | [ADR-003](adr/003-make-interface-standardization.md) |
+| 004 | GitOps Stamp Pattern               | acc    | [ADR-004](adr/004-gitops-stamp-pattern.md) |
+| 005 | Hybrid CI/CD Strategy              | acc    | [ADR-005](adr/005-hybrid-ci-cd-strategy.md) |
 
-### Advanced Capabilities
-- **[ADR-004: GitOps Stamp Pattern](adr/004-gitops-stamp-pattern.md)** - Complete environment deployment innovation
-- **[ADR-005: Hybrid CI/CD Strategy](adr/005-hybrid-ci-cd-strategy.md)** - Branch-aware testing approach
+### ADR Summaries
+
+**ADR-001: Host-Mode Architecture**
+- **Decision**: Use Kind directly on host Docker daemon, eliminating Docker-in-Docker complexity
+- **Benefits**: Stability, 50% faster startup, lower resource usage (4GB vs 8GB), standard kubectl/kind workflow
+- **Tradeoffs**: Less isolation, Docker Desktop dependency, single-node limitation
+
+**ADR-002: Kind Technology Selection**
+- **Decision**: Use Kind (Kubernetes in Docker) as the core Kubernetes runtime for local development
+- **Benefits**: Authentic Kubernetes components, host-mode compatible, upstream conformance, mature and stable
+- **Tradeoffs**: Docker dependency, single-node limitation, larger images
+
+**ADR-003: Make Interface Standardization**
+- **Decision**: Implement standardized Make interface wrapping all operational scripts with consistent conventions
+- **Benefits**: Universal familiarity, standard conventions, automatic KUBECONFIG handling, discoverability
+- **Tradeoffs**: Abstraction layer, Make dependency, argument limitations
+
+**ADR-004: GitOps Stamp Pattern**
+- **Decision**: Implement stamp pattern for deploying complete environments via Flux with component/application separation
+- **Benefits**: Complete environments, platform agnostic, dependency management, reusability
+- **Tradeoffs**: Learning curve, debugging complexity, bootstrap dependency
+
+**ADR-005: Hybrid CI/CD Strategy**
+- **Decision**: Branch-aware hybrid CI/CD combining GitLab CI (fast) with GitHub Actions (comprehensive)
+- **Benefits**: Fast feedback (2-3 min), comprehensive testing (8-10 min), branch-aware optimization
+- **Tradeoffs**: Dual platform complexity, sync overhead
 
 Each ADR documents the context, decision, alternatives considered, and consequences - providing the "why" behind HostK8s's unique architecture.
 

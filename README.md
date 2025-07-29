@@ -34,10 +34,9 @@ Uses your host Docker daemon directly — no nested Docker layers. Works seamles
 
 ### Learn More
 
-For a deeper understanding of the platform's design and decisions, see:
+For a deeper understanding of the platform's design:
 
 * [Architecture Guide](docs/architecture.md)
-* [ADR Catalog (Design Decisions)](docs/adr/README.md)
 
 ---
 
