@@ -145,11 +145,13 @@ status: ## Show cluster health and running services
 	echo "💡 export KUBECONFIG=\$$(pwd)/data/kubeconfig/config"; \
 	echo; \
 	if kubectl get namespace flux-system >/dev/null 2>&1; then \
-		echo "$$(date +'[%H:%M:%S]') === GitOps Status (Flux) ==="; \
 		if command -v flux >/dev/null 2>&1; then \
 			flux_version=$$(flux version 2>/dev/null | head -1 | cut -d' ' -f2 || echo "unknown"); \
-			echo "🔧 Flux CLI: $$flux_version (run 'flux version' for full details)"; \
-			echo; \
+			echo "$$(date +'[%H:%M:%S]') === GitOps Status (Flux:$$flux_version) ==="; \
+		else \
+			echo "$$(date +'[%H:%M:%S]') === GitOps Status (Flux:unknown) ==="; \
+		fi; \
+		if command -v flux >/dev/null 2>&1; then \
 			flux get sources git 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
 				repo_url=$$(kubectl get gitrepository.source.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown"); \
 				branch=$$(kubectl get gitrepository.source.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.ref.branch}' 2>/dev/null || echo "unknown"); \
