@@ -319,16 +319,11 @@ sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=
 		echo "⚙️  Syncing Kustomization: $(KUSTOMIZATION)"; \
 		flux reconcile kustomization $(KUSTOMIZATION) || echo "❌ Failed to sync $(KUSTOMIZATION)"; \
 	else \
-		echo "📁 Syncing all GitRepositories..."; \
-		flux get sources git --no-header 2>/dev/null | awk '{print $$1}' | while read repo; do \
+		echo "📁 Syncing all GitRepositories (Flux will auto-reconcile kustomizations)..."; \
+		git_repos=$$(flux get sources git --no-header 2>/dev/null | awk '{print $$1}'); \
+		for repo in $$git_repos; do \
 			echo "  → Syncing $$repo"; \
 			flux reconcile source git $$repo || echo "  ❌ Failed to sync $$repo"; \
-		done; \
-		echo; \
-		echo "⚙️  Syncing all Kustomizations..."; \
-		flux get kustomizations --no-header 2>/dev/null | awk '{print $$1}' | while read kust; do \
-			echo "  → Syncing $$kust"; \
-			flux reconcile kustomization $$kust || echo "  ❌ Failed to sync $$kust"; \
 		done; \
 	fi
 	@echo "✅ Sync complete! Run 'make status' to check results."
