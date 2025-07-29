@@ -1,70 +1,108 @@
-# HostK8s - Host-Mode Kubernetes Development Platform
+# HostK8s - Host-Mode Kubernetes Development Platform [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-A lightweight, stable Kubernetes development platform using **Kind** directly on your host. Deploy complete environments via GitOps stamps - perfect for rapid development, testing, and CI/CD pipelines without heavy infrastructure.
+A lightweight Kubernetes development platform built on **Kind**, optimized for direct host integration. Quickly deploy complete environments using **GitOps stamps** – ideal for development, testing, and CI/CD workflows without heavy infrastructure.
 
-## Why HostK8s?
+## Overview
 
-**The Problem:** Traditional Kubernetes development environments suffer from Docker-in-Docker complexity, resource overhead, and stability issues.
+HostK8s addresses common issues in Kubernetes development setups:
 
-**The Solution:** HostK8s uses a **host-mode architecture** with **GitOps stamps** to provide:
-- ✅ **50% faster startup** compared to virtualized solutions
-- ✅ **Lower resource usage** (4GB vs 8GB typical)
-- ✅ **Rock-solid stability** - eliminates Docker Desktop hanging issues
-- ✅ **Complete environments** - infrastructure + applications deployed together
-- ✅ **Platform-agnostic** - works with any software stack via stamps
+* **High overhead** from Docker-in-Docker or VM-based tools.
+* **Slow startup** and resource waste during local testing.
+* **Instability** from nested container layers.
+
+By running Kind directly on your host and adopting a GitOps-driven environment pattern, HostK8s provides a **stable, low-overhead** workflow for Kubernetes development.
+
+## Benefits at a Glance
+
+* **Fast startup** – no VM boot times.
+* **Low resource usage** – 4GB RAM typical.
+* **Stable development cycles** – avoids Docker Desktop hangs.
+* **Environment-as-code** – deploy full stacks with GitOps stamps.
+* **Stack agnostic** – works with any language or framework.
 
 ## Key Concepts
 
 ### GitOps Stamps
-**Stamps** are declarative templates that deploy complete environments (infrastructure + applications) via Flux GitOps. Think "environment-as-code" - consistent, reusable, version-controlled.
 
-```bash
-make up sample    # Deploy complete sample environment with DB, ingress, apps
-make up osdu-ci   # (Future) Deploy complete OSDU platform environment
-```
+Reusable templates that define infrastructure and application deployments as code. Applied via Flux to keep environments version-controlled and consistent.
 
 ### Host-Mode Architecture
-Run Kind directly on your host Docker daemon instead of nested containers. Standard kubectl/helm tools work seamlessly.
+
+Uses your host Docker daemon directly — no nested Docker layers. Works seamlessly with standard tools (`kubectl`, `helm`, etc.).
+
+### Learn More
+
+For a deeper understanding of the platform's design and decisions, see:
+
+* [Architecture Guide](docs/architecture.md)
+* [ADR Catalog (Design Decisions)](docs/adr/README.md)
 
 ---
 
 ## Quick Start
 
 ### Prerequisites
-- **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
-- **2+ CPU cores, 4GB+ RAM** (8GB recommended)
-- **Mac, Linux, or Windows WSL2**
+
+* **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
+* **2+ CPU cores, 4GB+ RAM** (8GB recommended)
+* **Mac, Linux, or Windows WSL2**
 
 ### Install Dependencies
+
 ```bash
-make install   # Installs kind, kubectl, helm, flux via your package manager
+make install   # Install required dependencies (kind, kubectl, helm, flux)
+make prepare   # Setup development environment (pre-commit, yamllint, hooks)
 ```
 
-### Basic Usage
-```bash
-# Start basic cluster
-make up
-make deploy sample/app1
-make status
+---
 
-# Deploy complete GitOps environment
+## Usage Scenarios
+
+There are two primary ways to use HostK8s, depending on whether you want **manual control** or **GitOps-driven environments**.
+
+### 1. Manual Cluster with Individual App Deployments
+
+Create a basic cluster and deploy applications one at a time using `make deploy`:
+
+```bash
+make up                 # Start empty cluster
+make deploy sample/app1 # Deploy an app manually
+make deploy sample/app2 # Deploy additional apps as needed
+make status             # Check cluster and app status
+```
+
+This approach is simple and good for **iterative development** or **testing single applications**.
+
+### 2. GitOps-Managed Environment with Stamps
+
+Enable Flux (GitOps) in your configuration, then create a cluster pre-configured with a **stamp** (a declarative environment template):
+
+```bash
+# Start cluster with a stamp (apps + infra)
+export FLUX_ENABLED=true
 make up sample
-make status       # Shows GitOps reconciliation status
-flux get all      # Monitor Flux resources
-
-# Development iteration
-make restart      # Quick reset
-make clean        # Complete cleanup
+make status             # Check cluster and app status
 ```
 
-### Configuration
-Copy `.env.example` to `.env` and customize:
-```bash
-CLUSTER_NAME=hostk8s
-METALLB_ENABLED=true    # LoadBalancer support
-INGRESS_ENABLED=true    # HTTP routing
-FLUX_ENABLED=true       # GitOps capabilities
-```
+This approach is ideal for **consistent, repeatable environments** and **multi-service setups**.
+
+---
+
+## Configuration
+
+Duplicate `.env.example` to `.env` and customize as needed. The main options are:
+
+| Variable          | Description                                   | Default   |
+| ----------------- | --------------------------------------------- | --------- |
+| `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
+| `K8S_VERSION`     | Kubernetes version to use                     | `latest`  |
+| `KIND_CONFIG`     | Kind config preset (minimal, simple, default) | `default` |
+| `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |
+| `METALLB_ENABLED` | Enable MetalLB for LoadBalancer support       | `false`   |
+| `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
+| `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
+| `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
+| `GITOPS_STAMP`    | Stamp to deploy (e.g., `sample`, `osdu-ci`)   | `sample`  |
 
 ---
 
@@ -144,4 +182,4 @@ flux get all   # GitOps status (if using stamps)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Apache License 2.0 – see [LICENSE](LICENSE) for details.
