@@ -13,7 +13,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: ${REPO_NAME}-repo
+    name: sample-repo
   path: ./software/components/cert-manager
   prune: true
   wait: true
@@ -45,7 +45,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: ${REPO_NAME}-repo
+    name: sample-repo
   path: ./software/components/cert-manager-certs
   prune: true
   wait: true
@@ -71,7 +71,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: ${REPO_NAME}-repo
+    name: sample-repo
   path: ./software/components/registry
   prune: true
   wait: true

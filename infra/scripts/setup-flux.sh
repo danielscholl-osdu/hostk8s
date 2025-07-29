@@ -95,17 +95,16 @@ flux install \
 log "Waiting for Flux controllers to be ready..."
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
 
-# Function to apply Flux templates with variable substitution
-apply_flux_template() {
-    local template_file="$1"
+# Function to apply stamp YAML files directly
+apply_stamp_yaml() {
+    local yaml_file="$1"
     local description="$2"
 
-    if [ -f "$template_file" ]; then
+    if [ -f "$yaml_file" ]; then
         log "$description"
-        # Use envsubst to substitute variables in template
-        envsubst < "$template_file" | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log "WARNING: Failed to apply $description"
+        kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log "WARNING: Failed to apply $description"
     else
-        log "WARNING: Template not found: $template_file"
+        log "WARNING: YAML file not found: $yaml_file"
     fi
 }
 
@@ -117,15 +116,10 @@ if [ -n "$GITOPS_STAMP" ]; then
     # Export variables for template substitution
     export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
-    # Define shared template directory path
-    TEMPLATE_DIR="software/flux-templates"
-
-    # Apply GitRepository template
-    apply_flux_template "$TEMPLATE_DIR/gitrepository.yaml" "Creating GitRepository source..."
-
-    # Apply stamp-specific Flux Kustomizations (components → applications)
-    apply_flux_template "$TEMPLATE_DIR/kustomization-stamp-components.yaml" "Creating stamp components Kustomization for: $GITOPS_STAMP"
-    apply_flux_template "$TEMPLATE_DIR/kustomization-applications.yaml" "Creating stamp applications Kustomization for: $GITOPS_STAMP"
+    # Apply stamp GitRepository and Kustomizations
+    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Creating GitRepository for stamp: $GITOPS_STAMP"
+    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/components/kustomization.yaml" "Creating components Kustomizations for stamp: $GITOPS_STAMP"
+    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/applications/kustomization.yaml" "Creating applications Kustomizations for stamp: $GITOPS_STAMP"
 else
     log "No stamp specified - Flux installed without GitOps configuration"
     log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
