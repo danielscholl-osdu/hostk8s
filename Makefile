@@ -49,10 +49,6 @@ up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|def
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
 	fi
-	@echo ""
-	@echo "export KUBECONFIG=\$$(pwd)/data/kubeconfig/config"
-	@echo ""
-	@kubectl get nodes
 
 # Handle arguments as targets to avoid "No rule to make target" errors
 minimal simple default sample:
@@ -78,7 +74,7 @@ restart: ## Quick cluster reset for development iteration (Usage: make restart [
 
 clean: ## Complete cleanup (destroy cluster and data)
 	@./infra/scripts/cluster-down.sh 2>/dev/null || true
-	@kind delete cluster --name osdu-ci 2>/dev/null || true
+	@kind delete cluster --name hostk8s 2>/dev/null || true
 	@rm -rf data/kubeconfig/ 2>/dev/null || true
 	@docker system prune -f >/dev/null 2>&1 || true
 

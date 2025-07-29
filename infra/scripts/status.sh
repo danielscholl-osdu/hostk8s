@@ -13,8 +13,8 @@ show_gitops_status() {
     fi
 
     local flux_version=$(get_flux_version)
-    log_status "GitOps Status (Flux:$flux_version)"
-
+    log_info "GitOps Status (Flux:$flux_version)"
+    echo
     show_git_repositories
     show_kustomizations
 }
@@ -89,7 +89,7 @@ show_gitops_applications() {
         return 0
     fi
 
-    log_status "GitOps Applications"
+    log_info "GitOps Applications"
     show_ingress_controller_status
 
     for app in $gitops_apps; do
@@ -120,7 +120,7 @@ show_manual_deployed_apps() {
         return 0
     fi
 
-    log_status "Manual Deployed Apps"
+    log_info "Manual Deployed Apps"
 
     for app in $deployed_apps; do
         echo "📱 $app"
@@ -197,7 +197,7 @@ show_health_check() {
         return 0
     fi
 
-    log_status "Health Check"
+    log_info "Health Check"
     local issues_found=0
 
     # Check LoadBalancer services
@@ -229,11 +229,10 @@ show_health_check() {
     if [ "$issues_found" = "0" ]; then
         log_success "All deployed apps are healthy"
     fi
-    echo
 }
 
 show_cluster_status() {
-    log_status "Cluster Status"
+    log_info "Cluster Status"
     kubectl get nodes
 }
 

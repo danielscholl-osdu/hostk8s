@@ -4,14 +4,12 @@ set -euo pipefail
 # Disable debug mode to prevent environment variable exposure
 set +x
 
-# Function for logging
-log() {
-    echo "[$(date +'%Y-%m-%d %H:%M:%S')] [Flux] $*"
-}
+# Source common utilities
+source "$(dirname "$0")/common.sh"
 
 # Function for error handling
 error_exit() {
-    log "ERROR: $1"
+    log_info_error "$1"
     exit 1
 }
 
@@ -19,13 +17,12 @@ error_exit() {
 detect_kubeconfig() {
     if [ -n "${KUBECONFIG:-}" ]; then
         KUBECONFIG_PATH="${KUBECONFIG}"
-        log "Using KUBECONFIG environment variable: $KUBECONFIG_PATH"
     elif [ -f "/kubeconfig/config" ]; then
         KUBECONFIG_PATH="/kubeconfig/config"  # Container mode
-        log "Using container kubeconfig: $KUBECONFIG_PATH"
+        log_info "Using container kubeconfig: $KUBECONFIG_PATH"
     elif [ -f "$(pwd)/data/kubeconfig/config" ]; then
         KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"  # Host mode
-        log "Using host-mode kubeconfig: $KUBECONFIG_PATH"
+        log_info "Using host-mode kubeconfig: $KUBECONFIG_PATH"
     else
         error_exit "No kubeconfig found. Ensure cluster is running."
     fi
@@ -43,7 +40,7 @@ check_flux_cli() {
         error_exit "Flux CLI found but not working properly"
     fi
 
-    log "Flux CLI verified: $flux_version"
+    log_debug "Flux CLI verified: ${CYAN}$flux_version${NC}"
 }
 
 detect_kubeconfig
@@ -53,26 +50,31 @@ GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/osdu-ci
 GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
 GITOPS_STAMP=${GITOPS_STAMP:-""}
 
-log "Setting up Flux GitOps..."
-log "GitOps Repository: $GITOPS_REPO"
-log "GitOps Branch: $GITOPS_BRANCH"
-if [ -n "$GITOPS_STAMP" ]; then
-    log "GitOps Stamp: $GITOPS_STAMP"
-else
-    log "GitOps Stamp: Not configured (Flux only)"
+# Show Flux configuration (only in debug mode)
+if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+    log_section_start
+    log_status "Flux GitOps Configuration"
+    log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
+    log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
+    if [ -n "$GITOPS_STAMP" ]; then
+        log_debug "  Stamp: ${CYAN}$GITOPS_STAMP${NC}"
+    else
+        log_debug "  Stamp: ${CYAN}Not configured (Flux only)${NC}"
+    fi
+    log_section_end
 fi
 
 # Check if Flux is already installed
 if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace flux-system >/dev/null 2>&1; then
-    log "Flux namespace already exists, checking if installation is complete..."
+    log_info "Flux namespace already exists, checking if installation is complete..."
     if kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n flux-system -l app.kubernetes.io/part-of=flux | grep -q Running; then
-        log "Flux appears to already be running"
+        log_info "Flux appears to already be running"
 
         # Show flux status
         export KUBECONFIG="$KUBECONFIG_PATH"
         if command -v flux >/dev/null 2>&1; then
-            log "Current Flux status:"
-            flux get all || log "WARNING: Could not get flux status"
+            log_info "Current Flux status:"
+            flux get all || log_warn "Could not get flux status"
         fi
         exit 0
     fi
@@ -82,7 +84,7 @@ fi
 check_flux_cli
 
 # Install Flux
-log "Installing Flux controllers..."
+log_info "Installing Flux controllers..."
 export KUBECONFIG="$KUBECONFIG_PATH"
 
 # Install Flux with minimal components for development
@@ -92,8 +94,8 @@ flux install \
     --watch-all-namespaces=true || error_exit "Failed to install Flux"
 
 # Wait for Flux controllers to be ready
-log "Waiting for Flux controllers to be ready..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log "WARNING: Some controllers may still be starting, but continuing..."
+log_info "Waiting for Flux controllers to be ready..."
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log_warn "Flux controllers still initializing, continuing setup..."
 
 # Function to apply stamp YAML files directly
 apply_stamp_yaml() {
@@ -101,10 +103,10 @@ apply_stamp_yaml() {
     local description="$2"
 
     if [ -f "$yaml_file" ]; then
-        log "$description"
-        kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log "WARNING: Failed to apply $description"
+        log_info "$description"
+        kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log_info "WARNING: Failed to apply $description"
     else
-        log "WARNING: YAML file not found: $yaml_file"
+        log_info "WARNING: YAML file not found: $yaml_file"
     fi
 }
 
@@ -117,31 +119,30 @@ if [ -n "$GITOPS_STAMP" ]; then
     export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
 
     # Apply stamp GitRepository first
-    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Creating GitRepository for stamp: $GITOPS_STAMP"
+    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Configuring GitOps repository for stamp: ${CYAN}$GITOPS_STAMP${NC}"
 
     # Apply universal bootstrap kustomization that manages all stamps
-    apply_stamp_yaml "software/stamp/bootstrap.yaml" "Creating universal bootstrap kustomization for all stamps"
+    apply_stamp_yaml "software/stamp/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
 else
-    log "No stamp specified - Flux installed without GitOps configuration"
-    log "To configure a stamp later, set GITOPS_STAMP and run: make restart"
+    log_info "No stamp specified - Flux installed without GitOps configuration"
+    log_info "To configure a stamp later, set GITOPS_STAMP and run: make restart"
 fi
 
 # Show Flux installation status
-log "Flux installation completed! Checking status..."
-flux get all || log "WARNING: Could not get flux status"
+log_info "Flux installation completed! Checking status..."
+flux get all || log_warn "Could not get flux status"
 
-log "Flux GitOps setup complete!"
-log ""
+log_info "Flux GitOps setup complete!"
 if [ -n "$GITOPS_STAMP" ]; then
-    log "Active Configuration:"
-    log "   Repository: $GITOPS_REPO"
-    log "   Branch: $GITOPS_BRANCH"
-    log "   Stamp: $GITOPS_STAMP"
-    log "   Path: ./software/stamp/$GITOPS_STAMP"
+    log_debug "Active Configuration:"
+    log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
+    log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
+    log_debug "  Stamp: ${CYAN}$GITOPS_STAMP${NC}"
+    log_debug "  Path: ${CYAN}./software/stamp/$GITOPS_STAMP${NC}"
 else
-    log "Flux installed - ready for GitOps configuration"
-    log "Next steps:"
-    log "1. Configure stamp: make restart sample"
-    log "2. Check status: make status"
-    log "3. Monitor logs: flux logs --follow"
+    log_info "Flux installed - ready for GitOps configuration"
+    log_info "Next steps:"
+    log_info "1. Configure stamp: make restart sample"
+    log_info "2. Check status: make status"
+    log_info "3. Monitor log_infos: flux log_infos --follow"
 fi

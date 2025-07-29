@@ -50,7 +50,7 @@ validate_docker_resources() {
         # Convert bytes to GB
         local memory_gb=$((memory_bytes / 1024 / 1024 / 1024))
 
-        log_debug "Docker resources: ${memory_gb}GB memory, ${cpus} CPUs"
+        log_debug "Docker resources: ${CYAN}${memory_gb}GB${NC} memory, ${CYAN}${cpus}${NC} CPUs"
 
         # Validate minimum requirements
         if [ "$memory_gb" -lt 4 ]; then
@@ -78,7 +78,7 @@ validate_docker_resources() {
     fi
 }
 
-log_start "Starting OSDU Kind cluster setup..."
+log_start "Starting HostK8s cluster setup..."
 
 # Validate dependencies first
 check_dependencies
@@ -163,8 +163,18 @@ if [ ! -f "${KIND_CONFIG_PATH}" ]; then
     exit 1
 fi
 
+# Show cluster configuration (only in debug mode)
+if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+    log_section_start
+    log_status "Kind Cluster Configuration"
+    log_debug "  Cluster Name: ${CYAN}${CLUSTER_NAME}${NC}"
+    log_debug "  Kubernetes Version: ${CYAN}${K8S_VERSION}${NC}"
+    log_debug "  Configuration File: ${CYAN}${KIND_CONFIG_FILE}${NC}"
+    log_section_end
+fi
+
 # Create Kind cluster with retry logic
-log_debug "Creating Kind cluster '${CLUSTER_NAME}' with Kubernetes ${K8S_VERSION} using ${KIND_CONFIG} (${KIND_CONFIG_FILE})..."
+log_info "Creating Kind cluster..."
 if ! retry_with_backoff "Creating Kind cluster" \
     kind create cluster \
         --name "${CLUSTER_NAME}" \
@@ -238,7 +248,3 @@ kubectl get nodes
 trap - ERR
 
 log_success "Kind cluster '${CLUSTER_NAME}' is ready!"
-log_debug ""
-log_debug "Access your cluster:"
-log_debug "  export KUBECONFIG=\$(pwd)/data/kubeconfig/config"
-log_debug "  kubectl get nodes"

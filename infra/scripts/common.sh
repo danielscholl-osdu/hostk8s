@@ -12,6 +12,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Logging functions with log levels
@@ -63,8 +64,16 @@ log_deploy() {
     log_info "$@"
 }
 
+log_section_start() {
+    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} ------------------------"
+}
+
 log_status() {
-    echo -e "${BLUE}[$(date +'%H:%M:%S')] ===${NC} $* ${BLUE}===${NC}"
+    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"
+}
+
+log_section_end() {
+    echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} ------------------------"
 }
 
 # Environment setup - source .env if exists
@@ -76,7 +85,7 @@ load_environment() {
     fi
 
     # Set defaults
-    export CLUSTER_NAME=${CLUSTER_NAME:-osdu-ci}
+    export CLUSTER_NAME=${CLUSTER_NAME:-hostk8s}
     export K8S_VERSION=${K8S_VERSION:-v1.33.2}
     export KIND_CONFIG=${KIND_CONFIG:-default}
     export METALLB_ENABLED=${METALLB_ENABLED:-false}
