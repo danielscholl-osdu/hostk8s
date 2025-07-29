@@ -164,11 +164,13 @@ status: ## Show cluster health and running services
 			done; \
 			flux get kustomizations 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
 				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
-				if [ "$$suspended" = "True" ]; then \
+				suspended_trim=$$(echo "$$suspended" | tr -d ' '); \
+				ready_trim=$$(echo "$$ready" | tr -d ' '); \
+				if [ "$$suspended_trim" = "True" ]; then \
 					status_icon="[PAUSED]"; \
-				elif [ "$$ready" = "True" ]; then \
+				elif [ "$$ready_trim" = "True" ]; then \
 					status_icon="[OK]"; \
-				elif [ "$$ready" = "False" ]; then \
+				elif [ "$$ready_trim" = "False" ]; then \
 					status_icon="[FAIL]"; \
 				else \
 					status_icon="[...]"; \
