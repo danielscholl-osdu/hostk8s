@@ -164,18 +164,17 @@ status: ## Show cluster health and running services
 			done; \
 			flux get kustomizations 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
 				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
-				# Determine status icon based on ready/suspended state \
 				if [ "$$suspended" = "True" ]; then \
-					status_icon="⏸️"; \
+					status_icon="[PAUSED]"; \
 					status_text="Suspended"; \
 				elif [ "$$ready" = "True" ]; then \
-					status_icon="✅"; \
+					status_icon="[OK]"; \
 					status_text="Ready"; \
 				elif [ "$$ready" = "False" ]; then \
-					status_icon="❌"; \
+					status_icon="[FAIL]"; \
 					status_text="Failed"; \
 				else \
-					status_icon="⏳"; \
+					status_icon="[...]"; \
 					status_text="Reconciling"; \
 				fi; \
 				echo "$$status_icon Kustomization: $$name ($$status_text)"; \
