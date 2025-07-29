@@ -1,4 +1,4 @@
-# ADR-003: Make Interface Standardization
+# ADR-002: Make Interface Standardization
 
 ## Status
 **Accepted** - 2025-07-28

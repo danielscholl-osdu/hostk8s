@@ -1,4 +1,4 @@
-# ADR-005: Hybrid CI/CD Strategy
+# ADR-004: Hybrid CI/CD Strategy
 
 ## Status
 **Accepted** - 2025-07-28

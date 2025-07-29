@@ -1,4 +1,4 @@
-# ADR-004: GitOps Stamp Pattern
+# ADR-003: GitOps Stamp Pattern
 
 ## Status
 **Accepted** - 2025-07-28
