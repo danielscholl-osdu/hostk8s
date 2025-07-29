@@ -164,12 +164,23 @@ status: ## Show cluster health and running services
 			done; \
 			flux get kustomizations 2>/dev/null | grep -v "^NAME" | while IFS=$$'\t' read -r name revision suspended ready message; do \
 				source_ref=$$(kubectl get kustomization.kustomize.toolkit.fluxcd.io $$name -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown"); \
-				echo "⚙️  Kustomization: $$name"; \
-				echo "   Source: $$source_ref"; \
-				echo "   Revision: $$revision"; \
-				echo "   Ready: $$ready"; \
-				echo "   Suspended: $$suspended"; \
-				[ "$$message" != "-" ] && echo "   Message: $$message"; \
+				# Determine status icon based on ready/suspended state \
+				if [ "$$suspended" = "True" ]; then \
+					status_icon="⏸️"; \
+					status_text="Suspended"; \
+				elif [ "$$ready" = "True" ]; then \
+					status_icon="✅"; \
+					status_text="Ready"; \
+				elif [ "$$ready" = "False" ]; then \
+					status_icon="❌"; \
+					status_text="Failed"; \
+				else \
+					status_icon="⏳"; \
+					status_text="Reconciling"; \
+				fi; \
+				echo "$$status_icon Kustomization: $$name ($$status_text)"; \
+				echo "   Source: $$source_ref | Revision: $$revision"; \
+				[ "$$message" != "-" ] && [ "$$message" != "" ] && echo "   Message: $$message"; \
 				echo; \
 			done; \
 		else \
