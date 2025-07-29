@@ -12,41 +12,41 @@ HostK8s provides a **host-mode Kubernetes development platform** using Kind (Kub
 ┌─────────────────────────────────────────────────────────────┐
 │                    Host Environment                         │
 │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────── │
-│  │   Developer     │  │   CI/CD         │  │   Local       │
-│  │   Workstation   │  │   Pipeline      │  │   Testing     │
+│  │   Developer     │  │   CI/CD         │  │   Local      | │
+│  │   Workstation   │  │   Pipeline      │  │   Testing    | │
 │  └─────────────────┘  └─────────────────┘  └─────────────── │
-│           │                    │                    │        │
-│    make up/scripts      make test          make clean        │
+│           │                  │                    │         │
+│    make up/scripts       make test            make clean    │
 └─────────────────────────────────────────────────────────────┘
                            │
                     Host Tools Layer
                            │
                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                Host Docker Daemon                           │
+┌───────────────────────────────────────────────────────────-──┐
+│                Host Docker Daemon                            │
 │  ┌─────────────────────────────────────────────────────────┐ │
-│  │              Kind Cluster (Single Node)                │ │
+│  │              Kind Cluster (Single Node)                 │ │
 │  │  ┌─────────────────────────────────────────────────────┐│ │
-│  │  │  Control Plane + Worker (Combined)                 ││ │
-│  │  │  • API Server                                      ││ │
-│  │  │  • etcd                                            ││ │
-│  │  │  • kubelet + containerd                            ││ │
-│  │  │  • Optional: MetalLB (LoadBalancer)                ││ │
-│  │  │  • Optional: NGINX Ingress (with MetalLB integration) ││ │
-│  │  │  • Optional: Flux (GitOps)                       ││ │
+│  │  │  Control Plane + Worker (Combined)                  ││ │
+│  │  │  • API Server                                       ││ │
+│  │  │  • etcd                                             ││ │
+│  │  │  • kubelet + containerd                             ││ │
+│  │  │  • Optional: MetalLB (LoadBalancer)                 ││ │
+│  │  │  • Optional: NGINX Ingress.                         ││ │
+│  │  │  • Optional: Flux (GitOps)                          ││ │
 │  │  └─────────────────────────────────────────────────────┘│ │
 │  └─────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
+└──────────────────────────────────────────────────────────-───┘
                            │
                     Port Mappings (NodePort only)
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Host Integration                         │
-│  • API Server: localhost:6443                              │
-│  • NodePort Services: localhost:8080 (from 30080)         │
-│  • Kubeconfig: ./data/kubeconfig/config                    │
-│  • Optional Services: registry:5000, prometheus:9090       │
+│  • API Server: localhost:6443                               │
+│  • NodePort Services: localhost:8080 (from 30080)           │
+│  • Kubeconfig: ./data/kubeconfig/config                     │
+│  • Optional Services: registry:5000, prometheus:9090        │
 └─────────────────────────────────────────────────────────────┘
 ```
 
