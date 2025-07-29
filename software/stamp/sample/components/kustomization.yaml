@@ -6,6 +6,6 @@ kind: Kustomization
 
 # Reference global components that this stamp needs
 resources:
-  - ../../components/cert-manager
-  - ../../components/cert-manager-certs
-  - ../../components/registry
+  - ../../../components/cert-manager
+  - ../../../components/cert-manager-certs
+  - ../../../components/registry
