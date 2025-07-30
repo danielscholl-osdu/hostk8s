@@ -10,6 +10,7 @@ Optimized ADR Index for Agent Context
 | 002 | Make Interface Standardization     | acc    | [ADR-002](002-make-interface-standardization.md) |
 | 003 | GitOps Stamp Pattern               | acc    | [ADR-003](003-gitops-stamp-pattern.md) |
 | 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](004-hybrid-ci-cd-strategy.md) |
+| 005 | AI-Assisted Development Integration | acc    | [ADR-005](005-ai-assisted-development-integration.md) |
 
 ---
 
@@ -81,4 +82,22 @@ why: |
 tradeoffs:
 positive: [dev velocity, comprehensive coverage, resource efficiency]
 negative: [dual platform complexity, sync overhead]
+```
+
+--------------------------------------------
+```yaml
+id: 005
+title: AI-Assisted Development Integration
+status: accepted
+date: 2025-07-30
+decision: Integrate optional AI-assisted development capabilities through three-layer architecture (MCP servers, specialized subagents, automated hooks).
+why: |
+• Productivity multiplier: AI reduces time for complex GitOps debugging and cluster analysis
+• Optional enhancement: Zero impact on users preferring traditional workflows
+• Multi-tool compatibility: Works with Claude Code, GitHub Copilot, and other MCP-enabled assistants
+• Domain specialization: Targeted AI agents for HostK8s workflows
+• Quality automation: Professional standards enforcement without manual oversight
+tradeoffs:
+positive: [productivity enhancement, optional adoption, multi-tool support, domain expertise]
+negative: [architectural complexity, AI service dependency, learning curve]
 ```

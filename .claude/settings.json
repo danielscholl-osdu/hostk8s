@@ -1,0 +1,73 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(docker:*)",
+      "Bash(git:*)",
+      "Bash(yamllint:*)",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Read",
+      "Glob",
+      "Grep",
+      "LS",
+      "mcp__kubernetes__kubectl_get",
+      "mcp__kubernetes__kubectl_describe",
+      "mcp__kubernetes__kubectl_logs",
+      "mcp__kubernetes__kubectl_context",
+      "mcp__kubernetes__explain_resource",
+      "mcp__kubernetes__list_api_resources",
+      "mcp__kubernetes__exec_in_pod",
+      "mcp__kubernetes__ping",
+      "mcp__flux-operator-mcp__get_flux_instance",
+      "mcp__flux-operator-mcp__get_kubernetes_resources",
+      "mcp__flux-operator-mcp__get_kubernetes_api_versions",
+      "mcp__flux-operator-mcp__get_kubeconfig_contexts",
+      "mcp__flux-operator-mcp__set_kubeconfig_context",
+      "mcp__flux-operator-mcp__search_flux_docs",
+      "mcp__flux-operator-mcp__apply_kubernetes_manifest",
+      "mcp__flux-operator-mcp__reconcile_flux_kustomization",
+      "mcp__flux-operator-mcp__reconcile_flux_helmrelease",
+      "mcp__flux-operator-mcp__reconcile_flux_source"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git:commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/validate-git-commit.sh"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/enforce-branch-naming.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash(git:commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/post-commit-sync.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/run-precommit-checks.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

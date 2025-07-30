@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install clean up down restart prepare test status deploy logs port-forward build
+.PHONY: help install clean up down restart prepare test status deploy logs port-forward build mcp-status
 
 # Environment setup
 KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
@@ -23,7 +23,7 @@ help: ## Show this help message
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-install: ## Install required dependencies (kind, kubectl, helm, flux)
+install: ## Install required dependencies (kind, kubectl, helm, flux, flux-operator-mcp)
 	@QUIET=true ./infra/scripts/install.sh
 
 prepare: ## Setup development environment (pre-commit, yamllint, hooks)
@@ -129,3 +129,20 @@ port-forward: ## Port forward a service (make port-forward SVC=myservice PORT=80
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
 	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
 	./infra/scripts/build.sh "$$APP_PATH"
+
+##@ AI-Assisted GitOps
+
+mcp-status: ## Check MCP server status and connectivity
+	@echo "🤖 Checking MCP server status..."
+	@if command -v flux-operator-mcp >/dev/null 2>&1; then \
+		echo "✅ flux-operator-mcp binary found"; \
+		flux-operator-mcp --version 2>/dev/null || echo "⚠️  flux-operator-mcp version check failed"; \
+	else \
+		echo "❌ flux-operator-mcp not found. Run 'make install' to install."; \
+	fi
+	@if [ -f "$(KUBECONFIG_PATH)" ]; then \
+		echo "✅ Kubeconfig found: $(KUBECONFIG_PATH)"; \
+		echo "🔗 MCP configuration: .mcp.json"; \
+	else \
+		echo "❌ Cluster not running. Run 'make up' to start cluster."; \
+	fi
