@@ -139,6 +139,33 @@ If any of these work, you have AI assistance running. If not, see [Troubleshooti
 
 ---
 
+## Understanding MCP Server Routing
+
+Claude Code automatically routes your questions to the appropriate MCP server based on the content of your query:
+
+### Kubernetes MCP Server Handles:
+- **Pod operations:** "Show me failing pods and their logs"
+- **Node health:** "Check cluster connectivity issues"
+- **Service accessibility:** "Debug why I can't reach the website service"
+- **Resource usage:** "Which pods are consuming the most CPU?"
+- **Network troubleshooting:** "Why can't my pod connect to the database?"
+
+### Flux Operator MCP Server Handles:
+- **GitOps resources:** "Analyze the sample stamp deployment status"
+- **Dependency tracing:** "Why isn't my GitRepository reconciling?"
+- **Configuration analysis:** "Generate a diagram of stamp relationships"
+- **Flux troubleshooting:** "Show me the status of all HelmReleases"
+- **Stamp operations:** "What components are deployed in the sample stamp?"
+
+### Automatic Server Selection:
+Claude Code intelligently uses **both servers** for complex queries:
+- "Debug the failing website application" → Uses Kubernetes MCP for pod status + Flux MCP for GitOps analysis
+- "Show me complete cluster health" → Combines infrastructure status + GitOps deployment status
+
+**Pro tip:** You don't need to specify which server to use - Claude Code handles routing automatically based on your question's context.
+
+---
+
 ## Effective AI Interaction Patterns
 
 ### Pattern 1: The Investigation Ladder
@@ -233,6 +260,33 @@ Use AI as an interactive manual for complex operations.
 - **Emergency fixes:** When speed matters more than analysis
 
 ### Hybrid Approach (Best of Both):
+
+**Development Workflow:**
+```bash
+# Traditional HostK8s workflow
+make up sample
+make status
+
+# Enhanced with AI assistance
+make up sample
+"Show me the overall cluster health and running pods"
+"Analyze the sample stamp deployment and report issues"
+```
+
+**Troubleshooting Workflow:**
+```bash
+# Traditional debugging
+kubectl get pods -A
+kubectl describe pod failing-pod
+kubectl logs failing-pod
+
+# AI-assisted troubleshooting
+"Debug the failing website pod and show me its logs"
+"Why is the website application failing in sample namespace?"
+# AI automatically uses appropriate servers and provides root cause analysis
+```
+
+**Problem Resolution:**
 ```bash
 # Let AI identify the problem
 "What pods are failing and why?"
