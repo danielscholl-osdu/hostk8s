@@ -3,6 +3,13 @@
     "kubernetes": {
       "command": "npx",
       "args": ["mcp-server-kubernetes"]
+    },
+    "flux-operator-mcp": {
+      "command": "flux-operator-mcp",
+      "args": ["serve"],
+      "env": {
+        "KUBECONFIG": "./data/kubeconfig/config"
+      }
     }
   }
 }

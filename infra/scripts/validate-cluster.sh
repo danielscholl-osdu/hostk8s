@@ -193,6 +193,32 @@ else
     log "ℹ️ Test 7: Ingress not enabled, skipping accessibility test"
 fi
 
+# Test 8: Check Flux MCP server availability (if Flux is enabled)
+if [[ "${FLUX_ENABLED:-false}" == "true" ]]; then
+    log "✓ Test 8: Checking Flux MCP server availability..."
+    if command -v flux-operator-mcp >/dev/null 2>&1; then
+        local version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "unknown")
+        log "✅ Flux MCP server available (v$version)"
+
+        # Check MCP configuration
+        if [ -f "$(pwd)/.mcp.json" ]; then
+            log "✅ MCP configuration found (.mcp.json)"
+            # Verify kubeconfig path in MCP config
+            if grep -q "\"KUBECONFIG\"" .mcp.json; then
+                log "✅ MCP server configured with KUBECONFIG"
+            else
+                warn "⚠ MCP configuration may be missing KUBECONFIG"
+            fi
+        else
+            warn "⚠ MCP configuration file (.mcp.json) not found"
+        fi
+    else
+        warn "⚠ Flux MCP server not installed (run 'make install' to install)"
+    fi
+else
+    log "ℹ️ Test 8: Flux not enabled, skipping MCP server test"
+fi
+
 # Final status
 log "Cluster validation completed!"
 warnings=$(kubectl get events --field-selector type=Warning --no-headers 2>/dev/null | wc -l | tr -d ' ')
