@@ -1,5 +1,9 @@
 # Environment variables
 .env
+.envrc
+
+.vscode/*
+!.vscode/mcp.json
 
 # Data directory (runtime artifacts, credentials, storage)
 data/

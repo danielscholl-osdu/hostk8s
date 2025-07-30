@@ -236,6 +236,26 @@ show_cluster_status() {
     kubectl get nodes
 }
 
+show_mcp_status() {
+    if has_flux; then
+        log_info "AI-Assisted GitOps (MCP)"
+        if command -v flux-operator-mcp >/dev/null 2>&1; then
+            local version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "unknown")
+            echo "🤖 Flux MCP Server: Available (v$version)"
+            echo "   Configuration: .mcp.json"
+            if [ -f "$(pwd)/.mcp.json" ]; then
+                echo "   Status: Ready for AI assistance"
+            else
+                echo "   Status: Configuration file not found"
+            fi
+        else
+            echo "🤖 Flux MCP Server: Not installed"
+            echo "   Install with: make install"
+        fi
+        echo
+    fi
+}
+
 # Main function
 main() {
     # Check if cluster exists (but allow status to show when not running)
@@ -256,6 +276,7 @@ main() {
     show_manual_deployed_apps
     show_health_check
     show_cluster_status
+    show_mcp_status
 }
 
 # Run if called directly

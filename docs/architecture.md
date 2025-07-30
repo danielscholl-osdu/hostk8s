@@ -263,6 +263,185 @@ Kind Network (172.18.0.0/16)
 - **Development reset**: < 1 minute (dev-cycle)
 - **Application deployment**: < 30 seconds
 
+## AI-Assisted Operations Integration (Optional)
+
+### MCP Server Architecture
+
+HostK8s optionally integrates **dual MCP servers** to enable comprehensive AI-assisted operations through the Model Context Protocol (MCP). This optional integration bridges AI assistants with both Kubernetes infrastructure and GitOps pipelines for users who choose to enable AI assistance.
+
+**MCP Integration Flow**
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    AI Assistant (Claude)                    │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │   Natural Language Operations                            ││
+│  │   • "Show me cluster status and health"                  ││
+│  │   • "Analyze Flux deployment issues"                     ││
+│  │   • "Compare resources between clusters"                 ││
+│  │   • "Debug failing pods and trace dependencies"         ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                           │
+                    MCP Protocol
+                           │
+                           ▼
+┌─────────────────┬───────────────────────────────────────────┐
+│   Kubernetes    │           Flux Operator                   │
+│   MCP Server    │           MCP Server                      │
+│  ┌─────────────┴┐ ┌────────────────────────────────────────┐│
+│  │ Core K8s Ops  │ │     GitOps Operations                  ││
+│  │ • Pod mgmt    │ │     • get_flux_instance                ││
+│  │ • Svc access  │ │     • get_kubernetes_resources         ││
+│  │ • Logs/events │ │     • search_flux_docs                 ││
+│  │ • Deployment  │ │     • apply_kubernetes_resource        ││
+│  └───────────────┘ └────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                           │
+                    KUBECONFIG Auth
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│              HostK8s Kubernetes Cluster                     │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │   Complete Kubernetes & GitOps Resources                ││
+│  │   • Pods, Services, Deployments                         ││
+│  │   • FluxInstance, ResourceSets                          ││
+│  │   • GitRepository, Kustomizations                       ││
+│  │   • HelmRelease, OCIRepository                          ││
+│  │   • Application Deployments                             ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Features**
+
+- **Comprehensive Kubernetes Operations**: Natural language queries for cluster management, pod troubleshooting, and resource analysis
+- **Advanced GitOps Operations**: AI-powered Flux resource management, dependency visualization, and deployment debugging
+- **Root Cause Analysis**: Automated investigation of failed deployments with cross-resource dependency tracing
+- **Cross-Cluster Management**: Compare configurations and resources between different environments using either MCP server
+- **Documentation Integration**: Search and reference latest Flux documentation during operations
+- **Visual Diagrams**: Generate Mermaid diagrams showing both infrastructure and GitOps dependencies
+
+### MCP Server Configuration
+
+Both MCP servers are configured for multiple AI assistants:
+
+**Claude Code** (`.mcp.json`):
+
+```json
+{
+  "mcpServers": {
+    "kubernetes": {
+      "command": "npx",
+      "args": ["mcp-server-kubernetes"]
+    },
+    "flux-operator-mcp": {
+      "command": "flux-operator-mcp",
+      "args": ["serve"],
+      "env": {
+        "KUBECONFIG": "./data/kubeconfig/config"
+      }
+    }
+  }
+}
+```
+
+**GitHub Copilot** (`.vscode/mcp.json`):
+```json
+{
+    "servers": {
+        "kubernetes": {
+            "command": "npx",
+            "args": ["mcp-server-kubernetes"],
+            "env": {}
+        },
+        "flux-operator-mcp": {
+            "command": "flux-operator-mcp",
+            "args": ["serve"],
+            "env": {
+                "KUBECONFIG": "./data/kubeconfig/config"
+            }
+        }
+    }
+}
+```
+
+**Server Responsibilities**
+- **Kubernetes MCP Server**: Core Kubernetes operations (pods, services, deployments, logs, events)
+- **Flux Operator MCP Server**: GitOps operations (Flux resources, documentation search, dependency analysis)
+
+**Security Model**
+- Uses existing KUBECONFIG permissions (same as `kubectl` access)
+- Supports read-only mode via `FLUX_MCP_READ_ONLY=true`
+- Automatically masks sensitive data in Kubernetes Secrets
+- No additional cluster permissions required
+
+### Integration with GitOps Stamps
+
+The MCP server enhances the GitOps stamp pattern by providing AI-assisted operations:
+
+**Stamp Analysis**
+- Analyze complete stamp configurations and dependencies
+- Identify potential issues before deployment
+- Generate documentation from stamp structures
+
+**Deployment Monitoring**
+- Real-time monitoring of stamp deployment progress
+- Automatic detection of failed resources in stamp hierarchy
+- Dependency resolution for complex multi-component stamps
+
+**Cross-Environment Management**
+- Compare stamp configurations between clusters
+- Validate stamp consistency across development/staging/production
+- Migration assistance for stamp updates
+
+### AI-Assisted Workflows
+
+**Development Workflow Enhancement**
+
+```bash
+# Traditional HostK8s workflow
+make up sample
+make status
+
+# Enhanced with AI assistance (using both MCP servers)
+make up sample
+# Ask: "Show me the overall cluster health and running pods"     (Kubernetes MCP)
+# Ask: "Analyze the sample stamp deployment and report issues"   (Flux MCP)
+# Ask: "Generate a diagram showing component relationships"       (Flux MCP)
+```
+
+**Troubleshooting Enhancement**
+
+```bash
+# Traditional debugging
+kubectl get pods -A
+kubectl describe pod failing-pod
+kubectl logs failing-pod
+
+# AI-assisted troubleshooting (leveraging both servers)
+# Ask: "Debug the failing website pod and show me its logs"          (Kubernetes MCP)
+# Ask: "Why is the website application failing in sample namespace?" (Flux MCP - traces GitOps)
+# AI automatically uses appropriate server based on query context
+```
+
+**Cross-Cluster Operations**
+
+```bash
+# Traditional comparison (manual)
+kubectl --context=staging get pods -A
+kubectl --context=production get pods -A
+kubectl --context=staging get helmrelease podinfo -o yaml
+kubectl --context=production get helmrelease podinfo -o yaml
+# Manual diff comparison
+
+# AI-assisted comparison (using appropriate MCP server)
+# Ask: "Compare pod status between staging and production clusters"       (Kubernetes MCP)
+# Ask: "Compare the podinfo HelmRelease between staging and production"   (Flux MCP)
+# AI automatically switches contexts, retrieves resources, and highlights differences
+```
+
 ## Integration Points
 
 ### Hybrid CI/CD Integration
@@ -365,5 +544,6 @@ Each ADR documents the context, decision, alternatives considered, and consequen
 ## Navigation
 
 - **← [Back to README](../README.md)** - Getting started guide
+- **→ [AI-Assisted Development](ai-assisted-development.md)** - Optional AI capabilities and usage scenarios
 - **→ [ADR Catalog](adr/README.md)** - All architecture decisions
 - **→ [Sample Apps](../software/apps/README.md)** - Available applications

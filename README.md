@@ -32,11 +32,24 @@ Reusable templates that define infrastructure and application deployments as cod
 
 Uses your host Docker daemon directly — no nested Docker layers. Works seamlessly with standard tools (`kubectl`, `helm`, etc.).
 
+### AI-Assisted Operations (Optional)
+
+HostK8s includes **comprehensive AI assistance** through specialized agents, subagents, automation hooks, and **Model Context Protocol (MCP)** servers to enhance development and operational workflows:
+
+* **Natural Language Operations** – ask questions about cluster health, deployment status, and troubleshooting in plain English.
+* **Specialized AI Agents** – domain experts for Kubernetes infrastructure, GitOps workflows, and development lifecycle management.
+* **Automated Quality Assurance** – intelligent hooks that enforce code standards, validate commits, and trigger GitOps reconciliation.
+* **Cross-Environment Analysis** – compare configurations, trace dependencies, and identify differences between clusters.
+* **Root Cause Investigation** – AI-powered analysis of deployment failures with actionable remediation steps.
+
+Integrates with popular AI development tools including Claude Code, GitHub Copilot, and other AI assistants. See [AI-Assisted Development](docs/ai-assisted-development.md).
+
 ### Learn More
 
 For a deeper understanding of the platform's design:
 
 * [Architecture Guide](docs/architecture.md)
+* [AI-Assisted Development](docs/ai-assisted-development.md) – Optional AI capabilities and usage scenarios
 
 ---
 

@@ -10,7 +10,7 @@ show_usage() {
     echo "Options:"
     echo "  -h, --help    Show this help"
     echo ""
-    echo "Required tools: kind, kubectl, helm, flux, docker"
+    echo "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
     echo ""
     echo "Supported platforms:"
     echo "  - macOS (via Homebrew)"
@@ -44,6 +44,7 @@ install_with_homebrew() {
         "kubectl:brew install kubectl"
         "helm:brew install helm"
         "flux:brew install fluxcd/tap/flux"
+        "flux-operator-mcp:brew install controlplaneio-fluxcd/tap/flux-operator-mcp"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -57,7 +58,7 @@ validate_ci_environment() {
     local env_name="$1"
     log_debug "$env_name environment detected - dependencies should be pre-installed"
 
-    local tools=("kind" "kubectl" "helm" "flux")
+    local tools=("kind" "kubectl" "helm" "flux" "flux-operator-mcp")
     local missing_tools=()
 
     for tool in "${tools[@]}"; do
@@ -86,12 +87,13 @@ install_dependencies() {
         validate_ci_environment "Ubuntu/Debian"
     else
         log_error "Unsupported environment. Please install tools manually or use macOS with Homebrew."
-        log_info "Required tools: kind, kubectl, helm, flux, docker"
+        log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
         log_info "Installation guides:"
         log_info "  - kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
         log_info "  - kubectl: https://kubernetes.io/docs/tasks/tools/"
         log_info "  - helm: https://helm.sh/docs/intro/install/"
         log_info "  - flux: https://fluxcd.io/flux/installation/"
+        log_info "  - flux-operator-mcp: https://fluxcd.control-plane.io/mcp/install/"
         return 1
     fi
 
