@@ -248,15 +248,18 @@ get_loadbalancer_access() {
 get_ingress_access() {
     local app_name="$1"
     local ingress_line="$2"
+    local ns=$(echo "$ingress_line" | awk '{print $1}')
+    local name=$(echo "$ingress_line" | awk '{print $2}')
     local hosts=$(echo "$ingress_line" | awk '{print $4}')
 
     if [ "$hosts" = "localhost" ]; then
-        case "$app_name" in
-            "app1") echo "http://localhost:8080/app1" ;;
-            "app2") echo "http://localhost:8080/frontend, /api" ;;
-            "app3") echo "http://localhost:8080/app3/frontend, /app3/api" ;;
-            *) echo "http://localhost:8080" ;;
-        esac
+        # Dynamically get the path from the ingress resource
+        local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+        if [ -n "$path" ] && [ "$path" != "/" ]; then
+            echo "http://localhost:8080$path"
+        else
+            echo "http://localhost:8080"
+        fi
     else
         echo "hosts: $hosts"
     fi
