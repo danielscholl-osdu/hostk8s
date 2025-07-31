@@ -192,7 +192,7 @@ Configuration files:
 ### Test Strategy
 - `make test` runs comprehensive cluster validation
 - Validates cluster health, node status, networking, and service accessibility
-- Supports both basic cluster and GitOps stack configurations
+- Supports both basic cluster and software stack configurations
 
 ### CI/CD Integration
 - Hybrid CI/CD strategy using GitLab CI (fast validation) + GitHub Actions (comprehensive testing)

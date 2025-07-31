@@ -34,13 +34,13 @@ prepare: ## Setup development environment (pre-commit, yamllint, hooks)
 up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|default|sample|extension])
 	@# Only check dependencies if no cluster config exists (fresh setup)
 	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then $(MAKE) install; fi
-	@# Determine if argument is a Kind config or GitOps stack
+	@# Determine if argument is a Kind config or software stack
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
-		echo "Detected local GitOps stack: $$ARG"; \
+		echo "Detected local software stack: $$ARG"; \
 		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ "$$ARG" = "extension" ]; then \
-		echo "Detected extension GitOps stack"; \
+		echo "Detected extension software stack"; \
 		FLUX_ENABLED=true ./infra/scripts/cluster-up.sh; \
 	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
 		echo "Detected Kind config: $$ARG"; \
@@ -62,10 +62,10 @@ down: ## Stop the Kind cluster (preserves data)
 
 restart: ## Quick cluster reset for development iteration (Usage: make restart [sample])
 	@echo "🔄 Restarting cluster..."
-	@# Determine if argument is a GitOps stack
+	@# Determine if argument is a software stack
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
-		echo "🎯 Restarting with GitOps stack: $$ARG"; \
+		echo "🎯 Restarting with software stack: $$ARG"; \
 		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-restart.sh; \
 	elif [ -n "$$ARG" ]; then \
 		echo "❌ Unknown stack: $$ARG"; \
