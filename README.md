@@ -18,7 +18,7 @@ Current solutions make simple tasks painful:
 * **Environment chaos** - Juggling multiple IDEs, countless env vars, nothing reproduces twice
 * **Fragile infrastructure** - That 200-line bash script broke again and took your data with it
 * **Works-on-my-machine syndrome** - Runs fine locally, crashes on your teammate's setup
-* **IDE debugging nightmare** - Debuggers can't connect through layers of virtualization
+* **IDE debugging nightmare** - Debuggers struggle to connect through layers of virtualization
 
 ### How HostK8s Works Differently
 
@@ -32,8 +32,8 @@ When you inevitably hit complexity walls - why didn't that service start? What's
 
 ### What This Means for You
 
-* **2-minute environment startup** instead of 20-minute waits
-* **4GB RAM usage** instead of burning through 16GB+
+* **Quicker environment startup** instead of 45-minute waits
+* **Less RAM and Compute usage** instead of burning through 64GB+
 * **Configuration you can version control** instead of fragile scripts that break
 * **Safe experimentation** - keep your data when you rebuild your environment
 * **Real Kubernetes** - test with service mesh, ingress controllers, and enterprise auth patterns
