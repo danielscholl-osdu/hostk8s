@@ -72,7 +72,7 @@ For a deeper understanding of the platform's design:
 
 ```bash
 git clone https://community.opengroup.org/danielscholl/hostk8s.git
-make up sample # Start cluster with software stack
+make up sample # Start cluster with a sample software stack
 ```
 
 ### Prerequisites
@@ -97,12 +97,12 @@ Direct cluster management with manual application deployments. Ideal for **itera
 ```bash
 export INGRESS_ENABLED=true
 make up                 # Start basic cluster
-make deploy             # Deploy default app (simple)
+make deploy simple      # Deploy default app (simple)
 make status             # Check cluster and app status
 make clean              # Complete cleanup
 ```
 
-**Advanced Development with Infrastructure:**
+**Advanced Development:**
 ```bash
 export INGRESS_ENABLED=true
 make up                 # Start cluster with LoadBalancer and Ingress
@@ -112,7 +112,7 @@ make restart            # Quick reset for development iteration
 make down               # Destroy cluster preserve data
 ```
 
-### 2. Automated GitOps
+### 2. Automated Operations
 
 Complete software stack deployments using GitOps automation. Perfect for **consistent environments**, **team collaboration**, and **production-like setups**.
 
@@ -124,16 +124,16 @@ make status             # Monitor GitOps reconciliation
 make sync               # Force Flux reconciliation when needed
 ```
 
-### 3. Extensions
+### 3. Custom Extensions
 
 Custom applications and cluster configurations for specialized requirements. Enables **complete customization** while leveraging the HostK8s framework.
 
-**Custom Cluster Configurations:**
+**Custom Clusters:**
 ```bash
 # Add configs to infra/kubernetes/extension/kind-your-name.yaml
 export KIND_CONFIG=extension/sample
 make up                           # Start with custom cluster config
-make deploy extension/sample      # Deploy matching application
+make deploy simple                # Deploy application
 make status                       # Check customized environment
 ```
 
@@ -150,12 +150,13 @@ make status                  # Verify deployment
 **Custom Software Stacks:**
 ```bash
 # Create complete stacks in software/stack/extension/
+export FLUX_ENABLED=true
 export GITOPS_REPO=https://github.com/yourorg/custom-stack
 make up extension                 # Deploy complete custom environment
 make status                       # Monitor custom stack deployment
 ```
 
-> **Note**: Extensions require no code changes to HostK8s core - simply add files in the appropriate `extension/` directories with proper labels and configurations.
+> **Note**: Extensions require no code changes to HostK8s core - simply add files in the appropriate `extension/` directories with proper labels and configurations or just clone a repo directly.
 
 ---
 
