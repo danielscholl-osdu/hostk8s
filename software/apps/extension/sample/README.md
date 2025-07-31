@@ -1,4 +1,4 @@
-# App3 - Multi-Service Application
+# Extensions App - Multi-Service Application
 
 A comprehensive 3-tier application demonstrating service-to-service communication patterns and microservices architecture.
 
@@ -42,9 +42,9 @@ Frontend (nginx) → API (nginx) → Database (postgresql)
 ## Deploy
 
 ```bash
-make deploy app3
+make deploy extensions/sample
 # or
-kubectl apply -f software/apps/app3/app.yaml
+kubectl apply -f software/apps/extensions/sample/app.yaml
 ```
 
 ## Access
@@ -103,7 +103,7 @@ Demonstrates Kubernetes DNS-based service discovery:
 ## Cleanup
 
 ```bash
-kubectl delete -f software/apps/app3/app.yaml
+kubectl delete -f software/apps/extensions/sample/app.yaml
 # or
-kubectl delete deployment,service,configmap -l 'tier in (frontend,api,database)'
+kubectl delete deployment,service,configmap -l hostk8s.app=sample
 ```

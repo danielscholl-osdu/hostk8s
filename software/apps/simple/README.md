@@ -1,4 +1,4 @@
-# App1 - Basic Sample Application
+# Simple - Basic Sample Application
 
 A simple NGINX application demonstrating basic Kubernetes deployment patterns.
 
@@ -23,7 +23,7 @@ Perfect for:
 
 ## Deploy
 ```bash
-make deploy app1
+make deploy simple
 # or
-APP_DEPLOY=app1 make deploy
+make deploy  # deploys simple by default
 ```

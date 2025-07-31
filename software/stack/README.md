@@ -22,15 +22,15 @@ Control which stack is deployed via environment variables:
 
 ```bash
 # Use sample stack (default)
-export GITOPS_STACK=sample
+export SOFTWARE_STACK=sample
 make up
 
 # Use sample-stack (when available)
-export GITOPS_STACK=sample-stack
+export SOFTWARE_STACK=sample-stack  
 make up
 
 # Or set in .env file
-GITOPS_STACK=sample
+SOFTWARE_STACK=sample
 ```
 
 ## Overview

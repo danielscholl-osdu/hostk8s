@@ -1,4 +1,4 @@
-# App2 - Advanced Sample Application
+# Multi-Tier - Advanced Sample Application
 
 A comprehensive NGINX application demonstrating multiple Kubernetes service types and ingress patterns.
 
@@ -30,9 +30,9 @@ Perfect for:
 
 ## Deploy
 ```bash
-make deploy app2
+make deploy multi-tier
 # or
-APP_DEPLOY=app2 make deploy
+kubectl apply -f software/apps/multi-tier/app.yaml
 ```
 
 ## Requirements

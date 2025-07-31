@@ -21,7 +21,16 @@ show_gitops_status() {
 
 show_git_repositories() {
     if has_flux_cli; then
-        flux get sources git 2>/dev/null | grep -v "^NAME" | while IFS=$'\t' read -r name revision suspended ready message; do
+        local git_output=$(flux get sources git 2>/dev/null)
+        if [ -z "$git_output" ] || ! echo "$git_output" | grep -q "^NAME"; then
+            echo "📁 No GitRepositories configured"
+            echo "   Run 'make restart sample' to configure a software stack"
+            echo
+            return 0
+        fi
+        
+        echo "$git_output" | grep -v "^NAME" | while IFS=$'\t' read -r name revision suspended ready message; do
+            [ -z "$name" ] && continue
             local repo_url=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name" -n flux-system -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown")
             local branch=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name" -n flux-system -o jsonpath='{.spec.ref.branch}' 2>/dev/null || echo "unknown")
 
@@ -36,7 +45,12 @@ show_git_repositories() {
         done
     else
         echo "flux CLI not available - showing basic repository status:"
-        kubectl get gitrepositories.source.toolkit.fluxcd.io -A --no-headers 2>/dev/null | while read -r ns name ready status age; do
+        local repos=$(kubectl get gitrepositories.source.toolkit.fluxcd.io -A --no-headers 2>/dev/null)
+        if [ -z "$repos" ]; then
+            echo "No GitRepositories configured"
+            return 0
+        fi
+        echo "$repos" | while read -r ns name ready status age; do
             local repo_url=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name" -n "$ns" -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown")
             echo "Repository: $name ($repo_url)"
             echo "Ready: $ready"
@@ -49,7 +63,15 @@ show_kustomizations() {
         return 0
     fi
 
-    flux get kustomizations 2>/dev/null | grep -v "^NAME" | grep -v "^[[:space:]]*$" | while IFS=$'\t' read -r name revision suspended ready message; do
+    local kustomization_output=$(flux get kustomizations 2>/dev/null)
+    if [ -z "$kustomization_output" ] || ! echo "$kustomization_output" | grep -q "^NAME"; then
+        echo "🔧 No Kustomizations configured"
+        echo "   GitOps resources will appear here after configuring a stack"
+        echo
+        return 0
+    fi
+
+    echo "$kustomization_output" | grep -v "^NAME" | grep -v "^[[:space:]]*$" | while IFS=$'\t' read -r name revision suspended ready message; do
         local name_trimmed=$(echo "$name" | tr -d ' ')
         [ -z "$name_trimmed" ] && continue
 

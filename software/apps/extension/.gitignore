@@ -1,0 +1,6 @@
+# Ignore everything in extensions directory except .gitignore, README.md and the sample app
+*
+!.gitignore
+!README.md
+!sample/**
+!sample/
