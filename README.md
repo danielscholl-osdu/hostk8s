@@ -78,21 +78,21 @@ Direct cluster management with manual application deployments. Ideal for **itera
 
 **Basic Development:**
 ```bash
+export INGRESS_ENABLED=true
 make up                 # Start basic cluster
 make deploy             # Deploy default app (simple)
-make deploy multi-tier  # Deploy advanced multi-service app
 make status             # Check cluster and app status
-make restart            # Quick reset for development iteration
 make clean              # Complete cleanup
 ```
 
 **Advanced Development with Infrastructure:**
 ```bash
 export INGRESS_ENABLED=true
-export METALLB_ENABLED=true
 make up                 # Start cluster with LoadBalancer and Ingress
 make deploy multi-tier  # Deploy apps requiring advanced networking
 make status             # Monitor cluster health
+make restart            # Quick reset for development iteration
+make down               # Destroy cluster perserve data
 ```
 
 ### 2. Automated GitOps
@@ -101,6 +101,7 @@ Complete software stack deployments using GitOps automation. Perfect for **consi
 
 **Built-in Sample Stack:**
 ```bash
+export FLUX_ENABLED=true
 make up sample          # Deploy complete GitOps environment
 make status             # Monitor GitOps reconciliation
 make sync               # Force Flux reconciliation when needed
@@ -118,6 +119,15 @@ make status             # Monitor deployment progress
 
 Custom applications and cluster configurations for specialized requirements. Enables **complete customization** while leveraging the HostK8s framework.
 
+**Custom Cluster Configurations:**
+```bash
+# Add configs to infra/kubernetes/extension/kind-your-name.yaml
+export KIND_CONFIG=extension/sample
+make up                           # Start with custom cluster config
+make deploy extension/sample      # Deploy matching application
+make status                       # Check customized environment
+```
+
 **Custom Applications:**
 ```bash
 # Add apps to software/apps/extension/your-app-name/
@@ -126,16 +136,6 @@ export INGRESS_ENABLED=true
 make up                      # Start with required infrastructure
 make deploy extension/sample # Deploy custom application
 make status                  # Verify deployment
-```
-
-**Custom Cluster Configurations:**
-```bash
-# Add configs to infra/kubernetes/extension/kind-your-name.yaml
-export KIND_CONFIG=extension/sample
-export FLUX_ENABLED=false
-make up                           # Start with custom cluster config
-make deploy extension/sample      # Deploy matching application
-make status                       # Check customized environment
 ```
 
 **Custom Software Stacks:**
