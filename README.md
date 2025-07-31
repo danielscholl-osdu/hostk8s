@@ -6,7 +6,7 @@
 
 ## Why HostK8s?
 
-HostK8s is designed to let you run only the Kubernetes services you actually need for development - pick just the building blocks necessary for your task. Turn massive, slow deployments into lightweight, fast environments that you can safely break and rebuild without losing your data.
+HostK8s is designed to let you run only the Kubernetes services you actually need, wherever you need them - pick just the building blocks necessary for your task. Turn massive, slow deployments into lightweight, fast environments that you can safely break and rebuild without losing your data.
 
 ### The Developer Reality
 
