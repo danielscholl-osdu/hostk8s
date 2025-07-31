@@ -25,19 +25,25 @@ install_precommit() {
     log_info "Installing pre-commit..."
 
     # Try different installation methods in order of preference
-    if command -v pip >/dev/null 2>&1; then
-        pip install pre-commit
-    elif command -v pipx >/dev/null 2>&1; then
+    if command -v pipx >/dev/null 2>&1; then
         pipx install pre-commit
     elif command -v brew >/dev/null 2>&1; then
         brew install pre-commit
+    elif command -v apt >/dev/null 2>&1; then
+        # Ubuntu/Debian - install via apt if pip is broken
+        sudo apt update && sudo apt install -y pre-commit
+    elif command -v pip3 >/dev/null 2>&1; then
+        # Try pip3 if pip is broken
+        pip3 install --user pre-commit
+    elif command -v pip >/dev/null 2>&1; then
+        pip install pre-commit
     else
         log_error "Could not install pre-commit. Please install manually:"
-        log_info "   pip install pre-commit"
+        log_info "   pipx install pre-commit (recommended)"
         log_info "   # or"
-        log_info "   pipx install pre-commit"
+        log_info "   sudo apt install pre-commit (Ubuntu/Debian)"
         log_info "   # or"
-        log_info "   brew install pre-commit"
+        log_info "   pip3 install --user pre-commit"
         return 1
     fi
 
@@ -52,14 +58,28 @@ install_yamllint() {
 
     log_info "Installing yamllint..."
 
-    if command -v pip >/dev/null 2>&1; then
+    # Try different installation methods in order of preference
+    if command -v pipx >/dev/null 2>&1; then
+        pipx install yamllint
+    elif command -v apt >/dev/null 2>&1; then
+        # Ubuntu/Debian - install via apt if pip is broken
+        sudo apt update && sudo apt install -y yamllint
+    elif command -v pip3 >/dev/null 2>&1; then
+        # Try pip3 if pip is broken
+        pip3 install --user yamllint
+    elif command -v pip >/dev/null 2>&1; then
         pip install yamllint
-        log_success "yamllint installed"
     else
-        log_error "pip not available - cannot install yamllint"
-        log_info "Please install yamllint manually: pip install yamllint"
+        log_error "Could not install yamllint. Please install manually:"
+        log_info "   pipx install yamllint (recommended)"
+        log_info "   # or"
+        log_info "   sudo apt install yamllint (Ubuntu/Debian)"
+        log_info "   # or"
+        log_info "   pip3 install --user yamllint"
         return 1
     fi
+
+    log_success "yamllint installed"
 }
 
 setup_precommit_hooks() {
@@ -69,6 +89,9 @@ setup_precommit_hooks() {
     fi
 
     log_info "Installing pre-commit hooks..."
+
+    # Ensure user's local bin is in PATH for pip --user installs
+    export PATH="$HOME/.local/bin:$PATH"
 
     if pre-commit install; then
         log_success "Pre-commit hooks installed"
@@ -81,6 +104,9 @@ setup_precommit_hooks() {
 setup_development_environment() {
     log_start "Setting up HostK8s development environment..."
 
+    # Ensure user's local bin is in PATH for all operations
+    export PATH="$HOME/.local/bin:$PATH"
+
     # Install tools
     install_precommit || return 1
     install_yamllint || return 1
@@ -91,6 +117,9 @@ setup_development_environment() {
     log_success "Development environment setup complete!"
     log_info "You can now use 'git commit' with automatic validation"
     log_info "Manual validation: 'pre-commit run --all-files'"
+    log_info ""
+    log_info "Note: If commands aren't found, add to your shell profile:"
+    log_info "  echo 'export PATH=\"\$HOME/.local/bin:\$PATH\"' >> ~/.bashrc"
 }
 
 # Main function
