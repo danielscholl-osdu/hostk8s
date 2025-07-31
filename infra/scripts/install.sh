@@ -23,13 +23,65 @@ check_tool() {
     local install_cmd="$2"
 
     if command -v "$tool" >/dev/null 2>&1; then
-        log_debug "$tool already installed"
+        local version=""
+        case "$tool" in
+            "kind")
+                version=$(kind version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "")
+                ;;
+            "kubectl")
+                version=$(kubectl version --client --output=yaml 2>/dev/null | grep gitVersion | cut -d'"' -f4 | sed 's/gitVersion://' | tr -d ' ' || echo "")
+                ;;
+            "helm")
+                version=$(helm version --template='{{.Version}}' 2>/dev/null || echo "")
+                ;;
+            "flux")
+                version=$(flux version --client 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
+                ;;
+            "flux-operator-mcp")
+                version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
+                ;;
+        esac
+        
+        if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+            if [ -n "$version" ]; then
+                log_debug "  $tool: ${CYAN}$version${NC}"
+            else
+                log_debug "  $tool: ${CYAN}installed${NC}"
+            fi
+        fi
         return 0
     fi
 
     if [ -n "$install_cmd" ]; then
         log_debug "Installing $tool..."
         eval "$install_cmd"
+        # Check version after installation
+        local version=""
+        case "$tool" in
+            "kind")
+                version=$(kind version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1 || echo "")
+                ;;
+            "kubectl")
+                version=$(kubectl version --client --output=yaml 2>/dev/null | grep gitVersion | cut -d'"' -f4 | sed 's/gitVersion://' | tr -d ' ' || echo "")
+                ;;
+            "helm")
+                version=$(helm version --template='{{.Version}}' 2>/dev/null || echo "")
+                ;;
+            "flux")
+                version=$(flux version --client 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
+                ;;
+            "flux-operator-mcp")
+                version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
+                ;;
+        esac
+        
+        if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+            if [ -n "$version" ]; then
+                log_debug "  $tool: ${CYAN}$version${NC}"
+            else
+                log_debug "  $tool: ${CYAN}installed${NC}"
+            fi
+        fi
     else
         log_error "$tool not found"
         return 1
@@ -37,7 +89,9 @@ check_tool() {
 }
 
 install_with_homebrew() {
-    log_debug "Using Homebrew..."
+    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+        log_debug "Tools"
+    fi
 
     local tools=(
         "kind:brew install kind"
@@ -55,7 +109,9 @@ install_with_homebrew() {
 }
 
 install_with_apt() {
-    log_debug "Using APT..."
+    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+        log_debug "Tools"
+    fi
 
     # Update package list
     sudo apt update
@@ -76,7 +132,9 @@ install_with_apt() {
 }
 
 install_with_apk() {
-    log_debug "Using APK..."
+    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+        log_debug "Tools"
+    fi
 
     local tools=(
         "kind:curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind"
@@ -115,24 +173,88 @@ validate_ci_environment() {
 }
 
 install_dependencies() {
-    log_start "Checking dependencies..."
+    log_debug "Checking dependencies..."
+    
+    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+        log_debug "------------------------"
+        log_debug "Dependency Configuration"
+    fi
 
-    # Detect package manager and install accordingly (prioritizing brew)
-    if command -v brew >/dev/null 2>&1; then
-        install_with_homebrew
-    elif command -v apt >/dev/null 2>&1; then
-        install_with_apt
-    elif command -v apk >/dev/null 2>&1; then
-        install_with_apk
+    # Select package manager based on PACKAGE_MANAGER setting
+    if [ -z "$PACKAGE_MANAGER" ]; then
+        # Auto-detect: prefer brew, then native
+        if command -v brew >/dev/null 2>&1; then
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "  Package Manager: ${CYAN}Homebrew${NC} (auto-detected)"
+                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
+                log_debug "------------------------"
+            fi
+            install_with_homebrew
+        elif command -v apt >/dev/null 2>&1; then
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "  Package Manager: ${CYAN}APT${NC} (auto-detected)"
+                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
+                log_debug "------------------------"
+            fi
+            install_with_apt
+        elif command -v apk >/dev/null 2>&1; then
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "  Package Manager: ${CYAN}APK${NC} (auto-detected)"
+                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
+                log_debug "------------------------"
+            fi
+            install_with_apk
+        else
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "------------------------"
+            fi
+            log_error "No supported package manager found (brew, apt, or apk)."
+            log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
+            log_info "Installation guides:"
+            log_info "  - kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
+            log_info "  - kubectl: https://kubernetes.io/docs/tasks/tools/"
+            log_info "  - helm: https://helm.sh/docs/intro/install/"
+            log_info "  - flux: https://fluxcd.io/flux/installation/"
+            log_info "  - flux-operator-mcp: https://fluxcd.control-plane.io/mcp/install/"
+            return 1
+        fi
+    elif [ "$PACKAGE_MANAGER" = "brew" ]; then
+        # Force Homebrew
+        if command -v brew >/dev/null 2>&1; then
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "  Package Manager: ${CYAN}Homebrew${NC} (forced)"
+                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
+                log_debug "------------------------"
+            fi
+            install_with_homebrew
+        else
+            log_error "Homebrew not available but PACKAGE_MANAGER=brew is set"
+            log_info "Install Homebrew: https://brew.sh/"
+            return 1
+        fi
+    elif [ "$PACKAGE_MANAGER" = "native" ]; then
+        # Force native package manager
+        if command -v apt >/dev/null 2>&1; then
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "  Package Manager: ${CYAN}APT${NC} (native)"
+                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
+                log_debug "------------------------"
+            fi
+            install_with_apt
+        elif command -v apk >/dev/null 2>&1; then
+            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+                log_debug "  Package Manager: ${CYAN}APK${NC} (native)"
+                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
+                log_debug "------------------------"
+            fi
+            install_with_apk
+        else
+            log_error "No native package manager found (apt or apk) but PACKAGE_MANAGER=native is set"
+            return 1
+        fi
     else
-        log_error "No supported package manager found (brew, apt, or apk)."
-        log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
-        log_info "Installation guides:"
-        log_info "  - kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
-        log_info "  - kubectl: https://kubernetes.io/docs/tasks/tools/"
-        log_info "  - helm: https://helm.sh/docs/intro/install/"
-        log_info "  - flux: https://fluxcd.io/flux/installation/"
-        log_info "  - flux-operator-mcp: https://fluxcd.control-plane.io/mcp/install/"
+        log_error "Invalid PACKAGE_MANAGER value: '$PACKAGE_MANAGER'"
+        log_info "Valid options: brew, native"
         return 1
     fi
 
@@ -143,7 +265,10 @@ install_dependencies() {
         return 1
     fi
 
-    log_success "All dependencies verified"
+    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
+        log_debug "------------------------"
+    fi
+    log_info "All dependencies verified"
 }
 
 # Main function

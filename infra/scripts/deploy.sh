@@ -8,16 +8,16 @@ show_usage() {
     echo "Deploy an application to the cluster."
     echo ""
     echo "Arguments:"
-    echo "  APP_NAME    Application to deploy (default: sample/app1)"
+    echo "  APP_NAME    Application to deploy (default: simple)"
     echo ""
     echo "Available applications:"
     list_available_apps | sed 's/^/  /'
     echo ""
     echo "Examples:"
-    echo "  $0                    # Deploy default app (sample/app1)"
-    echo "  $0 sample/app1        # Deploy basic sample app"
-    echo "  $0 sample/app2        # Deploy advanced sample app"
-    echo "  $0 sample/app3        # Deploy multi-service sample app"
+    echo "  $0                    # Deploy default app (simple)"
+    echo "  $0 simple        # Deploy basic sample app"
+    echo "  $0 simple2        # Deploy advanced sample app"
+    echo "  $0 simple3        # Deploy multi-service sample app"
 }
 
 deploy_application() {
@@ -44,7 +44,7 @@ deploy_application() {
 
 # Main function
 main() {
-    local app_name="${1:-sample/app1}"
+    local app_name="${1:-simple}"
 
     # Show help if requested
     if [ "$app_name" = "-h" ] || [ "$app_name" = "--help" ] || [ "$app_name" = "help" ]; then

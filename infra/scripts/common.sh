@@ -90,7 +90,8 @@ load_environment() {
     export KIND_CONFIG=${KIND_CONFIG:-default}
     export METALLB_ENABLED=${METALLB_ENABLED:-false}
     export INGRESS_ENABLED=${INGRESS_ENABLED:-false}
-    export FLUX_ENABLED=${FLUX_ENABLED:-true}
+    export FLUX_ENABLED=${FLUX_ENABLED:-false}
+    export PACKAGE_MANAGER=${PACKAGE_MANAGER:-}
     export KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"
     export KUBECONFIG="$KUBECONFIG_PATH"
 }
@@ -131,7 +132,7 @@ check_dependencies() {
 get_app_label() {
     local app_name="$1"
     local app_type="${2:-app}"  # 'app' for manual, 'application' for GitOps
-    echo "osdu-ci.${app_type}=${app_name}"
+    echo "hostk8s.${app_type}=${app_name}"
 }
 
 get_deployments_for_app() {
