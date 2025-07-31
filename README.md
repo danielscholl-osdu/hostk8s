@@ -10,7 +10,7 @@ HostK8s is designed to let you run what kubernetes services and software compone
 
 ### The Developer Reality
 
-You're debugging a microservice that connects to a database, it calls two other APIs, and uses a search engine. The projects full platform includes workflow orchestration, a networking mesh, message queues, identity management, and dozens of other services. You just need to test your one service, but you're forced to boot up 50+ containers you'll never touch.
+You're debugging a microservice that connects to a database, it calls two other APIs, and uses a search engine. The full platform includes workflow orchestration, a networking mesh, message queues, identity management, and dozens of other services. You just need to test your one service, but you're forced to boot up 50+ containers you'll never touch.
 
 Current solutions make simple tasks painful:
 
