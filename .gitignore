@@ -2,6 +2,8 @@
 .env
 .envrc
 
+.claude/settings.local.json
+
 .vscode/*
 !.vscode/mcp.json
 
