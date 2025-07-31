@@ -92,12 +92,12 @@ sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=
 
 ##@ Tools
 
-deploy: ## Deploy application (Usage: make deploy [sample/app1])
+deploy: ## Deploy application (Usage: make deploy [simple])
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
 	./infra/scripts/deploy.sh "$$APP_NAME"
 
 # Handle app arguments as targets to avoid "No rule to make target" errors
-app1 app2 app3 sample/app1 sample/app2 sample/app3 sample/registry-demo:
+multi-tier extension/sample registry-demo:
 	@:
 
 # Handle src/* arguments as targets to avoid "No rule to make target" errors

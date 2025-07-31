@@ -1,0 +1,7 @@
+# Ignore all files and directories in the extension folder
+*
+
+# But keep specific files
+!.gitignore
+!README.md
+!kind-sample.yaml

@@ -124,7 +124,7 @@ retry_with_backoff() {
 
 # Check if cluster already exists
 if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
-    log_warn "Cluster '${CLUSTER_NAME}' already exists. Delete it first with: kind delete cluster --name ${CLUSTER_NAME}"
+    log_warn "Cluster '${CLUSTER_NAME}' already exists. Use 'make restart' to recreate it."
     exit 1
 fi
 
@@ -143,12 +143,17 @@ case "${KIND_CONFIG}" in
         KIND_CONFIG_FILE="kind-config-ci.yaml"
         ;;
     *)
+        # Check if it's an extension config (format: extension/name)
+        if [[ "${KIND_CONFIG}" == extension/* ]]; then
+            EXTENSION_NAME="${KIND_CONFIG#extension/}"
+            KIND_CONFIG_FILE="extension/kind-${EXTENSION_NAME}.yaml"
         # If it doesn't match convention, assume it's a direct filename
-        if [[ "${KIND_CONFIG}" == *.yaml ]]; then
+        elif [[ "${KIND_CONFIG}" == *.yaml ]]; then
             KIND_CONFIG_FILE="${KIND_CONFIG}"
         else
             log_error "Unknown config name: ${KIND_CONFIG}"
             log_error "Available options: default, minimal, simple, ci"
+            log_error "Extension configs: extension/your-config-name (via KIND_CONFIG env var)"
             log_error "Or use full filename like: kind-config-custom.yaml"
             exit 1
         fi
@@ -159,7 +164,11 @@ KIND_CONFIG_PATH="infra/kubernetes/${KIND_CONFIG_FILE}"
 if [ ! -f "${KIND_CONFIG_PATH}" ]; then
     log_error "Kind config file not found: ${KIND_CONFIG_PATH}"
     log_error "Available configs:"
-    ls -1 infra/kubernetes/kind-config*.yaml 2>/dev/null || log_error "No kind config files found"
+    ls -1 infra/kubernetes/kind-config*.yaml 2>/dev/null || true
+    if [ -d "infra/kubernetes/extension" ]; then
+        log_error "Extension configs:"
+        find infra/kubernetes/extension -name "kind-*.yaml" 2>/dev/null | sed 's|infra/kubernetes/extension/kind-|extension/|' | sed 's|\.yaml||' || true
+    fi
     exit 1
 fi
 

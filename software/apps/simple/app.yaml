@@ -6,7 +6,7 @@ metadata:
   namespace: default
   labels:
     app: sample-app
-    hostk8s.app: app1
+    hostk8s.app: simple
 spec:
   replicas: 2
   selector:
@@ -43,7 +43,7 @@ metadata:
   name: sample-app-html
   namespace: default
   labels:
-    hostk8s.app: app1
+    hostk8s.app: simple
 data:
   index.html: |
     <!DOCTYPE html>
@@ -99,7 +99,7 @@ metadata:
   name: sample-app
   namespace: default
   labels:
-    hostk8s.app: app1
+    hostk8s.app: simple
 spec:
   selector:
     app: sample-app
@@ -116,7 +116,7 @@ metadata:
   name: sample-app
   namespace: default
   labels:
-    hostk8s.app: app1
+    hostk8s.app: simple
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
@@ -125,7 +125,7 @@ spec:
   - host: localhost
     http:
       paths:
-      - path: /app1
+      - path: /simple
         pathType: Prefix
         backend:
           service:

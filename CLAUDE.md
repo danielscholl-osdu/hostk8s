@@ -24,8 +24,8 @@ HostK8s is a lightweight Kubernetes development platform built on Kind that comb
 - `make status` - Show cluster health and running services
 
 ### Development Operations
-- `make deploy` - Deploy default app (sample/app1)
-- `make deploy sample/app2` - Deploy specific application
+- `make deploy` - Deploy default app (simple)
+- `make deploy simple2` - Deploy specific application
 - `make test` - Run comprehensive cluster validation tests
 - `make logs` - View recent cluster events and logs
 - `make port-forward SVC=myservice PORT=8080` - Port forward a service
@@ -102,7 +102,7 @@ HostK8s includes automatic quality assurance and GitOps integration through Clau
 - `infra/kubernetes/` - Kind configuration files (minimal, simple, default)
 
 **Software Layer** (`software/`):
-- `software/apps/` - Individual applications (sample/app1, app2, app3, registry-demo)
+- `software/apps/` - Individual applications (simple, multi-tier, extensions/sample, registry-demo)
 - `software/components/` - Flux-managed infrastructure components (certs, registry, ingress)
 - `software/stack/` - Software stack templates for complete environments
 
@@ -131,8 +131,8 @@ The software stack pattern deploys complete environments:
 ### Manual Development
 ```bash
 make up                    # Start basic cluster
-make deploy sample/app1    # Deploy basic app
-make deploy sample/app2    # Deploy advanced app (needs MetalLB/Ingress)
+make deploy simple    # Deploy basic app
+make deploy simple2    # Deploy advanced app (needs MetalLB/Ingress)
 make status                # Check status
 make restart               # Reset for iteration
 ```

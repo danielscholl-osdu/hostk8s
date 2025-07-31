@@ -1,4 +1,4 @@
-# App2: Ingress showcase with multiple services and path routing
+# Multi-Tier: Ingress showcase with multiple services and path routing
 # Requires: INGRESS_ENABLED=true
 # Access: http://localhost/frontend, http://localhost/api
 
@@ -11,7 +11,7 @@ metadata:
   namespace: default
   labels:
     app: frontend
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
 spec:
   replicas: 2
   selector:
@@ -49,7 +49,7 @@ metadata:
   name: frontend-html
   namespace: default
   labels:
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
 data:
   index.html: |
     <!DOCTYPE html>
@@ -113,7 +113,7 @@ metadata:
   name: frontend
   namespace: default
   labels:
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
 spec:
   selector:
     app: frontend
@@ -131,7 +131,7 @@ metadata:
   namespace: default
   labels:
     app: api
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
 spec:
   replicas: 2
   selector:
@@ -169,7 +169,7 @@ metadata:
   name: api-html
   namespace: default
   labels:
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
 data:
   index.html: |
     <!DOCTYPE html>
@@ -217,7 +217,7 @@ metadata:
   name: api
   namespace: default
   labels:
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
 spec:
   selector:
     app: api
@@ -234,7 +234,7 @@ metadata:
   name: app2-ingress
   namespace: default
   labels:
-    hostk8s.app: app2
+    hostk8s.app: multi-tier
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:

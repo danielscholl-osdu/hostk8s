@@ -97,14 +97,20 @@ flux install \
 log_info "Waiting for Flux controllers to be ready..."
 kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log_warn "Flux controllers still initializing, continuing setup..."
 
-# Function to apply stamp YAML files directly
+# Function to apply stamp YAML files with template substitution support
 apply_stamp_yaml() {
     local yaml_file="$1"
     local description="$2"
 
     if [ -f "$yaml_file" ]; then
         log_info "$description"
-        kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log_info "WARNING: Failed to apply $description"
+        # Check if this is an extension stack that needs template processing
+        if [[ "$yaml_file" == *"extension/"* ]]; then
+            log_debug "Processing template variables for extension stack"
+            envsubst < "$yaml_file" | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log_info "WARNING: Failed to apply $description"
+        else
+            kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log_info "WARNING: Failed to apply $description"
+        fi
     else
         log_info "WARNING: YAML file not found: $yaml_file"
     fi

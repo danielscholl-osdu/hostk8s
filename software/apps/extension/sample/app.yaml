@@ -1,6 +1,6 @@
-# App3: Production patterns with MetalLB + Ingress + Multi-tier architecture
+# Extensions App: Production patterns with MetalLB + Ingress + Multi-tier architecture
 # Requires: METALLB_ENABLED=true AND INGRESS_ENABLED=true
-# Access: http://localhost/app3/ (ingress) AND LoadBalancer external IPs
+# Access: http://localhost/sample/ (ingress) AND LoadBalancer external IPs
 # Demonstrates: Service mesh, LoadBalancer services, production networking
 # Frontend Application
 apiVersion: apps/v1
@@ -9,7 +9,7 @@ metadata:
   name: frontend
   labels:
     app: frontend
-    hostk8s.app: app3
+    hostk8s.app: sample
     tier: frontend
 spec:
   replicas: 2
@@ -50,7 +50,7 @@ kind: ConfigMap
 metadata:
   name: frontend-content
   labels:
-    hostk8s.app: app3
+    hostk8s.app: sample
 data:
   index.html: |
     <!DOCTYPE html>
@@ -88,7 +88,7 @@ data:
                 <h3>🔌 API Service</h3>
                 <p><span class="status">Status: Running</span></p>
                 <p><strong>Purpose:</strong> Business logic and database communication</p>
-                <p><strong>Database:</strong> <code>postgresql://database:5432/appdb</code></p>
+                <p><strong>Database:</strong> <code>postgresql://database:5432/sampledb</code></p>
                 <button class="test-btn" onclick="testDatabase()">Test Database Connection</button>
             </div>
 
@@ -131,7 +131,7 @@ metadata:
   name: frontend-lb
   labels:
     tier: frontend
-    hostk8s.app: app3
+    hostk8s.app: sample
 spec:
   selector:
     app: frontend
@@ -147,7 +147,7 @@ metadata:
   name: api
   labels:
     app: api
-    hostk8s.app: app3
+    hostk8s.app: sample
     tier: api
 spec:
   replicas: 2
@@ -167,7 +167,7 @@ spec:
         - containerPort: 80
         env:
         - name: DATABASE_URL
-          value: "postgresql://appuser:apppass@database:5432/appdb"
+          value: "postgresql://sampleuser:apppass@database:5432/sampledb"
         - name: PORT
           value: "80"
         resources:
@@ -202,7 +202,7 @@ kind: ConfigMap
 metadata:
   name: api-config
   labels:
-    hostk8s.app: app3
+    hostk8s.app: sample
 data:
   index.html: |
     <!DOCTYPE html>
@@ -222,7 +222,7 @@ data:
             <h1>🔌 API Service</h1>
             <div class="api-status">
                 <h2>API Status: Running</h2>
-                <p><strong>Database:</strong> postgresql://database:5432/appdb</p>
+                <p><strong>Database:</strong> postgresql://database:5432/sampledb</p>
                 <p><strong>Endpoints:</strong></p>
                 <ul>
                     <li><code>GET /health</code> - Health check</li>
@@ -244,7 +244,7 @@ metadata:
   name: api
   labels:
     tier: api
-    hostk8s.app: app3
+    hostk8s.app: sample
 spec:
   selector:
     app: api
@@ -260,7 +260,7 @@ metadata:
   name: api-lb
   labels:
     tier: api
-    hostk8s.app: app3
+    hostk8s.app: sample
 spec:
   selector:
     app: api
@@ -276,7 +276,7 @@ metadata:
   name: database
   labels:
     app: database
-    hostk8s.app: app3
+    hostk8s.app: sample
     tier: database
 spec:
   replicas: 1
@@ -321,7 +321,7 @@ metadata:
   name: database
   labels:
     tier: database
-    hostk8s.app: app3
+    hostk8s.app: sample
 spec:
   selector:
     app: database
@@ -336,7 +336,7 @@ kind: Ingress
 metadata:
   name: app3-ingress
   labels:
-    hostk8s.app: app3
+    hostk8s.app: sample
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:
@@ -345,14 +345,14 @@ spec:
   - host: localhost
     http:
       paths:
-      - path: /app3/frontend(/|$)(.*)
+      - path: /sample/frontend(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:
             name: frontend
             port:
               number: 80
-      - path: /app3/api(/|$)(.*)
+      - path: /sample/api(/|$)(.*)
         pathType: ImplementationSpecific
         backend:
           service:

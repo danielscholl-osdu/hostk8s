@@ -10,7 +10,7 @@ HostK8s addresses common pain points in Kubernetes development:
 
 * **Manual environment setup** - repeatedly configuring the same development stacks.
 * **Environment drift** - inconsistent setups across team members and projects.
-* **Heavy tooling overhead** - resource-intensive solutions like Docker Desktop or VM-based tools.
+* **Heavy tooling overhead** - resource-intensive solutions that reserve dedicated host resources or require VM layers.
 
 HostK8s solves these by letting you deploy isolated apps or complete software stacks in seconds using predefined configurations.
 
@@ -51,11 +51,10 @@ For a deeper understanding of the platform's design:
 
 ## Quick Start
 
-**Get started in 3 steps:**
+**Get started in 2 steps:**
 
 ```bash
 git clone https://community.opengroup.org/danielscholl/hostk8s.git
-make install   # Install dependencies (kind, kubectl, helm, flux)
 make up sample # Start cluster with software stack
 ```
 
@@ -78,11 +77,44 @@ There are two primary ways to use HostK8s, depending on whether you want **indiv
 Create a basic cluster and deploy applications one at a time using `make deploy`:
 
 ```bash
+export FLUX_ENABLED=false
+export INGRESS_ENABLED=true
 make up                 # Start empty cluster
-make deploy sample/app1 # Deploy an app manually
-make deploy sample/app2 # Deploy additional apps as needed
+make deploy             # Deploy default app (simple)
+make deploy multi-tier  # Deploy advanced multi-service app
 make status             # Check cluster and app status
+make down               # Stop cluster (preserves data)
+make restart            # Quick reset for development iteration
+make clean              # Complete cleanup (destroy cluster and data)
 ```
+
+**Extension Apps**: Add custom applications by placing them in `software/apps/extension/your-app-name/` with an `app.yaml` file and proper `hostk8s.app` labels. Most extension apps require additional infrastructure:
+
+```bash
+export FLUX_ENABLED=false
+export METALLB_ENABLED=true
+export INGRESS_ENABLED=true
+make up                      # Start cluster with LoadBalancer and Ingress support
+make deploy extension/sample # Deploy extension apps
+make status                  # Check cluster and app status
+make clean                   # Complete cleanup when done
+```
+
+**Custom Cluster + Custom App**: Combine custom Kubernetes configurations with custom applications for complete extensibility:
+
+```bash
+# Use custom cluster configuration with custom app
+export FLUX_ENABLED=false
+export METALLB_ENABLED=true
+export INGRESS_ENABLED=true
+export KIND_CONFIG=extension/sample
+make up                           # Start with custom cluster config
+make deploy extension/sample      # Deploy custom app  
+make status                       # Check status
+make clean                        # Complete cleanup
+```
+
+Add custom cluster configurations as `infra/kubernetes/extension/kind-your-name.yaml` to customize networking, storage, or other cluster features.
 
 This approach is simple and good for **iterative development** or **testing single applications**.
 
@@ -111,6 +143,7 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
 | `K8S_VERSION`     | Kubernetes version to use                     | `latest`  |
 | `KIND_CONFIG`     | Kind config preset (minimal, simple, default) | `default` |
+| `PACKAGE_MANAGER` | Package manager preference (brew, native)     | `auto`    |
 | `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |
 | `METALLB_ENABLED` | Enable MetalLB for LoadBalancer support       | `false`   |
 | `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
