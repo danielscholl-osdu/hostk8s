@@ -1,4 +1,4 @@
-# ADR-003: GitOps Stamp Pattern
+# ADR-003: GitOps Stack Pattern
 
 ## Status
 **Accepted** - 2025-07-28
@@ -7,17 +7,17 @@
 HostK8s needed a way to deploy complete, declarative environments that go beyond simple application deployment. Users require consistent patterns for deploying infrastructure components (databases, ingress, certificates) alongside applications, with clear dependency management and environment-specific configurations. The solution must be platform-agnostic and reusable across different domain contexts.
 
 ## Decision
-Implement the **GitOps Stamp Pattern** - a declarative template system for deploying complete environments via Flux, with component/application separation and dependency management.
+Implement the **GitOps Stack Pattern** - a declarative template system for deploying complete environments via Flux, with component/application separation and dependency management.
 
 ## Rationale
 1. **Complete Environments**: Deploy infrastructure + applications as cohesive units
 2. **Platform Agnostic**: Pattern works for any software stack (OSDU, microservices, etc.)
 3. **Dependency Management**: Clear component ordering and health checks
-4. **Reusability**: Stamps can be shared and evolved independently
+4. **Reusability**: Stacks can be shared and evolved independently
 5. **GitOps Native**: Leverages Flux's reconciliation and drift detection
 6. **Selective Sync**: Efficient Git synchronization with ignore patterns
 
-## Stamp Architecture
+## Stack Architecture
 
 ### Directory Structure
 ```

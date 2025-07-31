@@ -6,7 +6,7 @@ metadata:
   namespace: default
   labels:
     app: sample-app
-    osdu-ci.app: app1
+    hostk8s.app: app1
 spec:
   replicas: 2
   selector:
@@ -43,13 +43,13 @@ metadata:
   name: sample-app-html
   namespace: default
   labels:
-    osdu-ci.app: app1
+    hostk8s.app: app1
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
-        <title>OSDU-CI Sample App</title>
+        <title>HostK8s Sample App</title>
         <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f5f5f5; }
@@ -62,7 +62,7 @@ data:
     </head>
     <body>
         <div class="container">
-            <h1>🎉 OSDU-CI Sample Application</h1>
+            <h1>🎉 HostK8s Sample Application</h1>
 
             <div class="success">
                 <h2>✅ Cluster is Working!</h2>
@@ -99,7 +99,7 @@ metadata:
   name: sample-app
   namespace: default
   labels:
-    osdu-ci.app: app1
+    hostk8s.app: app1
 spec:
   selector:
     app: sample-app
@@ -116,7 +116,7 @@ metadata:
   name: sample-app
   namespace: default
   labels:
-    osdu-ci.app: app1
+    hostk8s.app: app1
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:

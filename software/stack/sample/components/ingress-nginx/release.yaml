@@ -4,7 +4,7 @@ metadata:
   name: ingress-nginx
   namespace: flux-system
   labels:
-    osdu-ci.component: ingress-nginx
+    hostk8s.component: ingress-nginx
 spec:
   interval: 1h
   releaseName: ingress-nginx

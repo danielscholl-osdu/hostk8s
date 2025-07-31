@@ -31,7 +31,7 @@
                 <li><strong>Registry Push:</strong> Pushed to localhost:5000 registry</li>
                 <li><strong>Kubernetes Pull:</strong> Deployed from internal registry service</li>
                 <li><strong>Shared Components:</strong> Uses shared registry component pattern</li>
-                <li><strong>GitOps Ready:</strong> Registry deployed via Flux stamp</li>
+                <li><strong>GitOps Ready:</strong> Registry deployed via Flux stack</li>
             </ul>
         </div>
 
@@ -57,7 +57,7 @@ make deploy sample/registry-demo
                 <li><strong>External Access:</strong> NodePort 30500</li>
                 <li><strong>Storage:</strong> 10Gi persistent volume</li>
                 <li><strong>Component Type:</strong> Shared platform component</li>
-                <li><strong>Deployment:</strong> Optional via stamp configuration</li>
+                <li><strong>Deployment:</strong> Optional via stack configuration</li>
             </ul>
         </div>
 
@@ -78,7 +78,7 @@ kubectl describe pod -l app=registry-demo
         <div class="success">
             <h3>🎓 Learning Outcomes</h3>
             <ul>
-                <li>Understand shared vs stamp-specific components</li>
+                <li>Understand shared vs stack-specific components</li>
                 <li>Learn local registry integration patterns</li>
                 <li>Practice custom image development workflows</li>
                 <li>Experience GitOps-managed infrastructure components</li>

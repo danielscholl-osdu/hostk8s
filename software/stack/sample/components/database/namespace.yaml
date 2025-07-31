@@ -4,4 +4,4 @@ metadata:
   name: database
   labels:
     app.kubernetes.io/name: postgresql
-    osdu-ci.component: database
+    hostk8s.component: database

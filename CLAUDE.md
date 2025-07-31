@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository Overview
 
-HostK8s is a lightweight Kubernetes development platform built on Kind that combines host-mode architecture with GitOps stamps for reproducible, efficient development workflows. It addresses common pain points like manual environment setup, environment drift, and heavy tooling overhead.
+HostK8s is a lightweight Kubernetes development platform built on Kind that combines host-mode architecture with GitOps software stacks for reproducible, efficient development workflows. It addresses common pain points like manual environment setup, environment drift, and heavy tooling overhead.
 
 ## Essential SubAgents
 - `cluster-agent` - Infrastructure Kubernetes specialist for HostK8s clusters.
@@ -16,10 +16,10 @@ HostK8s is a lightweight Kubernetes development platform built on Kind that comb
 - `make help` - Show all available commands
 - `make install` - Install required dependencies (kind, kubectl, helm, flux, flux-operator-mcp)
 - `make up` - Start basic cluster
-- `make up sample` - Start cluster with GitOps stamp (requires `FLUX_ENABLED=true`)
+- `make up sample` - Start cluster with software stack (requires `FLUX_ENABLED=true`)
 - `make down` - Stop cluster (preserves data)
 - `make restart` - Quick cluster reset for development iteration
-- `make restart sample` - Restart with GitOps stamp
+- `make restart sample` - Restart with software stack
 - `make clean` - Complete cleanup (destroy cluster and data)
 - `make status` - Show cluster health and running services
 
@@ -93,7 +93,7 @@ HostK8s includes automatic quality assurance and GitOps integration through Clau
 
 **Host-Mode Architecture**: Uses Kind directly on host Docker daemon, eliminating Docker-in-Docker complexity for better stability and performance (4GB RAM vs 8GB typical).
 
-**GitOps Stamps**: Reusable templates that define complete infrastructure and application deployments as code. Applied via Flux to keep environments version-controlled and consistent.
+**Software Stacks**: Pre-configured complete development environments (infrastructure + applications) deployed as code. Applied via GitOps to keep environments version-controlled and consistent.
 
 ### Key Components
 
@@ -104,17 +104,17 @@ HostK8s includes automatic quality assurance and GitOps integration through Clau
 **Software Layer** (`software/`):
 - `software/apps/` - Individual applications (sample/app1, app2, app3, registry-demo)
 - `software/components/` - Flux-managed infrastructure components (certs, registry, ingress)
-- `software/stamp/` - GitOps stamp templates for complete environments
+- `software/stack/` - Software stack templates for complete environments
 
 **Source Code** (`src/`):
 - Application source code for building and deploying custom applications
 
-### GitOps Stamp Pattern
+### Software Stack Pattern
 
-The stamp pattern deploys complete environments:
+The software stack pattern deploys complete environments:
 
-1. **Bootstrap Kustomization** (`software/stamp/bootstrap.yaml`) - Entry point
-2. **Stamp Kustomization** (e.g., `software/stamp/sample/kustomization.yaml`) - Defines resources
+1. **Bootstrap Kustomization** (`software/stack/bootstrap.yaml`) - Entry point
+2. **Stack Kustomization** (e.g., `software/stack/sample/kustomization.yaml`) - Defines resources
 3. **Components** - Infrastructure services (database, ingress-nginx) via Helm
 4. **Applications** - Application manifests managed through GitOps
 
@@ -143,7 +143,7 @@ export FLUX_ENABLED=true
 make up sample            # Start with complete GitOps environment
 make status               # Monitor GitOps reconciliation
 make sync                 # Force reconciliation
-make restart sample       # Reset with stamp
+make restart sample       # Reset with stack
 ```
 
 ## Configuration
@@ -160,7 +160,7 @@ Copy `.env.example` to `.env` and customize:
 - `INGRESS_ENABLED` - NGINX Ingress (default: false)
 - `GITOPS_REPO` - Git repository URL for Flux sync
 - `GITOPS_BRANCH` - Git branch (default: main)
-- `GITOPS_STAMP` - Stamp to deploy (sample, osdu-ci)
+- `GITOPS_STACK` - Software stack to deploy (sample, sample-stack)
 
 ### KUBECONFIG Management
 The platform automatically manages KUBECONFIG:
@@ -192,7 +192,7 @@ Configuration files:
 ### Test Strategy
 - `make test` runs comprehensive cluster validation
 - Validates cluster health, node status, networking, and service accessibility
-- Supports both basic cluster and GitOps stamp configurations
+- Supports both basic cluster and GitOps stack configurations
 
 ### CI/CD Integration
 - Hybrid CI/CD strategy using GitLab CI (fast validation) + GitHub Actions (comprehensive testing)
@@ -209,14 +209,14 @@ app-name/
 └── app.yaml          # Kubernetes manifests
 ```
 
-### Stamp Structure
-Each stamp in `software/stamp/` follows the pattern:
+### Stack Structure
+Each stack in `software/stack/` follows the pattern:
 ```
-stamp-name/
-├── README.md          # Stamp documentation
-├── kustomization.yaml # Stamp entry point
+stack-name/
+├── README.md          # Stack documentation
+├── kustomization.yaml # Stack entry point
 ├── repository.yaml    # GitRepository source
-├── stamp.yaml         # Component deployments
+├── stack.yaml         # Component deployments
 ├── components/        # Infrastructure Helm releases
 └── applications/      # Application manifests
 ```
@@ -254,7 +254,7 @@ Required tools installed via `make install`:
 - Application deployment: < 30 seconds
 
 ### GitOps Best Practices
-- Use stamps for complete environments rather than individual apps
+- Use stacks for complete environments rather than individual apps
 - Monitor Flux reconciliation with `make status` and `flux get all`
 - Force reconciliation with `make sync` when needed
 - Leverage AI assistance through MCP servers for troubleshooting

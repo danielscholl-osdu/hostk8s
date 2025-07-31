@@ -83,7 +83,7 @@ show_kustomizations() {
 }
 
 show_gitops_applications() {
-    local gitops_apps=$(kubectl get deployments -l osdu-ci.application --all-namespaces -o jsonpath='{.items[*].metadata.labels.osdu-ci\.application}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    local gitops_apps=$(kubectl get deployments -l hostk8s.application --all-namespaces -o jsonpath='{.items[*].metadata.labels.hostk8s\.application}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
     if [ -z "$gitops_apps" ]; then
         return 0
@@ -114,7 +114,7 @@ show_ingress_controller_status() {
 }
 
 show_manual_deployed_apps() {
-    local deployed_apps=$(kubectl get all -l osdu-ci.app --all-namespaces -o jsonpath='{.items[*].metadata.labels.osdu-ci\.app}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    local deployed_apps=$(kubectl get all -l hostk8s.app --all-namespaces -o jsonpath='{.items[*].metadata.labels.hostk8s\.app}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' ')
 
     if [ -z "$deployed_apps" ]; then
         return 0
@@ -193,7 +193,7 @@ show_app_ingress() {
 }
 
 show_health_check() {
-    if ! kubectl get all -l osdu-ci.app --all-namespaces >/dev/null 2>&1; then
+    if ! kubectl get all -l hostk8s.app --all-namespaces >/dev/null 2>&1; then
         return 0
     fi
 
@@ -201,7 +201,7 @@ show_health_check() {
     local issues_found=0
 
     # Check LoadBalancer services
-    kubectl get services -l osdu-ci.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do
+    kubectl get services -l hostk8s.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do
         if ! check_service_health "$ns $name $type $cluster_ip $external_ip $ports $age"; then
             log_warn "LoadBalancer $name is pending (MetalLB not installed?)"
             exit 1
@@ -209,7 +209,7 @@ show_health_check() {
     done && \
 
     # Check deployments
-    kubectl get deployments -l osdu-ci.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do
+    kubectl get deployments -l hostk8s.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do
         if ! check_deployment_health "$ready"; then
             local ready_count=$(echo "$ready" | cut -d/ -f1)
             local total_count=$(echo "$ready" | cut -d/ -f2)
@@ -219,7 +219,7 @@ show_health_check() {
     done && \
 
     # Check pods
-    kubectl get pods -l osdu-ci.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready status restarts age; do
+    kubectl get pods -l hostk8s.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready status restarts age; do
         if ! check_pod_health "$status"; then
             log_warn "Pod $name in $status state"
             exit 1

@@ -4,4 +4,4 @@ metadata:
   name: registry
   labels:
     name: registry
-    osdu-ci.component: registry
+    hostk8s.component: registry

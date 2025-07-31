@@ -1,5 +1,5 @@
 ---
-# Pre-commit hooks configuration for OSDU-CI
+# Pre-commit hooks configuration for HostK8s
 # Run: pre-commit install (one time setup)
 # Run: pre-commit run --all-files (manual check)
 

@@ -1,5 +1,5 @@
 ---
-# YAML Lint Configuration for OSDU-CI
+# YAML Lint Configuration for HostK8s
 # Starts with relaxed rules, can be tightened over time
 
 extends: relaxed

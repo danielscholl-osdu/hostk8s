@@ -179,13 +179,13 @@ parse_make_args() {
     echo "${2:-}"
 }
 
-validate_stamp_arg() {
-    local stamp="$1"
-    local valid_stamps="sample"  # Add more as they're created
+validate_stack_arg() {
+    local stack="$1"
+    local valid_stacks="sample sample-stack"  # Add more as they're created
 
-    if [ -n "$stamp" ] && [[ ! " $valid_stamps " =~ " $stamp " ]]; then
-        log_error "Unknown stamp: $stamp"
-        log_info "Valid stamps: $valid_stamps"
+    if [ -n "$stack" ] && [[ ! " $valid_stacks " =~ " $stack " ]]; then
+        log_error "Unknown stack: $stack"
+        log_info "Valid stacks: $valid_stacks"
         return 1
     fi
     return 0

@@ -5,7 +5,7 @@ metadata:
   namespace: sample-website
   labels:
     app: sample-website
-    osdu-ci.application: website
+    hostk8s.application: website
 spec:
   replicas: 2
   selector:
@@ -15,7 +15,7 @@ spec:
     metadata:
       labels:
         app: sample-website
-        osdu-ci.application: website
+        hostk8s.application: website
     spec:
       containers:
       - name: website
@@ -46,7 +46,7 @@ metadata:
   name: sample-website-content
   namespace: sample-website
   labels:
-    osdu-ci.application: website
+    hostk8s.application: website
 data:
   index.html: |
     <!DOCTYPE html>
