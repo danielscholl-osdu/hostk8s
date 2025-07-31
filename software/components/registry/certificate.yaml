@@ -1,0 +1,24 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: registry-tls
+  namespace: registry
+  labels:
+    app: registry
+    osdu-ci.component: registry
+spec:
+  secretName: registry-tls-secret
+  issuerRef:
+    name: ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  commonName: registry.registry.svc.cluster.local
+  dnsNames:
+    - registry.registry.svc.cluster.local
+    - registry
+    - localhost
+  ipAddresses:
+    - 127.0.0.1
+  duration: 8760h # 1 year
+  renewBefore: 720h # 30 days

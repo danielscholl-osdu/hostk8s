@@ -1,0 +1,37 @@
+---
+# Pre-commit hooks configuration for OSDU-CI
+# Run: pre-commit install (one time setup)
+# Run: pre-commit run --all-files (manual check)
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+      - id: end-of-file-fixer
+        name: Ensure files end with newline
+      - id: check-yaml
+        name: Check YAML syntax
+        args: ['--allow-multiple-documents']
+      - id: check-added-large-files
+        name: Check for large files
+      - id: check-merge-conflict
+        name: Check for merge conflicts
+
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        name: Lint YAML files
+        args: ['-c', '.yamllint.yaml']  # Use same config as GitLab CI
+        files: \.(yaml|yml)$
+
+  - repo: local
+    hooks:
+      - id: makefile-lint
+        name: Validate Makefile targets
+        entry: make help
+        language: system
+        files: Makefile
+        pass_filenames: false

@@ -1,0 +1,33 @@
+---
+# YAML Lint Configuration for OSDU-CI
+# Starts with relaxed rules, can be tightened over time
+
+extends: relaxed
+
+rules:
+  # Document format
+  document-start: disable  # Don't require --- at start
+
+  # Line length - be very forgiving for Kubernetes YAML
+  line-length:
+    max: 200  # Allow long lines for HTML content, commands, etc.
+
+  # Indentation - Kubernetes standard
+  indentation:
+    spaces: 2
+    indent-sequences: true
+    check-multi-line-strings: false
+
+  # Comments
+  comments:
+    min-spaces-from-content: 1
+
+  # Trailing spaces - enforce this one
+  trailing-spaces: enable
+
+  # End of file newline - enforce this one
+  new-line-at-end-of-file: enable
+
+  # Be flexible on truthy values (common in GitHub Actions)
+  truthy:
+    allowed-values: ['true', 'false', 'on', 'off']

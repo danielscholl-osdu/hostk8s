@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-api
+  namespace: sample-api
+  labels:
+    app: sample-api
+    osdu-ci.application: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sample-api
+  template:
+    metadata:
+      labels:
+        app: sample-api
+        osdu-ci.application: api
+    spec:
+      containers:
+      - name: api
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://appuser:apppass@postgresql.database.svc.cluster.local:5432/appdb"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        volumeMounts:
+        - name: api-content
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: api-content
+        configMap:
+          name: sample-api-content
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sample-api-content
+  namespace: sample-api
+  labels:
+    osdu-ci.application: api
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Sample API</title>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f0f8ff; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .api-status { padding: 20px; background: #e8f4f8; border-radius: 5px; }
+            code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🔌 Sample API Service</h1>
+            <div class="api-status">
+                <h2>API Status: Running</h2>
+                <p><strong>Database:</strong> postgresql://postgresql.database.svc.cluster.local:5432/appdb</p>
+                <p><strong>Deployment:</strong> GitOps via Flux</p>
+                <p><strong>Endpoints:</strong></p>
+                <ul>
+                    <li><code>GET /health</code> - Health check</li>
+                    <li><code>GET /api/data</code> - Sample data</li>
+                </ul>
+                <p><strong>Access:</strong> http://localhost:8080/api</p>
+            </div>
+        </div>
+    </body>
+    </html>

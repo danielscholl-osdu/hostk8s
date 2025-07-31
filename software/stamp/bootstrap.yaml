@@ -1,0 +1,21 @@
+######################
+## Bootstrap for Sample Stamp
+## This kustomization applies the sample stamp kustomization.yaml
+## Apply once during cluster setup, then git sync handles everything
+######################
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: bootstrap-stamp
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 30s
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stamp/sample
+  targetNamespace: flux-system
+  prune: true
+  wait: false

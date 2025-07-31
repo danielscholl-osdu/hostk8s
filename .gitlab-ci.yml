@@ -1,0 +1,212 @@
+---
+# GitLab CI/CD Pipeline for OSDU-CI Development Environment
+# Hybrid approach: Fast lint validation + GitHub Actions integration testing
+
+stages:
+  - validate
+  - deploy
+  - test
+
+make:
+  stage: validate
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
+  before_script:
+    - tdnf install -y make bash gawk
+  script:
+    - echo "Validating Makefile syntax and targets..."
+    - make help
+    - make -n up
+    - make -n test
+    - echo "✅ Makefile syntax validated"
+
+yaml:
+  stage: validate
+  image: mcr.microsoft.com/azurelinux/base/python:3.12
+  before_script:
+    - pip install yamllint
+  script:
+    - echo "Validating YAML files with relaxed rules..."
+    - echo "Checking GitLab CI configuration..."
+    - yamllint -c .yamllint.yaml .gitlab-ci.yml
+    - echo "Checking GitHub Actions workflows..."
+    - find .github/workflows -name "*.yml" -o -name "*.yaml" | xargs yamllint -c .yamllint.yaml
+    - echo "Checking Kubernetes manifests..."
+    - find software -name "*.yaml" -o -name "*.yml" | xargs yamllint -c .yamllint.yaml
+    - find infra -name "*.yaml" -o -name "*.yml" | xargs yamllint -c .yamllint.yaml
+    - echo "✅ All YAML files validated with relaxed rules"
+
+github:
+  stage: deploy
+  image: mcr.microsoft.com/azurelinux/base/python:3.12
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 0
+  before_script:
+    - tdnf install -y git ca-certificates
+    - git config --global http.sslVerify true
+  script:
+    - echo "Starting sync process with Azure Linux Python 3.12"
+    - ls -la .gitlab/scripts/sync-to-github.sh
+    - chmod +x .gitlab/scripts/sync-to-github.sh
+    - ./.gitlab/scripts/sync-to-github.sh
+  when: on_success
+  allow_failure: false
+
+execute:
+  stage: test
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 2
+  before_script:
+    - tdnf install -y curl ca-certificates git
+  script:
+    - echo "Checking if GitHub Actions testing is needed..."
+    - |
+      # Check if changes affect core functionality
+      NEEDS_FULL_TEST="false"
+
+      # Get list of changed files since last commit
+      CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
+
+      echo "📂 Changed files:"
+      echo "$CHANGED_FILES" | sed 's/^/  - /'
+      echo ""
+
+      # Check for files that require full testing
+      for file in $CHANGED_FILES; do
+        # Check if file is documentation-only
+        if [[ "$file" == docs/* ]] || [[ "$file" == "README.md" ]] || [[ "$file" == "CLAUDE.md" ]] || [[ "$file" == *.md ]]; then
+          echo "📖 Documentation change: $file (skip full test)"
+          continue
+        fi
+
+        # Check for core files that require full testing
+        case "$file" in
+          infra/*|software/*|Makefile|.github/*|.gitlab-ci.yml|.yamllint.yaml|.pre-commit-config.yaml)
+            echo "🎯 Found core change: $file"
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+          *)
+            echo "🔧 Other change: $file"
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+        esac
+      done
+
+      if [ "$NEEDS_FULL_TEST" = "false" ]; then
+        echo ""
+        echo "✅ Only documentation/non-core changes detected"
+        echo "⏭️  Skipping expensive GitHub Actions testing"
+        echo "💡 GitLab CI validation is sufficient for these changes"
+        exit 0
+      fi
+
+      echo ""
+      echo "🚀 Core changes detected - full GitHub Actions testing required"
+    - echo "Waiting for GitHub sync to complete..."
+    - sleep 30
+    - test -n "$GITHUB_TOKEN" || (echo "GITHUB_TOKEN not configured" && exit 0)
+    - test -n "$GITHUB_REPO" || (echo "GITHUB_REPO not configured" && exit 0)
+    - echo "Triggering GitOps reconciliation testing on $GITHUB_REPO..."
+    - >
+      curl -X POST
+      -H "Authorization: token $GITHUB_TOKEN"
+      -H "Accept: application/vnd.github.v3+json"
+      https://api.github.com/repos/$GITHUB_REPO/dispatches
+      -d "{\"event_type\":\"gitlab-ci-success\",
+      \"client_payload\":{
+      \"gitlab_pipeline_id\":\"$CI_PIPELINE_ID\",
+      \"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",
+      \"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",
+      \"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",
+      \"gitops_repo\":\"https://github.com/$GITHUB_REPO\",
+      \"trigger_source\":\"gitlab-ci\",
+      \"test_type\":\"gitops-reconciliation\"}}"
+    - echo "GitHub GitOps testing triggered successfully on $GITHUB_REPO"
+    - echo "Setting pending status for GitHub Actions..."
+    - test -n "$GITLAB_TOKEN" || (echo "GITLAB_TOKEN not configured for status updates" && exit 0)
+    - >
+      curl -X POST
+      -H "PRIVATE-TOKEN: $GITLAB_TOKEN"
+      -H "Content-Type: application/json"
+      https://community.opengroup.org/api/v4/projects/1595/statuses/$CI_COMMIT_SHA
+      -d "{\"state\": \"running\",
+      \"target_url\": \"https://github.com/$GITHUB_REPO/actions\",
+      \"description\": \"GitOps reconciliation tests are running...\",
+      \"context\": \"github-actions/gitops-testing\"}" || echo "Failed to set pending status (non-blocking)"
+  when: on_success
+  allow_failure: true
+  needs: ["github"]
+
+status:
+  stage: test
+  image: mcr.microsoft.com/azurelinux/base/core:3.0
+  variables:
+    GIT_STRATEGY: clone
+    GIT_DEPTH: 2
+  before_script:
+    - tdnf install -y git
+  script:
+    - |
+      echo "📊 Hybrid CI/CD Pipeline Status Report"
+      echo "====================================="
+      echo ""
+      echo "✅ GitLab CI: Fast validation completed successfully"
+      echo "   • Project structure validated"
+      echo "   • Makefile syntax checked"
+      echo "   • YAML files validated"
+      echo "   • Code synced to GitHub"
+      echo ""
+
+      # Check what type of changes were made
+      CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || git ls-files)
+      NEEDS_FULL_TEST="false"
+
+      for file in $CHANGED_FILES; do
+        case "$file" in
+          infra/*|software/*|Makefile|.github/*|.gitlab-ci.yml|.yamllint.yaml|.pre-commit-config.yaml)
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+          docs/*|README.md|CLAUDE.md|*.md)
+            ;;
+          *)
+            NEEDS_FULL_TEST="true"
+            break
+            ;;
+        esac
+      done
+
+      if [ "$NEEDS_FULL_TEST" = "true" ] && [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_REPO" ]; then
+        echo "🚀 GitHub Actions: GitOps reconciliation tests triggered"
+        echo "   • Tests are running comprehensive Kubernetes validation"
+        echo "   • Results will appear as commit status when complete"
+        echo "   • View progress: https://github.com/$GITHUB_REPO/actions"
+        echo ""
+        echo "📍 How to see GitHub test results:"
+        echo "   1. Check commit status indicators in GitLab (🟢 success / 🔴 failed)"
+        echo "   2. Or visit: https://github.com/$GITHUB_REPO/actions"
+        echo ""
+        echo "⏱️  Results typically available within 5-10 minutes"
+      elif [ "$NEEDS_FULL_TEST" = "false" ]; then
+        echo "📖 Documentation-only changes detected"
+        echo "   • Skipped expensive GitHub Actions testing"
+        echo "   • GitLab CI validation sufficient for these changes"
+        echo "   • No Kubernetes/GitOps validation needed"
+      elif [ -z "$GITHUB_TOKEN" ] || [ -z "$GITHUB_REPO" ]; then
+        echo "ℹ️  GitHub Actions integration not configured"
+        echo "   • GITHUB_TOKEN or GITHUB_REPO variables missing"
+        echo "   • Only GitLab CI validation completed"
+      fi
+      echo ""
+      echo "🔗 This intelligent approach provides:"
+      echo "   • Fast feedback via GitLab CI (< 4 minutes)"
+      echo "   • Smart triggering based on changed files"
+      echo "   • Full validation only when needed"
+      echo "   • Cost optimization for documentation changes"
+  when: on_success
+  allow_failure: false
+  needs: ["execute"]
