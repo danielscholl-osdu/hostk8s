@@ -1,10 +1,10 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: sample-api
-  namespace: sample-api
+  name: sample-website
+  namespace: sample-website
   labels:
-    osdu-ci.application: api
+    hostk8s.application: website
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
@@ -13,10 +13,10 @@ spec:
   - host: localhost
     http:
       paths:
-      - path: /api
+      - path: /
         pathType: Prefix
         backend:
           service:
-            name: sample-api
+            name: sample-website
             port:
               number: 80

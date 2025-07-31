@@ -9,7 +9,7 @@ metadata:
   name: frontend
   labels:
     app: frontend
-    osdu-ci.app: app3
+    hostk8s.app: app3
     tier: frontend
 spec:
   replicas: 2
@@ -50,7 +50,7 @@ kind: ConfigMap
 metadata:
   name: frontend-content
   labels:
-    osdu-ci.app: app3
+    hostk8s.app: app3
 data:
   index.html: |
     <!DOCTYPE html>
@@ -131,7 +131,7 @@ metadata:
   name: frontend-lb
   labels:
     tier: frontend
-    osdu-ci.app: app3
+    hostk8s.app: app3
 spec:
   selector:
     app: frontend
@@ -147,7 +147,7 @@ metadata:
   name: api
   labels:
     app: api
-    osdu-ci.app: app3
+    hostk8s.app: app3
     tier: api
 spec:
   replicas: 2
@@ -202,7 +202,7 @@ kind: ConfigMap
 metadata:
   name: api-config
   labels:
-    osdu-ci.app: app3
+    hostk8s.app: app3
 data:
   index.html: |
     <!DOCTYPE html>
@@ -244,7 +244,7 @@ metadata:
   name: api
   labels:
     tier: api
-    osdu-ci.app: app3
+    hostk8s.app: app3
 spec:
   selector:
     app: api
@@ -260,7 +260,7 @@ metadata:
   name: api-lb
   labels:
     tier: api
-    osdu-ci.app: app3
+    hostk8s.app: app3
 spec:
   selector:
     app: api
@@ -276,7 +276,7 @@ metadata:
   name: database
   labels:
     app: database
-    osdu-ci.app: app3
+    hostk8s.app: app3
     tier: database
 spec:
   replicas: 1
@@ -321,7 +321,7 @@ metadata:
   name: database
   labels:
     tier: database
-    osdu-ci.app: app3
+    hostk8s.app: app3
 spec:
   selector:
     app: database
@@ -336,7 +336,7 @@ kind: Ingress
 metadata:
   name: app3-ingress
   labels:
-    osdu-ci.app: app3
+    hostk8s.app: app3
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
 spec:

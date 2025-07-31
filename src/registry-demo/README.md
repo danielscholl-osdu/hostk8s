@@ -168,7 +168,7 @@ my-app-repo/                    # Separate application repository
 ├── docker-compose.yml
 └── .github/workflows/build.yml
 
-osdu-ci-repo/                   # Infrastructure repository
+hostk8s-repo/                   # Infrastructure repository
 ├── software/components/registry/
 └── software/apps/sample/registry-demo/app.yaml
 ```
@@ -201,7 +201,7 @@ kubectl rollout restart deployment/registry -n registry
 ### Image Pull Issues in Kubernetes
 ```bash
 # Check containerd registry configuration
-docker exec osdu-ci-control-plane cat /etc/containerd/config.toml
+docker exec hostk8s-control-plane cat /etc/containerd/config.toml
 
 # Verify image exists in registry
 curl http://localhost:30500/v2/registry-demo/tags/list

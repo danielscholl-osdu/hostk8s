@@ -46,9 +46,9 @@ check_flux_cli() {
 detect_kubeconfig
 
 # Set GitOps repository defaults
-GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/osdu-ci"}
+GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/hostk8s"}
 GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
-GITOPS_STAMP=${GITOPS_STAMP:-""}
+GITOPS_STACK=${GITOPS_STACK:-""}
 
 # Show Flux configuration (only in debug mode)
 if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -56,10 +56,10 @@ if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
     log_status "Flux GitOps Configuration"
     log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
     log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
-    if [ -n "$GITOPS_STAMP" ]; then
-        log_debug "  Stamp: ${CYAN}$GITOPS_STAMP${NC}"
+    if [ -n "$GITOPS_STACK" ]; then
+        log_debug "  Stack: ${CYAN}$GITOPS_STACK${NC}"
     else
-        log_debug "  Stamp: ${CYAN}Not configured (Flux only)${NC}"
+        log_debug "  Stack: ${CYAN}Not configured (Flux only)${NC}"
     fi
     log_section_end
 fi
@@ -110,22 +110,22 @@ apply_stamp_yaml() {
     fi
 }
 
-# Only create GitOps configuration if a stamp is specified
-if [ -n "$GITOPS_STAMP" ]; then
+# Only create GitOps configuration if a stack is specified
+if [ -n "$GITOPS_STACK" ]; then
     # Extract repository name from URL for better naming
     REPO_NAME=$(basename "$GITOPS_REPO" .git)
 
     # Export variables for template substitution
-    export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STAMP
+    export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STACK
 
-    # Apply stamp GitRepository first
-    apply_stamp_yaml "software/stamp/$GITOPS_STAMP/repository.yaml" "Configuring GitOps repository for stamp: ${CYAN}$GITOPS_STAMP${NC}"
+    # Apply stack GitRepository first
+    apply_stamp_yaml "software/stack/$GITOPS_STACK/repository.yaml" "Configuring GitOps repository for stack: ${CYAN}$GITOPS_STACK${NC}"
 
-    # Apply universal bootstrap kustomization that manages all stamps
-    apply_stamp_yaml "software/stamp/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
+    # Apply universal bootstrap kustomization that manages all stacks
+    apply_stamp_yaml "software/stack/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
 else
-    log_info "No stamp specified - Flux installed without GitOps configuration"
-    log_info "To configure a stamp later, set GITOPS_STAMP and run: make restart"
+    log_info "No stack specified - Flux installed without GitOps configuration"
+    log_info "To configure a stack later, set GITOPS_STACK and run: make restart"
 fi
 
 # Show Flux installation status
@@ -133,16 +133,16 @@ log_info "Flux installation completed! Checking status..."
 flux get all || log_warn "Could not get flux status"
 
 log_info "Flux GitOps setup complete!"
-if [ -n "$GITOPS_STAMP" ]; then
+if [ -n "$GITOPS_STACK" ]; then
     log_debug "Active Configuration:"
     log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
     log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
-    log_debug "  Stamp: ${CYAN}$GITOPS_STAMP${NC}"
-    log_debug "  Path: ${CYAN}./software/stamp/$GITOPS_STAMP${NC}"
+    log_debug "  Stack: ${CYAN}$GITOPS_STACK${NC}"
+    log_debug "  Path: ${CYAN}./software/stack/$GITOPS_STACK${NC}"
 else
     log_info "Flux installed - ready for GitOps configuration"
     log_info "Next steps:"
-    log_info "1. Configure stamp: make restart sample"
+    log_info "1. Configure stack: make restart sample"
     log_info "2. Check status: make status"
     log_info "3. Monitor log_infos: flux log_infos --follow"
 fi

@@ -12,12 +12,12 @@ HostK8s addresses common pain points in Kubernetes development:
 * **Environment drift** - inconsistent setups across team members and projects.
 * **Heavy tooling overhead** - resource-intensive solutions like Docker Desktop or VM-based tools.
 
-HostK8s solves these by letting you deploy isolated apps or complete software configurations in seconds using stamps.
+HostK8s solves these by letting you deploy isolated apps or complete software stacks in seconds using predefined configurations.
 
 ### Key advantages:
 
-* **Environment-as-Code** – deploy full stacks with GitOps stamps, no more setup scripts.
-* **Team Consistency** – everyone gets identical environments from the same stamp.
+* **Environment-as-Code** – deploy complete software stacks with GitOps, no more setup scripts.
+* **Team Consistency** – everyone gets identical environments from the same stack configuration.
 * **Fast Startup** – direct host execution with no VM boot times.
 * **Low Resource Usage** – 4GB RAM typical vs heavier alternatives.
 * **Stack Agnostic** – works with any language or framework.
@@ -28,13 +28,13 @@ HostK8s solves these by letting you deploy isolated apps or complete software co
 
 Uses your host Docker daemon directly, eliminating nested Docker layers. Works seamlessly with standard tools (`make`, `kubectl`, `helm`, etc.).
 
-### GitOps Stamps
+### Software Stacks
 
-Reusable templates that define software configurations as code. Applied via Flux to keep environments version-controlled and consistent.
+Pre-configured software stacks (web app + database, microservices, etc.) that spin up complete development environments. Applied via GitOps to keep environments version-controlled and consistent.
 
 ### Extensibility Points
 
-Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure external stamps while leveraging the HostK8s framework.
+Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure custom software stacks while leveraging the HostK8s framework.
 
 ### AI Guided Operations
 
@@ -54,9 +54,9 @@ For a deeper understanding of the platform's design:
 **Get started in 3 steps:**
 
 ```bash
-git clone https://community.opengroup.org/danielscholl/osdu-ci.git
+git clone https://community.opengroup.org/danielscholl/hostk8s.git
 make install   # Install dependencies (kind, kubectl, helm, flux)
-make up sample # Start cluster with GitOps stamp
+make up sample # Start cluster with software stack
 ```
 
 ### Prerequisites
@@ -71,7 +71,7 @@ make up sample # Start cluster with GitOps stamp
 
 ## Usage Scenarios
 
-There are two primary ways to use HostK8s, depending on whether you want **manual control** or **automated software configuration**.
+There are two primary ways to use HostK8s, depending on whether you want **individual app control** or **complete software stacks**.
 
 ### 1. Manual Cluster with Individual App Deployments
 
@@ -86,12 +86,12 @@ make status             # Check cluster and app status
 
 This approach is simple and good for **iterative development** or **testing single applications**.
 
-### 2. Automated GitOps managed Environments
+### 2. Complete Software Stack Deployments
 
-Enable Flux (GitOps) in your configuration, then create a cluster pre-configured as a **stamp** (a declarative software configuration):
+Enable GitOps to deploy complete software stacks - pre-configured environments with multiple services working together:
 
 ```bash
-# Start cluster with a stamp (apps + infra)
+# Start cluster with complete software stack
 export FLUX_ENABLED=true
 make up sample
 make status             # Check cluster and app status
@@ -116,4 +116,4 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
-| `GITOPS_STAMP`    | Stamp to deploy                               | `sample`  |
+| `GITOPS_STACK`    | Software stack to deploy                      | `sample`  |

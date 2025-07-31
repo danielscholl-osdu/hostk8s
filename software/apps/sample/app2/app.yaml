@@ -11,7 +11,7 @@ metadata:
   namespace: default
   labels:
     app: frontend
-    osdu-ci.app: app2
+    hostk8s.app: app2
 spec:
   replicas: 2
   selector:
@@ -49,13 +49,13 @@ metadata:
   name: frontend-html
   namespace: default
   labels:
-    osdu-ci.app: app2
+    hostk8s.app: app2
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
-        <title>OSDU-CI Frontend</title>
+        <title>HostK8s Frontend</title>
         <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f0f8ff; }
@@ -113,7 +113,7 @@ metadata:
   name: frontend
   namespace: default
   labels:
-    osdu-ci.app: app2
+    hostk8s.app: app2
 spec:
   selector:
     app: frontend
@@ -131,7 +131,7 @@ metadata:
   namespace: default
   labels:
     app: api
-    osdu-ci.app: app2
+    hostk8s.app: app2
 spec:
   replicas: 2
   selector:
@@ -169,13 +169,13 @@ metadata:
   name: api-html
   namespace: default
   labels:
-    osdu-ci.app: app2
+    hostk8s.app: app2
 data:
   index.html: |
     <!DOCTYPE html>
     <html>
     <head>
-        <title>OSDU-CI API</title>
+        <title>HostK8s API</title>
         <meta charset="UTF-8">
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; background: #f0fff0; }
@@ -217,7 +217,7 @@ metadata:
   name: api
   namespace: default
   labels:
-    osdu-ci.app: app2
+    hostk8s.app: app2
 spec:
   selector:
     app: api
@@ -234,7 +234,7 @@ metadata:
   name: app2-ingress
   namespace: default
   labels:
-    osdu-ci.app: app2
+    hostk8s.app: app2
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:

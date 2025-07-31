@@ -4,7 +4,7 @@ metadata:
   name: postgresql
   namespace: flux-system
   labels:
-    osdu-ci.component: database
+    hostk8s.component: database
 spec:
   interval: 1h
   releaseName: postgresql

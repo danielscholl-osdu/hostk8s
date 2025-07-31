@@ -4,7 +4,7 @@ metadata:
   name: sample-website
   namespace: sample-website
   labels:
-    osdu-ci.application: website
+    hostk8s.application: website
 spec:
   selector:
     app: sample-website

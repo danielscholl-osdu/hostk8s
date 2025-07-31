@@ -4,7 +4,7 @@
 
 HostK8s provides a **host-mode Kubernetes development platform** using Kind (Kubernetes in Docker) running directly on the host Docker daemon. The architecture prioritizes stability, simplicity, and rapid development iteration by eliminating Docker-in-Docker complexity.
 
-**Key Innovation:** GitOps stamp pattern for deploying complete, declarative environments. The platform is application-agnostic - the "sample" stamp demonstrates the pattern, while future stamps (like OSDU-CI) will provide domain-specific complete environments.
+**Key Innovation:** software stack pattern for deploying complete, declarative environments. The platform is application-agnostic - the "sample" stack demonstrates the pattern, while additional stacks can provide domain-specific complete environments.
 
 ## System Architecture
 
@@ -110,10 +110,10 @@ make clean       # Complete cleanup
 - **app3/**: Multi-service microservices (Frontend → API → Database, 5 replicas)
 - **Convention-based**: Each app in own folder with `app.yaml` and `README.md`
 
-**GitOps Stamps (`software/stamp/`)**
-- **Stamp Pattern**: Declarative deployment templates for complete environments
+**Software Stacks (`software/stack/`)**
+- **Stack Pattern**: Declarative deployment templates for complete environments
 - **Component/Application Separation**: Infrastructure vs application deployment patterns
-- **Bootstrap Workflow**: Universal bootstrap kustomization manages all stamps
+- **Bootstrap Workflow**: Universal bootstrap kustomization manages all stacks
 - **Selective Sync**: Git ignore patterns for efficient synchronization
 
 ```bash
@@ -122,23 +122,23 @@ make deploy           # Deploy default app (sample/app1)
 make deploy sample/app2      # Deploy advanced app
 make deploy sample/app3      # Deploy multi-service app
 
-# GitOps stamp deployment
-make up sample        # Start cluster with sample stamp
-make restart sample   # Restart cluster with sample stamp
+# Software stack deployment
+make up sample        # Start cluster with sample stack
+make restart sample   # Restart cluster with sample stack
 ```
 
-### GitOps Stamp Architecture
+### Software Stack Architecture
 
-**Stamp Pattern Structure**
+**Stack Pattern Structure**
 
 ```
 software/stamp/
-├── README.md              # GitOps stamps documentation
+├── README.md              # Software stacks documentation
 ├── bootstrap.yaml         # Universal bootstrap kustomization
-└── sample/                # Sample stamp (GitOps demonstration)
-    ├── kustomization.yaml # Stamp entry point
+└── sample/                # Sample stack (GitOps demonstration)
+    ├── kustomization.yaml # Stack entry point
     ├── repository.yaml    # GitRepository source definition
-    ├── stamp.yaml         # Component deployments (infrastructure)
+    ├── stack.yaml         # Component deployments (infrastructure)
     ├── components/        # Infrastructure components (Helm releases)
     │   ├── database/      # PostgreSQL deployment
     │   └── ingress-nginx/ # NGINX Ingress controller
@@ -147,17 +147,17 @@ software/stamp/
         └── website/       # Sample website service
 ```
 
-**Stamp Deployment Flow**
+**Stack Deployment Flow**
 
 ```
 1. Bootstrap Kustomization (bootstrap.yaml)
-   └── Points to specific stamp path (e.g., ./software/stamp/sample)
+   └── Points to specific stack path (e.g., ./software/stamp/sample)
 
-2. Stamp Kustomization (sample/kustomization.yaml)
+2. Stack Kustomization (sample/kustomization.yaml)
    ├── repository.yaml     # Creates GitRepository source
-   └── stamp.yaml          # Deploys infrastructure components
+   └── stack.yaml          # Deploys infrastructure components
 
-3. Component Dependencies (stamp.yaml)
+3. Component Dependencies (stack.yaml)
    ├── component-certs     # Certificate management (cert-manager)
    ├── component-certs-ca  # Root CA certificate
    └── component-certs-issuer # Certificate issuer
@@ -174,7 +174,7 @@ software/stamp/
 ### Component Services Layer
 
 **Flux-Managed Components (`software/components/`)**
-- **Registry**: Container registry deployed via Flux (available in stamps)
+- **Registry**: Container registry deployed via Flux (available in stacks)
 - **Certificate Management**: cert-manager for TLS certificates
 - **Ingress**: NGINX Ingress controller for HTTP routing
 - **All services**: Declaratively managed through GitOps

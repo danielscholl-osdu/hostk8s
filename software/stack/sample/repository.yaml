@@ -5,12 +5,12 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: https://community.opengroup.org/danielscholl/osdu-ci
+  url: https://community.opengroup.org/danielscholl/hostk8s
   ref:
     branch: main
   ignore: |
     # exclude all
     /*
-    # include shared components and this stamp
+    # include shared components and this stack
     !/software/components/
-    !/software/stamp/sample/
+    !/software/stack/sample/
