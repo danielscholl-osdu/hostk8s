@@ -14,7 +14,7 @@ You're debugging a microservice that connects to a database, it calls two other 
 
 Current solutions make simple tasks painful:
 
-* **Resource waste** - 16GB RAM and 45-minute waits for services you'll never use
+* **Resource waste** - 64GB RAM, 10 vCPUs and 45-minute waits for services you'll never use
 * **Environment chaos** - Juggling multiple IDEs, countless env vars, nothing reproduces twice
 * **Fragile infrastructure** - That 200-line bash script broke again and took your data with it
 * **Works-on-my-machine syndrome** - Runs fine locally, crashes on your teammate's setup
