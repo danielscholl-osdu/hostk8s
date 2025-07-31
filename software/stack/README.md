@@ -1,8 +1,8 @@
-# GitOps Stamps
+# GitOps Software Stacks
 
-This directory contains **GitOps Stamp Patterns** for different deployment scenarios. "Stamp" represents the practice of stamping consistent, declarative deployments across environments.
+This directory contains **Software Stack Patterns** for different deployment scenarios. "Stack" represents pre-configured complete software environments with consistent, declarative deployments across environments.
 
-## Available Stamps
+## Available Stacks
 
 ### `sample/` - GitOps Pattern Demonstration
 - **Purpose**: Demonstrates component/application separation pattern
@@ -10,37 +10,37 @@ This directory contains **GitOps Stamp Patterns** for different deployment scena
 - **Applications**: sample-api, sample-website
 - **Use Case**: Learning GitOps patterns, development reference
 
-### `osdu-ci/` - (Future) Full OSDU Platform
-- **Purpose**: Complete OSDU platform deployment
+### `sample-stack/` - (Future) Extended Sample
+- **Purpose**: Extended sample with more components
 - **Components**: TBD (istio, elasticsearch, postgresql, etc.)
-- **Applications**: TBD (osdu-core services)
-- **Use Case**: Production OSDU deployment
+- **Applications**: TBD (additional sample services)
+- **Use Case**: Extended development scenarios
 
-## Stamp Selection
+## Stack Selection
 
-Control which stamp is deployed via environment variables:
+Control which stack is deployed via environment variables:
 
 ```bash
-# Use sample stamp (default)
-export GITOPS_STAMP=sample
+# Use sample stack (default)
+export GITOPS_STACK=sample
 make up
 
-# Use osdu-ci stamp (when available)
-export GITOPS_STAMP=osdu-ci
+# Use sample-stack (when available)
+export GITOPS_STACK=sample-stack
 make up
 
 # Or set in .env file
-GITOPS_STAMP=sample
+GITOPS_STACK=sample
 ```
 
 ## Overview
 
-Flux is a GitOps operator for Kubernetes that keeps your cluster in sync with Git repositories. Each stamp provides:
+Flux is a GitOps operator for Kubernetes that keeps your cluster in sync with Git repositories. Each stack provides:
 
 - **Declarative deployments**: Infrastructure and applications defined in Git
 - **Component separation**: Infrastructure (ingress, database) vs applications (API, web)
 - **Automated deployments**: Changes in Git trigger cluster updates
-- **Environment consistency**: Same stamp pattern across dev/staging/prod
+- **Environment consistency**: Same stack pattern across dev/staging/prod
 
 ## Getting Started
 
@@ -126,7 +126,7 @@ spec:
 ## Directory Structure
 
 ```
-software/stamp/
+software/stack/
 ├── README.md              # This file
 ├── sources/               # Git repositories and Helm repositories
 │   ├── git-repository.yaml
@@ -135,7 +135,7 @@ software/stamp/
 │   ├── kustomization.yaml
 │   └── helm-release.yaml
 └── clusters/              # Cluster-specific configurations
-    └── osdu-ci/
+    └── sample-stack/
         ├── infrastructure.yaml
         └── apps.yaml
 ```
@@ -171,9 +171,9 @@ kubectl get events -n flux-system --sort-by='.lastTimestamp'
 flux check
 ```
 
-## Integration with OSDU-CI Apps
+## Integration with Sample Apps
 
-You can deploy the existing OSDU-CI apps via GitOps:
+You can deploy additional sample apps via GitOps:
 
 1. Create a Git repository with your app manifests
 2. Create a GitRepository pointing to your repo

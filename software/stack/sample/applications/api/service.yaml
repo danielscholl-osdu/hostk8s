@@ -4,7 +4,7 @@ metadata:
   name: sample-api
   namespace: sample-api
   labels:
-    osdu-ci.application: api
+    hostk8s.application: api
 spec:
   selector:
     app: sample-api

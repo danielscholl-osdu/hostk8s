@@ -4,7 +4,7 @@ metadata:
   name: registry-data
   namespace: registry
   labels:
-    osdu-ci.component: registry
+    hostk8s.component: registry
 spec:
   accessModes:
     - ReadWriteOnce

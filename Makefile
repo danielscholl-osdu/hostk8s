@@ -34,17 +34,17 @@ prepare: ## Setup development environment (pre-commit, yamllint, hooks)
 up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|default|sample])
 	@# Only check dependencies if no cluster config exists (fresh setup)
 	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then $(MAKE) install; fi
-	@# Determine if argument is a Kind config or GitOps stamp
+	@# Determine if argument is a Kind config or GitOps stack
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
-		echo "Detected GitOps stamp: $$ARG"; \
-		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-up.sh; \
+		echo "Detected GitOps stack: $$ARG"; \
+		FLUX_ENABLED=true GITOPS_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
 		echo "Detected Kind config: $$ARG"; \
 		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ -n "$$ARG" ]; then \
 		echo "Unknown argument: $$ARG"; \
-		echo "Valid options: minimal, simple, default (Kind configs) | sample (GitOps stamp)"; \
+		echo "Valid options: minimal, simple, default (Kind configs) | sample (GitOps stack)"; \
 		exit 1; \
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
@@ -59,14 +59,14 @@ down: ## Stop the Kind cluster (preserves data)
 
 restart: ## Quick cluster reset for development iteration (Usage: make restart [sample])
 	@echo "🔄 Restarting cluster..."
-	@# Determine if argument is a GitOps stamp
+	@# Determine if argument is a GitOps stack
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
-		echo "🎯 Restarting with GitOps stamp: $$ARG"; \
-		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-restart.sh; \
+		echo "🎯 Restarting with GitOps stack: $$ARG"; \
+		FLUX_ENABLED=true GITOPS_STACK="$$ARG" ./infra/scripts/cluster-restart.sh; \
 	elif [ -n "$$ARG" ]; then \
-		echo "❌ Unknown stamp: $$ARG"; \
-		echo "Valid stamps: sample"; \
+		echo "❌ Unknown stack: $$ARG"; \
+		echo "Valid stacks: sample"; \
 		exit 1; \
 	else \
 		./infra/scripts/cluster-restart.sh; \

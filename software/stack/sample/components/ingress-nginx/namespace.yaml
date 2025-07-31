@@ -5,4 +5,4 @@ metadata:
   labels:
     app.kubernetes.io/name: ingress-nginx
     app.kubernetes.io/instance: ingress-nginx
-    osdu-ci.component: ingress-nginx
+    hostk8s.component: ingress-nginx

@@ -4,4 +4,4 @@ metadata:
   name: sample-api
   labels:
     app.kubernetes.io/name: sample-api
-    osdu-ci.application: api
+    hostk8s.application: api

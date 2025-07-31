@@ -4,4 +4,4 @@ metadata:
   name: sample-website
   labels:
     app.kubernetes.io/name: sample-website
-    osdu-ci.application: website
+    hostk8s.application: website

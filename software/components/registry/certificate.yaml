@@ -6,7 +6,7 @@ metadata:
   namespace: registry
   labels:
     app: registry
-    osdu-ci.component: registry
+    hostk8s.component: registry
 spec:
   secretName: registry-tls-secret
   issuerRef:

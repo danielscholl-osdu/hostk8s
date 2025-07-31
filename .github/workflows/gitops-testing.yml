@@ -1,6 +1,6 @@
-name: OSDU-CI Cluster Testing
+name: HostK8s Cluster Testing
 
-run-name: ${{ github.event_name == 'repository_dispatch' && format('GitLab Pipeline {0} - Cluster Testing', github.event.client_payload.gitlab_pipeline_id) || 'OSDU-CI Cluster Testing' }}
+run-name: ${{ github.event_name == 'repository_dispatch' && format('GitLab Pipeline {0} - Cluster Testing', github.event.client_payload.gitlab_pipeline_id) || 'HostK8s Cluster Testing' }}
 
 on:
   repository_dispatch:
@@ -49,7 +49,7 @@ jobs:
       - name: Create minimal Kind cluster
         uses: helm/kind-action@v1
         with:
-          cluster_name: osdu-ci-minimal
+          cluster_name: hostk8s-minimal
           node_image: kindest/node:v1.33.2
           config: infra/kubernetes/kind-config-minimal.yaml
 
@@ -78,7 +78,7 @@ jobs:
 
           # Create basic GitRepository source
           echo "🔗 Creating GitRepository source..."
-          flux create source git osdu-ci-source \
+          flux create source git hostk8s-source \
             --url=https://github.com/danielscholl-osdu/osdu-ci \
             --branch=main \
             --interval=1m \
@@ -87,7 +87,7 @@ jobs:
           # Verify source reconciliation
           echo "⏳ Waiting for GitRepository reconciliation..."
           sleep 30
-          flux reconcile source git osdu-ci-source --timeout=60s
+          flux reconcile source git hostk8s-source --timeout=60s
 
           # Validate Flux system health
           echo "📊 Flux system status:"
@@ -102,7 +102,7 @@ jobs:
           echo "================================"
 
           echo "🎯 GitRepository Source Details:"
-          flux get sources git osdu-ci-source -n flux-system || echo "GitRepository source not found"
+          flux get sources git hostk8s-source -n flux-system || echo "GitRepository source not found"
           echo ""
 
           echo "📋 All Git Sources:"
@@ -176,7 +176,7 @@ jobs:
       - name: Create full Kind cluster with registry
         uses: helm/kind-action@v1
         with:
-          cluster_name: osdu-ci-gitops
+          cluster_name: hostk8s-gitops
           node_image: kindest/node:v1.33.2
           config: infra/kubernetes/kind-config.yaml
           registry: true
@@ -249,7 +249,7 @@ jobs:
 
           # Skip static sources and create PR-specific source with highest priority
           echo "🔗 Creating PR-specific GitRepository source (overriding any static sources)..."
-          flux create source git osdu-ci-self \
+          flux create source git hostk8s-self \
             --url="$GITOPS_REPO" \
             --branch="$GITOPS_BRANCH" \
             --interval=30s \
@@ -262,7 +262,7 @@ jobs:
 
           # Wait for the PR-specific source to be ready
           echo "⏳ Waiting for PR GitRepository source to be ready..."
-          kubectl wait --for=condition=ready gitrepository/osdu-ci-self -n flux-system --timeout=120s
+          kubectl wait --for=condition=ready gitrepository/hostk8s-self -n flux-system --timeout=120s
 
           # Verify what we're actually testing
           echo "🔍 Verifying GitOps sources:"
@@ -271,7 +271,7 @@ jobs:
           echo "🎯 GitOps Configuration Application Scope"
           echo "========================================="
           echo "✅ Flux system installation: COMPLETED"
-          echo "✅ GitRepository source (osdu-ci-self): COMPLETED"
+          echo "✅ GitRepository source (hostk8s-self): COMPLETED"
           echo "⏳ Kustomizations: APPLYING NOW..."
           echo "⏳ Application deployments: APPLYING NOW..."
           echo ""
@@ -315,7 +315,7 @@ jobs:
           sleep 60
 
           echo "🔄 Triggering reconciliations with PR-specific source..."
-          flux reconcile source git osdu-ci-self --timeout=120s || true
+          flux reconcile source git hostk8s-self --timeout=120s || true
           flux reconcile source helm bitnami --timeout=120s || true
           flux reconcile source helm nginx-stable --timeout=120s || true
           flux reconcile source helm prometheus-community --timeout=120s || true
@@ -325,7 +325,7 @@ jobs:
           echo "================================"
 
           echo "🎯 Branch-Specific GitRepository Source Status:"
-          flux get sources git osdu-ci-self -n flux-system || echo "Branch-specific source not found"
+          flux get sources git hostk8s-self -n flux-system || echo "Branch-specific source not found"
           echo ""
 
           echo "📋 All Git Sources (for comparison):"
@@ -346,8 +346,8 @@ jobs:
 
           # Verify branch-specific source is working
           echo "🔍 Branch Source Verification:"
-          if flux get sources git osdu-ci-self -n flux-system | grep -q "True"; then
-            BRANCH_REVISION=$(flux get sources git osdu-ci-self -n flux-system -o yaml | grep revision | head -1 | awk '{print $2}')
+          if flux get sources git hostk8s-self -n flux-system | grep -q "True"; then
+            BRANCH_REVISION=$(flux get sources git hostk8s-self -n flux-system -o yaml | grep revision | head -1 | awk '{print $2}')
             echo "✅ Branch-specific source is ready"
             echo "   Revision: $BRANCH_REVISION"
             echo "   Repository: $GITOPS_REPO"
@@ -362,9 +362,9 @@ jobs:
           summary=""
 
           # Check PR-specific source first
-          if ! flux get sources git osdu-ci-self -n flux-system | grep -q "True"; then
+          if ! flux get sources git hostk8s-self -n flux-system | grep -q "True"; then
             reconciliation_status="failed"
-            summary="Branch-specific GitRepository source (osdu-ci-self) failed to reconcile"
+            summary="Branch-specific GitRepository source (hostk8s-self) failed to reconcile"
           # Check other Git sources for failures
           elif flux get sources git -A | grep -E "\s+False\s+" | grep -v "True"; then
             reconciliation_status="failed"
@@ -402,7 +402,7 @@ jobs:
     steps:
       - name: Report comprehensive GitOps results
         run: |
-          echo "📊 OSDU-CI Cluster Testing Results:"
+          echo "📊 HostK8s Cluster Testing Results:"
           echo "=================================="
           echo ""
 
