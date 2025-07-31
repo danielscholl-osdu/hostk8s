@@ -6,15 +6,15 @@
 
 ## Why HostK8s?
 
-HostK8s lets you run only the Kubernetes services you actually need for development - pick just the building blocks necessary for your task. Turn massive, slow deployments into lightweight, fast environments that you can safely break and rebuild without losing your data.
+HostK8s is designed to let you run only the Kubernetes services you actually need for development - pick just the building blocks necessary for your task. Turn massive, slow deployments into lightweight, fast environments that you can safely break and rebuild without losing your data.
 
 ### The Developer Reality
 
-You're debugging a microservice that connects to a database, calls two other APIs, and uses a search engine. Your team's full platform includes workflow orchestration, networking mesh, message queues, identity management, and dozens of other services. You just need to test your one service, but you're forced to boot up 50+ containers you'll never touch.
+You're debugging a microservice that connects to a database, it calls two other APIs, and uses a search engine. The projects full platform includes workflow orchestration, a networking mesh, message queues, identity management, and dozens of other services. You just need to test your one service, but you're forced to boot up 50+ containers you'll never touch.
 
 Current solutions make simple tasks painful:
 
-* **Resource waste** - 16GB RAM and 20-minute waits for services you'll never use
+* **Resource waste** - 16GB RAM and 45-minute waits for services you'll never use
 * **Environment chaos** - Juggling multiple IDEs, countless env vars, nothing reproduces twice
 * **Fragile infrastructure** - That 200-line bash script broke again and took your data with it
 * **Works-on-my-machine syndrome** - Runs fine locally, crashes on your teammate's setup
@@ -22,11 +22,13 @@ Current solutions make simple tasks painful:
 
 ### How HostK8s Works Differently
 
-HostK8s eliminates this complexity by letting you pick exactly what you need. Want to test your API against a database and search engine? Deploy just those three services. Need to swap PostgreSQL for MySQL to test compatibility? Change one line in your config and redeploy.
+HostK8s eliminates this complexity by letting you pick exactly what you need. Want to test your API against a database and search engine? Deploy just those three services. Need to swap PostgreSQL for MySQL to test compatibility? Change one line in a config and redeploy.
 
-Beyond selective deployment, the platform separates your cluster from your data, so you can experiment fearlessly. Try that risky Helm chart upgrade, test new networking configs, or completely rebuild your environment - your databases and persistent storage survive every change. When something breaks (and it will), you're back to working in 2 minutes, not 2 hours.
+Beyond selective deployment, the platform separates the cluster from the data, so you can experiment fearlessly. Try that risky Helm chart upgrade, test new networking configs in the mesh, or completely rebuild your environment - the databases and persistent storage survive every change. When something breaks (and it will), you're back to working in 2 minutes, not 2 hours.
 
-Most importantly, HostK8s bridges the gap between your IDE and distributed services. Connect your familiar debugging tools directly to services running in Kubernetes. Set breakpoints, inspect variables, and step through code just like you would with local development - but with the full complexity of a production-like environment.
+Most importantly, HostK8s bridges the gap between your IDE and distributed services. Connect familiar debugging tools directly to services running in Kubernetes. Set breakpoints, inspect variables, and step through code just like you would with local development - but with the full complexity of a production-like environment.
+
+When you inevitably hit complexity walls - why didn't that service start? What's wrong with the ingress configuration? - HostK8s includes AI agents that understand your specific setup. Ask natural language questions and get targeted analysis of your deployment, networking issues, or configuration trade-offs without diving into documentation rabbit holes.
 
 ### What This Means for You
 
