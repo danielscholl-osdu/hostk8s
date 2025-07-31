@@ -122,10 +122,19 @@ This approach is simple and good for **iterative development** or **testing sing
 
 Enable GitOps to deploy complete software stacks - pre-configured environments with multiple services working together:
 
+**Local Stack (built-in):**
 ```bash
-# Start cluster with complete software stack
-export FLUX_ENABLED=true
+# Use built-in sample stack from this repository
 make up sample
+make status             # Check cluster and app status
+```
+
+**Extension Stack (external repository):**
+```bash
+# Use custom stack from external Git repository
+export GITOPS_REPO=https://github.com/yourorg/your-stack-repo
+export GITOPS_BRANCH=main
+make up extension       # Auto-detects extension stack
 make status             # Check cluster and app status
 ```
 
@@ -149,4 +158,4 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
-| `GITOPS_STACK`    | Software stack to deploy                      | `sample`  |
+| `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |

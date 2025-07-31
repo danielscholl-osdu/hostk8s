@@ -31,27 +31,30 @@ prepare: ## Setup development environment (pre-commit, yamllint, hooks)
 
 ##@ Cluster Operations
 
-up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|default|sample])
+up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|default|sample|extension])
 	@# Only check dependencies if no cluster config exists (fresh setup)
 	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then $(MAKE) install; fi
 	@# Determine if argument is a Kind config or GitOps stack
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
-		echo "Detected GitOps stack: $$ARG"; \
-		FLUX_ENABLED=true GITOPS_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
+		echo "Detected local GitOps stack: $$ARG"; \
+		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
+	elif [ "$$ARG" = "extension" ]; then \
+		echo "Detected extension GitOps stack"; \
+		FLUX_ENABLED=true ./infra/scripts/cluster-up.sh; \
 	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
 		echo "Detected Kind config: $$ARG"; \
 		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ -n "$$ARG" ]; then \
 		echo "Unknown argument: $$ARG"; \
-		echo "Valid options: minimal, simple, default (Kind configs) | sample (GitOps stack)"; \
+		echo "Valid options: minimal, simple, default (Kind configs) | sample (local stack) | extension (external stack)"; \
 		exit 1; \
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
 	fi
 
 # Handle arguments as targets to avoid "No rule to make target" errors
-minimal simple default sample:
+minimal simple default sample extension:
 	@:
 
 down: ## Stop the Kind cluster (preserves data)
@@ -63,7 +66,7 @@ restart: ## Quick cluster reset for development iteration (Usage: make restart [
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
 		echo "🎯 Restarting with GitOps stack: $$ARG"; \
-		FLUX_ENABLED=true GITOPS_STACK="$$ARG" ./infra/scripts/cluster-restart.sh; \
+		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-restart.sh; \
 	elif [ -n "$$ARG" ]; then \
 		echo "❌ Unknown stack: $$ARG"; \
 		echo "Valid stacks: sample"; \

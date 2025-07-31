@@ -48,7 +48,17 @@ detect_kubeconfig
 # Set GitOps repository defaults
 GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/hostk8s"}
 GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
-GITOPS_STACK=${GITOPS_STACK:-""}
+# Set default value first
+SOFTWARE_STACK=${SOFTWARE_STACK:-""}
+
+# Auto-detect extension stack if SOFTWARE_STACK not set but extension stacks exist
+if [ -z "$SOFTWARE_STACK" ] && [ -d "software/stack/extension" ]; then
+    # Find the first available extension stack
+    EXTENSION_STACK=$(find software/stack/extension -maxdepth 1 -type d -name "*-stack" | head -1 | sed 's|software/stack/||')
+    if [ -n "$EXTENSION_STACK" ]; then
+        SOFTWARE_STACK="$EXTENSION_STACK"
+    fi
+fi
 
 # Show Flux configuration (only in debug mode)
 if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -56,8 +66,8 @@ if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
     log_status "Flux GitOps Configuration"
     log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
     log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
-    if [ -n "$GITOPS_STACK" ]; then
-        log_debug "  Stack: ${CYAN}$GITOPS_STACK${NC}"
+    if [ -n "$SOFTWARE_STACK" ]; then
+        log_debug "  Stack: ${CYAN}$SOFTWARE_STACK${NC}"
     else
         log_debug "  Stack: ${CYAN}Not configured (Flux only)${NC}"
     fi
@@ -117,21 +127,44 @@ apply_stamp_yaml() {
 }
 
 # Only create GitOps configuration if a stack is specified
-if [ -n "$GITOPS_STACK" ]; then
+if [ -n "$SOFTWARE_STACK" ]; then
     # Extract repository name from URL for better naming
     REPO_NAME=$(basename "$GITOPS_REPO" .git)
 
     # Export variables for template substitution
-    export REPO_NAME GITOPS_REPO GITOPS_BRANCH GITOPS_STACK
+    export REPO_NAME GITOPS_REPO GITOPS_BRANCH SOFTWARE_STACK
 
     # Apply stack GitRepository first
-    apply_stamp_yaml "software/stack/$GITOPS_STACK/repository.yaml" "Configuring GitOps repository for stack: ${CYAN}$GITOPS_STACK${NC}"
+    apply_stamp_yaml "software/stack/$SOFTWARE_STACK/repository.yaml" "Configuring GitOps repository for stack: ${CYAN}$SOFTWARE_STACK${NC}"
 
-    # Apply universal bootstrap kustomization that manages all stacks
-    apply_stamp_yaml "software/stack/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
+    # Apply bootstrap kustomization - different for extension vs local stacks
+    if [[ "$SOFTWARE_STACK" == extension/* ]]; then
+        log_info "Setting up GitOps bootstrap configuration for extension stack"
+        # Create dynamic bootstrap for extension stack
+        cat <<EOF | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f -
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: bootstrap-stack
+  namespace: flux-system
+spec:
+  interval: 1m
+  retryInterval: 30s
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: extension-stack-system
+  path: ./software/stack/${SOFTWARE_STACK}
+  targetNamespace: flux-system
+  prune: true
+  wait: false
+EOF
+    else
+        apply_stamp_yaml "software/stack/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
+    fi
 else
     log_info "No stack specified - Flux installed without GitOps configuration"
-    log_info "To configure a stack later, set GITOPS_STACK and run: make restart"
+    log_info "To configure a stack later, set SOFTWARE_STACK and run: make restart"
 fi
 
 # Show Flux installation status
@@ -139,12 +172,12 @@ log_info "Flux installation completed! Checking status..."
 flux get all || log_warn "Could not get flux status"
 
 log_info "Flux GitOps setup complete!"
-if [ -n "$GITOPS_STACK" ]; then
+if [ -n "$SOFTWARE_STACK" ]; then
     log_debug "Active Configuration:"
     log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
     log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
-    log_debug "  Stack: ${CYAN}$GITOPS_STACK${NC}"
-    log_debug "  Path: ${CYAN}./software/stack/$GITOPS_STACK${NC}"
+    log_debug "  Stack: ${CYAN}$SOFTWARE_STACK${NC}"
+    log_debug "  Path: ${CYAN}./software/stack/$SOFTWARE_STACK${NC}"
 else
     log_info "Flux installed - ready for GitOps configuration"
     log_info "Next steps:"

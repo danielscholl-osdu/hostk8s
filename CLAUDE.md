@@ -160,7 +160,7 @@ Copy `.env.example` to `.env` and customize:
 - `INGRESS_ENABLED` - NGINX Ingress (default: false)
 - `GITOPS_REPO` - Git repository URL for Flux sync
 - `GITOPS_BRANCH` - Git branch (default: main)
-- `GITOPS_STACK` - Software stack to deploy (sample, sample-stack)
+- `SOFTWARE_STACK` - Software stack to deploy (sample, sample-stack)
 
 ### KUBECONFIG Management
 The platform automatically manages KUBECONFIG:
