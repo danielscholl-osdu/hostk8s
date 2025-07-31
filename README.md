@@ -107,14 +107,6 @@ make status             # Monitor GitOps reconciliation
 make sync               # Force Flux reconciliation when needed
 ```
 
-**External GitOps Repository:**
-```bash
-export GITOPS_REPO=https://github.com/yourorg/your-stack-repo
-export GITOPS_BRANCH=main
-make up extension       # Deploy from external repository
-make status             # Monitor deployment progress
-```
-
 ### 3. Extensions
 
 Custom applications and cluster configurations for specialized requirements. Enables **complete customization** while leveraging the HostK8s framework.
