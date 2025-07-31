@@ -70,75 +70,83 @@ make up sample # Start cluster with software stack
 
 ## Usage Scenarios
 
-There are two primary ways to use HostK8s, depending on whether you want **individual app control** or **complete software stacks**.
+HostK8s supports three primary usage patterns, each optimized for different development workflows and requirements.
 
-### 1. Manual Cluster with Individual App Deployments
+### 1. Manual Operations
 
-Create a basic cluster and deploy applications one at a time using `make deploy`:
+Direct cluster management with manual application deployments. Ideal for **iterative development**, **learning Kubernetes**, and **testing individual applications**.
 
+**Basic Development:**
 ```bash
-export FLUX_ENABLED=false
-export INGRESS_ENABLED=true
-make up                 # Start empty cluster
+make up                 # Start basic cluster
 make deploy             # Deploy default app (simple)
 make deploy multi-tier  # Deploy advanced multi-service app
 make status             # Check cluster and app status
-make down               # Stop cluster (preserves data)
 make restart            # Quick reset for development iteration
-make clean              # Complete cleanup (destroy cluster and data)
+make clean              # Complete cleanup
 ```
 
-**Extension Apps**: Add custom applications by placing them in `software/apps/extension/your-app-name/` with an `app.yaml` file and proper `hostk8s.app` labels. Most extension apps require additional infrastructure:
-
+**Advanced Development with Infrastructure:**
 ```bash
-export FLUX_ENABLED=false
-export METALLB_ENABLED=true
 export INGRESS_ENABLED=true
-make up                      # Start cluster with LoadBalancer and Ingress support
-make deploy extension/sample # Deploy extension apps
-make status                  # Check cluster and app status
-make clean                   # Complete cleanup when done
-```
-
-**Custom Cluster + Custom App**: Combine custom Kubernetes configurations with custom applications for complete extensibility:
-
-```bash
-# Use custom cluster configuration with custom app
-export FLUX_ENABLED=false
 export METALLB_ENABLED=true
-export INGRESS_ENABLED=true
-export KIND_CONFIG=extension/sample
-make up                           # Start with custom cluster config
-make deploy extension/sample      # Deploy custom app  
-make status                       # Check status
-make clean                        # Complete cleanup
+make up                 # Start cluster with LoadBalancer and Ingress
+make deploy multi-tier  # Deploy apps requiring advanced networking
+make status             # Monitor cluster health
 ```
 
-Add custom cluster configurations as `infra/kubernetes/extension/kind-your-name.yaml` to customize networking, storage, or other cluster features.
+### 2. Automated GitOps
 
-This approach is simple and good for **iterative development** or **testing single applications**.
+Complete software stack deployments using GitOps automation. Perfect for **consistent environments**, **team collaboration**, and **production-like setups**.
 
-### 2. Complete Software Stack Deployments
-
-Enable GitOps to deploy complete software stacks - pre-configured environments with multiple services working together:
-
-**Local Stack (built-in):**
+**Built-in Sample Stack:**
 ```bash
-# Use built-in sample stack from this repository
-make up sample
-make status             # Check cluster and app status
+make up sample          # Deploy complete GitOps environment
+make status             # Monitor GitOps reconciliation
+make sync               # Force Flux reconciliation when needed
 ```
 
-**Extension Stack (external repository):**
+**External GitOps Repository:**
 ```bash
-# Use custom stack from external Git repository
 export GITOPS_REPO=https://github.com/yourorg/your-stack-repo
 export GITOPS_BRANCH=main
-make up extension       # Auto-detects extension stack
-make status             # Check cluster and app status
+make up extension       # Deploy from external repository
+make status             # Monitor deployment progress
 ```
 
-This approach is ideal for **consistent, repeatable environments** and **multi-service setups**.
+### 3. Extensions
+
+Custom applications and cluster configurations for specialized requirements. Enables **complete customization** while leveraging the HostK8s framework.
+
+**Custom Applications:**
+```bash
+# Add apps to software/apps/extension/your-app-name/
+export METALLB_ENABLED=true
+export INGRESS_ENABLED=true
+make up                      # Start with required infrastructure
+make deploy extension/sample # Deploy custom application
+make status                  # Verify deployment
+```
+
+**Custom Cluster Configurations:**
+```bash
+# Add configs to infra/kubernetes/extension/kind-your-name.yaml
+export KIND_CONFIG=extension/sample
+export FLUX_ENABLED=false
+make up                           # Start with custom cluster config
+make deploy extension/sample      # Deploy matching application
+make status                       # Check customized environment
+```
+
+**Custom Software Stacks:**
+```bash
+# Create complete stacks in software/stack/extension/
+export GITOPS_REPO=https://github.com/yourorg/custom-stack
+make up extension                 # Deploy complete custom environment
+make status                       # Monitor custom stack deployment
+```
+
+> **Note**: Extensions require no code changes to HostK8s core - simply add files in the appropriate `extension/` directories with proper labels and configurations.
 
 ---
 
