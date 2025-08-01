@@ -30,6 +30,7 @@
 **Available Specialists:**
 - `cluster-agent` - Infrastructure Kubernetes specialist for HostK8s clusters
 - `software-agent` - GitOps/Flux Software specialist for HostK8s clusters
+- `gitops-committer` - GitOps commit specialist for ANY changes requiring Git commits to trigger Flux deployments
 
 **Delegation Decision Matrix:**
 
@@ -51,6 +52,18 @@
 - Repository source management
 - Application-level configuration and secrets
 
+**Use `gitops-committer` for:**
+- ANY modifications to files in software/ directory
+- Helm chart values changes (release.yaml files)
+- Kustomization updates and patches
+- Component additions or removals
+- Resource optimization changes
+- Application configuration updates
+- Stack composition modifications
+- When work involves "commit and deploy" workflows
+
+**Critical Decision Rule**: If your changes need Git commits to take effect in the cluster, use gitops-committer IMMEDIATELY
+
 **Self-Handle (No Delegation) for:**
 - Make command orchestration and workflow coordination
 - Documentation updates and markdown file management
@@ -70,10 +83,27 @@
 "GitOps repository structure optimization" → software-agent
 "Application helm chart not deploying" → software-agent
 
+# GitOps modifications → gitops-committer
+"Update resource limits in cert-manager" → gitops-committer
+"Add new component to stack" → gitops-committer
+"Modify ingress configuration" → gitops-committer
+"ANY change to software/ directory files" → gitops-committer
+
 # Workflow coordination → self-handle
 "Run full cluster setup with sample stack" → self-handle with make commands
 "Generate project documentation" → self-handle
 "Diagnose whether issue is infrastructure or software" → self-handle first
+```
+
+**File-Based Decision Rule:**
+```bash
+# Modifying software/ directory → ALWAYS use gitops-committer
+software/**/*.yaml → gitops-committer
+software/**/*.yml → gitops-committer
+
+# Infrastructure diagnosis → cluster-agent
+# GitOps pipeline troubleshooting → software-agent
+# Workflow coordination → self-handle
 ```
 
 **Critical: Always use `make` commands** - direct script execution will fail due to missing KUBECONFIG and dependency management:
