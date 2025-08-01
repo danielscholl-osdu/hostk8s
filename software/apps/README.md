@@ -1,4 +1,4 @@
-# OSDU-CI Applications
+# hostk8s Applications
 
 Sample applications for testing and demonstrating various Kubernetes deployment patterns in the OSDU-CI development environment.
 
@@ -11,7 +11,7 @@ software/apps/
 ├── app1/           # Basic sample application
 │   ├── app.yaml    # Kubernetes manifests
 │   └── README.md   # App-specific documentation
-├── app2/           # Advanced sample application  
+├── app2/           # Advanced sample application
 │   ├── app.yaml    # Kubernetes manifests
 │   └── README.md   # App-specific documentation
 └── README.md       # This file
@@ -29,7 +29,7 @@ software/apps/
 ### App2 - Advanced Sample
 - **Type**: Multi-service NGINX deployment
 - **Services**: ClusterIP + LoadBalancer + Ingress
-- **Replicas**: 3 pods  
+- **Replicas**: 3 pods
 - **Access**: Multiple access methods
 - **Use Case**: Testing MetalLB, Ingress, and advanced networking
 - **Requires**: MetalLB and NGINX Ingress enabled

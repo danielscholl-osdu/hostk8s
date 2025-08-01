@@ -177,7 +177,7 @@ Extension points preserve the platform's automation benefits while enabling:
 - **Integration flexibility** for external systems and existing stacks
 - **Debugging capabilities** for complex, domain-specific scenarios
 
-(Contract specifications and design rationale in [ADR-006](adr/006-extension-system-architecture.md))
+(Contract specifications and design rationale in [ADR-004](adr/004-extension-system-architecture.md))
 
 
 ## Integration Architecture
@@ -249,8 +249,6 @@ spec:
 **Conditional Template Processing:** The platform automatically applies `envsubst` template processing to extension files (path contains `"extension/"`) while applying core platform files directly without processing, enabling parameterized extensions without affecting platform stability.
 
 
-
-
 ## Integration Points
 
 ### CI/CD Enablement Architecture
@@ -270,8 +268,7 @@ HostK8s provides architectural primitives that enable sophisticated CI/CD patter
 The platform's lightweight architecture enables CI/CD systems to implement **disposable test environments**:
 ```bash
 # CI/CD systems can leverage these patterns
-make up minimal           # Create lightweight validation cluster
-make up custom-stack     # Test specific software stack in isolation
+make up minimal          # Create lightweight validation cluster
 make test                # Validate functionality
 make clean               # Destroy environment
 ```
@@ -304,9 +301,9 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 | 001 | Host-Mode Architecture              | acc    | [ADR-001](adr/001-host-mode-architecture.md) |
 | 002 | Make Interface Standardization     | acc    | [ADR-002](adr/002-make-interface-standardization.md) |
 | 003 | GitOps Stack Pattern               | acc    | [ADR-003](adr/003-gitops-stack-pattern.md) |
-| 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](adr/004-hybrid-ci-cd-strategy.md) |
+| 004 | Extension System Architecture       | acc    | [ADR-004](adr/004-extension-system-architecture.md) |
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](adr/005-ai-assisted-development-integration.md) |
-| 006 | Extension System Architecture       | acc    | [ADR-006](adr/006-extension-system-architecture.md) |
+| 006 | Hybrid CI/CD Strategy              | temp   | [ADR-006](adr/006-hybrid-ci-cd-strategy.md) |
 
 ### ADR Summaries
 
@@ -325,20 +322,20 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Benefits**: Complete environments, platform agnostic, dependency management, reusability
 - **Tradeoffs**: Learning curve, debugging complexity, bootstrap dependency
 
-**ADR-004: Hybrid CI/CD Strategy**
-- **Decision**: Branch-aware hybrid CI/CD combining GitLab CI (fast) with GitHub Actions (comprehensive)
-- **Benefits**: Fast feedback (2-3 min), comprehensive testing (8-10 min), branch-aware optimization
-- **Tradeoffs**: Dual platform complexity, sync overhead
-
-**ADR-005: AI-Assisted Development Integration**
-- **Decision**: Integrate optional AI-assisted development capabilities through three-layer architecture (MCP servers, specialized subagents, automated hooks)
-- **Benefits**: Productivity multiplier, optional enhancement, multi-tool compatibility, domain specialization
-- **Tradeoffs**: Architectural complexity, AI service dependency, learning curve
-
-**ADR-006: Extension System Architecture**
+**ADR-004: Extension System Architecture**
 - **Decision**: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration
 - **Benefits**: Complete customization, first-class experience, dynamic configuration, external integration
 - **Tradeoffs**: Discovery challenge, template complexity, documentation overhead, testing complexity
+
+**ADR-005: AI-Assisted Development Integration**
+- **Decision**: Integrate optional AI-assisted development capabilities through three-layer architecture (MCP servers, specialized subagents, automated hooks)
+- **Benefits**: Productivity multiplier, optional enhancement, extensible architecture, domain specialization
+- **Tradeoffs**: Architectural complexity, current AI service dependency, learning curve
+
+**ADR-006: Temporary Hybrid CI/CD Workaround**
+- **Decision**: Temporary workaround using GitLab CI for validation then triggering GitHub Actions for Kubernetes testing due to GitLab runner limitations
+- **Benefits**: Preserves GitLab workflow, accesses GitHub K8s tooling, smart change detection
+- **Tradeoffs**: Operational complexity, dual platform dependency, temporary solution
 
 Each ADR documents the context, decision, alternatives considered, and consequences - providing the "why" behind HostK8s's unique architecture.
 

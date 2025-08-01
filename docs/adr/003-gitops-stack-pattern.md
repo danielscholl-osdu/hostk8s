@@ -63,7 +63,7 @@ software/stack/
 ### 1. Helm Charts Only
 - **Pros**: Mature ecosystem, templating capabilities
 - **Cons**: No GitOps reconciliation, dependency management complex
-- **Decision**: Rejected - Helm used within stamps for components only
+- **Decision**: Rejected - Helm used within stacks for components only
 
 ### 2. Kustomize Only
 - **Pros**: Kubernetes-native, good for applications
@@ -130,7 +130,7 @@ spec:
 - **Platform Agnostic**: Works with any application stack
 - **Dependency Safety**: Components deploy in correct order with health checks
 - **Git Efficiency**: Selective sync reduces bandwidth and reconciliation time
-- **Reusability**: Stamps shareable across teams and projects
+- **Reusability**: Stacks shareable across teams and projects
 - **Observability**: Clear GitOps status and reconciliation tracking
 
 **Negative:**
@@ -162,6 +162,6 @@ make restart myapp  # Test new stack
 - ✅ Complete environment deployment in < 5 minutes
 - ✅ Component dependency resolution 100% reliable
 - ✅ Platform-agnostic pattern (works for any software stack)
-- ✅ Git sync efficiency (ignore patterns reduce sync by 80%)
+- ✅ Git sync efficiency (ignore patterns significantly reduce sync time)
 - ✅ Clear observability via `make status` and Flux tools
 - ✅ Stack reusability across different contexts

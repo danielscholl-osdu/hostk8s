@@ -1,4 +1,4 @@
-# ADR-006: Extension System Architecture
+# ADR-004: Extension System Architecture
 
 ## Status
 **Accepted** - 2025-08-01
@@ -103,27 +103,12 @@ export GITOPS_BRANCH=develop
 make up extension                    # Deploys external stack with template processing
 ```
 
-### Template Variable Processing
-```bash
-# In setup-flux.sh
-if [[ "$yaml_file" == *"extension/"* ]]; then
-    log_debug "Processing template variables for extension stack"
-    envsubst < "$yaml_file" | kubectl apply -f -
-else
-    kubectl apply -f "$yaml_file"
-fi
-```
+### Implementation Approach
+The platform uses convention-based detection to automatically discover and process extensions:
 
-### Extension Auto-Detection
-```bash
-# In cluster-up.sh
-if [ -z "$SOFTWARE_STACK" ] && [ -d "software/stack/extension" ]; then
-    EXTENSION_STACK=$(find software/stack/extension -maxdepth 1 -type d -name "*-stack" | head -1)
-    if [ -n "$EXTENSION_STACK" ]; then
-        SOFTWARE_STACK="$EXTENSION_STACK"
-    fi
-fi
-```
+- **Template Processing**: Extension files undergo environment variable substitution when path contains `extension/`
+- **Auto-Detection**: Platform scans extension directories for standard patterns (kind-*.yaml, app.yaml, kustomization.yaml)
+- **Path Resolution**: Direct mapping from command arguments to filesystem locations
 
 ## Consequences
 
@@ -142,13 +127,13 @@ fi
 - **Documentation Overhead**: Extensions need their own documentation and examples
 - **Testing Complexity**: Extensions require separate validation workflows
 
-## Success Criteria Achieved
-- ✅ Complete platform customization without code modifications
-- ✅ Template processing works reliably with environment variables
-- ✅ Auto-detection discovers extensions automatically
-- ✅ External repository integration functions correctly
-- ✅ Extensions work identically to built-in components
-- ✅ Clear separation between core platform and custom extensions
+## Success Criteria
+- Complete platform customization without code modifications
+- Template processing works reliably with environment variables
+- Auto-detection discovers extensions automatically
+- External repository integration functions correctly
+- Extensions work identically to built-in components
+- Clear separation between core platform and custom extensions
 
 ## Related ADRs
 - [ADR-001: Host-Mode Architecture](001-host-mode-architecture.md) - Foundation platform architecture

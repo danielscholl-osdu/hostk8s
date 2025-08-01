@@ -9,9 +9,9 @@ Optimized ADR Index for Agent Context
 | 001 | Host-Mode Architecture              | acc    | [ADR-001](001-host-mode-architecture.md) |
 | 002 | Make Interface Standardization     | acc    | [ADR-002](002-make-interface-standardization.md) |
 | 003 | GitOps Stack Pattern               | acc    | [ADR-003](003-gitops-stack-pattern.md) |
-| 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](004-hybrid-ci-cd-strategy.md) |
+| 004 | Extension System Architecture       | acc    | [ADR-004](004-extension-system-architecture.md) |
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](005-ai-assisted-development-integration.md) |
-| 006 | Extension System Architecture       | acc    | [ADR-006](006-extension-system-architecture.md) |
+| 006 | Hybrid CI/CD Strategy              | acc    | [ADR-006](006-hybrid-ci-cd-strategy.md) |
 
 ---
 
@@ -71,18 +71,19 @@ negative: [learning curve, debugging complexity, bootstrap dependency]
 --------------------------------------------
 ```yaml
 id: 004
-title: Hybrid CI/CD Strategy
+title: Extension System Architecture
 status: accepted
-date: 2025-01-20
-decision: Branch-aware hybrid CI/CD combining GitLab CI (fast) with GitHub Actions (comprehensive).
+date: 2025-08-01
+decision: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration.
 why: |
-• Fast feedback (2-3 min) for development velocity
-• Comprehensive testing (8-10 min) for production readiness
-• Branch-aware: PR branches get minimal, main gets full testing
-• Resource optimization avoids expensive tests on every commit
+• Zero code modification: Complete customization without touching HostK8s core
+• First-class integration: Extensions work identically to built-in components
+• Dynamic configuration: Template processing enables environment-specific customization
+• External repository support: Extensions can reference external Git repositories
+• Platform agnostic: Works for any domain or specialized use case
 tradeoffs:
-positive: [dev velocity, comprehensive coverage, resource efficiency]
-negative: [dual platform complexity, sync overhead]
+positive: [complete customization, first-class experience, dynamic configuration, external integration]
+negative: [discovery challenge, template complexity, documentation overhead, testing complexity]
 ```
 
 --------------------------------------------
@@ -106,17 +107,16 @@ negative: [architectural complexity, AI service dependency, learning curve]
 --------------------------------------------
 ```yaml
 id: 006
-title: Extension System Architecture
+title: Hybrid CI/CD Strategy
 status: accepted
-date: 2025-08-01
-decision: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration.
+date: 2025-01-20
+decision: Branch-aware hybrid CI/CD combining GitLab CI (fast) with GitHub Actions (comprehensive).
 why: |
-• Zero code modification: Complete customization without touching HostK8s core
-• First-class integration: Extensions work identically to built-in components
-• Dynamic configuration: Template processing enables environment-specific customization
-• External repository support: Extensions can reference external Git repositories
-• Platform agnostic: Works for any domain or specialized use case
+• Fast feedback (2-3 min) for development velocity
+• Comprehensive testing (8-10 min) for production readiness
+• Branch-aware: PR branches get minimal, main gets full testing
+• Resource optimization avoids expensive tests on every commit
 tradeoffs:
-positive: [complete customization, first-class experience, dynamic configuration, external integration]
-negative: [discovery challenge, template complexity, documentation overhead, testing complexity]
+positive: [dev velocity, comprehensive coverage, resource efficiency]
+negative: [dual platform complexity, sync overhead]
 ```

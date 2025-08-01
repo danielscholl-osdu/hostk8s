@@ -7,13 +7,13 @@
 Modern development platforms benefit from AI assistance to accelerate complex operations, reduce cognitive load, and improve developer productivity. HostK8s, being a GitOps-focused Kubernetes development platform, involves intricate operations across cluster management, GitOps workflows, and debugging scenarios that are ideal candidates for AI enhancement. However, AI assistance must remain optional to preserve the platform's core accessibility and not create dependencies for users who prefer traditional workflows.
 
 ## Decision
-Integrate **optional AI-assisted development capabilities** through a three-layer architecture: Model Context Protocol (MCP) servers for natural language operations, specialized subagents for domain-specific tasks, and automated hooks for quality assurance. This integration enhances productivity for users who choose to enable it while maintaining full platform functionality for traditional development workflows.
+Integrate **optional AI-assisted development capabilities** through a three-layer architecture: MCP servers for cross-tool compatibility, specialized sub-agents for domain-specific tasks, and automated hooks for quality assurance. This integration enhances productivity for users who choose to enable it while maintaining full platform functionality for traditional development workflows.
 
 ## Rationale
-1. **Productivity Multiplier**: AI assistance significantly reduces time for complex GitOps debugging and cluster analysis
+1. **Productivity Multiplier**: AI assistance reduces time for complex GitOps debugging and cluster analysis
 2. **Optional Enhancement**: Zero impact on users who prefer traditional workflows
-3. **Multi-Tool Compatibility**: Works with Claude Code, GitHub Copilot, and other MCP-enabled AI assistants
-4. **Domain Specialization**: Targeted AI agents for specific HostK8s workflows (GitOps, troubleshooting, cluster analysis)
+3. **Extensible Architecture**: MCP protocol enables future multi-tool compatibility
+4. **Domain Specialization**: Targeted AI agents for specific HostK8s workflows
 5. **Quality Automation**: Automated enforcement of project standards without manual oversight
 6. **Learning Acceleration**: Natural language queries reduce learning curve for complex Kubernetes operations
 
@@ -24,7 +24,7 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    AI Assistant Layer                       │
-│         (Claude Code, GitHub Copilot, etc.)                │
+│            (Currently Claude Code primary)                 │
 └─────────────────────────────────────────────────────────────┘
                            │
                     MCP Protocol
@@ -32,10 +32,10 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
                            ▼
 ┌─────────────────┬───────────────────────────────────────────┐
 │   Layer 1:      │           Layer 2:                        │
-│   MCP Servers   │           Specialized Subagents           │
+│   MCP Servers   │           Specialized Sub-Agents          │
 │                 │                                           │
-│ • kubernetes    │ • hostk8s-analyzer                        │
-│ • flux-operator │ • gitops-troubleshooter                   │
+│ • kubernetes    │ • cluster-agent                           │
+│ • flux-operator │ • software-agent                          │
 │                 │ • gitops-committer                        │
 └─────────────────┴───────────────────────────────────────────┘
                            │
@@ -44,9 +44,9 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │           Quality Assurance & Automation                    │
-│ • Git commit validation                                     │
+│ • Git commit validation and enhancement                     │
 │ • Branch naming enforcement                                 │
-│ • Post-commit GitOps sync                                   │
+│ • Post-commit GitOps reconciliation                        │
 │ • Pre-commit checks automation                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -54,102 +54,73 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 ### Layer 1: MCP Server Integration
 - **kubernetes**: Core Kubernetes operations (pods, services, deployments, logs, events)
 - **flux-operator-mcp**: GitOps operations (Flux resources, documentation, dependency analysis)
-- **Protocol**: Standard MCP interface works with multiple AI assistants
-- **Configuration**: `.mcp.json` for Claude Code, `.vscode/mcp.json` for GitHub Copilot
+- **Cross-Tool Protocol**: Standard MCP interface designed for multiple AI assistants
+- **Current Reality**: Primary integration with Claude Code, architecture supports expansion
 
-### Layer 2: Specialized Subagents
-- **cluster-agent**: Infrastructure analysis specialist for HostK8s clusters (cluster health checks, pod troubleshooting, service accessibility issues, node problems)
-- **software-agent**: GitOps and Flux specialist for HostK8s (deployment failures, GitOps pipeline issues, Kustomization problems, HelmRelease troubleshooting, Flux resource analysis)
-- **gitops-committer**: Git workflow specialist for HostK8s GitOps development (maintaining clean git history, branch management, pre-commit hook issues)
+### Layer 2: Specialized Sub-Agents
+- **cluster-agent**: Infrastructure analysis specialist (cluster health, pod troubleshooting, node problems)
+- **software-agent**: GitOps and Flux specialist (deployment failures, Kustomization problems, HelmRelease troubleshooting)
+- **gitops-committer**: Git workflow specialist (clean history, branch management, pre-commit automation)
+- **Current Availability**: Claude Code exclusive, extensible architecture for future tools
 
 ### Layer 3: Automated Hooks
-- **PreToolUse Hooks**: Git validation, branch naming enforcement
-- **PostToolUse Hooks**: Automatic GitOps reconciliation, pre-commit checks
-- **Configuration**: `.claude/settings.json` with selective tool matching
+- **Quality Enhancement**: Automatic commit message improvement and branch naming enforcement
+- **GitOps Integration**: Automatic Flux reconciliation when GitOps files change
+- **Development Acceleration**: Pre-commit checks and standards enforcement
+- **Graceful Degradation**: Platform functions normally when hooks disabled
 
 ## Alternatives Considered
 
-### 1. AI-First Architecture (Rejected)
+### 1. AI-First Architecture
 - **Pros**: Maximum AI integration, cutting-edge developer experience
 - **Cons**: Creates AI dependency, excludes users preferring traditional workflows
 - **Decision**: Rejected to maintain platform accessibility
 
-### 2. Single AI Assistant Integration (Rejected)
+### 2. Single AI Assistant Integration
 - **Pros**: Simple implementation, single vendor relationship
 - **Cons**: Limits user choice, creates vendor lock-in
-- **Decision**: Rejected in favor of multi-tool compatibility
+- **Decision**: Rejected in favor of extensible MCP architecture
 
-### 3. Manual AI Integration Only (Rejected)
+### 3. Manual AI Integration Only
 - **Pros**: User-controlled AI interaction, no automation
 - **Cons**: Misses opportunities for quality automation, higher cognitive load
 - **Decision**: Rejected in favor of hybrid manual/automated approach
 
-### 4. ChatOps-Style Integration (Rejected)
+### 4. ChatOps-Style Integration
 - **Pros**: Familiar chat interface, team collaboration
 - **Cons**: Requires additional infrastructure, less integrated with development tools
-- **Decision**: Rejected in favor of native IDE integration
-
-## Implementation Details
-
-### MCP Server Configuration
-```json
-{
-  "mcpServers": {
-    "kubernetes": {
-      "command": "npx",
-      "args": ["mcp-server-kubernetes"]
-    },
-    "flux-operator-mcp": {
-      "command": "flux-operator-mcp",
-      "args": ["serve"],
-      "env": {
-        "KUBECONFIG": "./data/kubeconfig/config"
-      }
-    }
-  }
-}
-```
-
-### Subagent Specializations
-- **cluster-agent Focus**: Kubernetes infrastructure analysis, cluster health checks, pod troubleshooting, service accessibility issues, node problems
-- **software-agent Focus**: GitOps and Flux specialist operations, deployment failures, pipeline issues, Kustomization problems, HelmRelease troubleshooting, Flux resource analysis
-- **gitops-committer Focus**: Git workflow management, clean commit history, branch management, pre-commit hook automation
-
-### Hook Integration Points
-- **Git Operations**: Automatic validation and professional standards enforcement
-- **GitOps Changes**: Automatic Flux reconciliation triggers
-- **Quality Gates**: Pre-commit checks run automatically with specialized agents
+- **Decision**: Rejected in favor of native development tool integration
 
 ## Consequences
 
 **Positive:**
-- Dramatic productivity improvement for complex debugging and analysis tasks
+- Significant productivity improvement for complex debugging and analysis tasks
 - Natural language interface reduces learning curve for Kubernetes operations
 - Automated quality assurance reduces manual oversight burden
-- Multi-tool compatibility preserves user choice in AI assistants
+- Extensible architecture positions platform for evolving AI landscape
 - Optional nature maintains platform accessibility for all users
 - Specialized agents provide domain expertise for HostK8s-specific workflows
 
 **Negative:**
-- Additional complexity in platform architecture
-- Dependency on external AI services for enhanced features
+- Additional architectural complexity
+- Current dependency on specific AI service for enhanced features
 - Learning curve for users adopting AI-assisted workflows
-- Potential inconsistency if AI tools produce varying results
 - Additional installation requirements for full AI capabilities
-
-**Neutral:**
-- Users can adopt AI assistance incrementally (MCP only, then subagents, then hooks)
-- Platform remains fully functional without any AI components
 - Documentation overhead for explaining AI capabilities and usage patterns
 
+**Neutral:**
+- Users can adopt AI assistance incrementally (MCP servers, then sub-agents, then hooks)
+- Platform remains fully functional without any AI components
+- AI tool ecosystem expected to evolve rapidly, requiring adaptive approach
+
 ## Success Criteria
-- ✅ MCP servers integrate seamlessly with Claude Code and GitHub Copilot
-- ✅ Subagents provide accurate, domain-specific assistance for HostK8s workflows
-- ✅ Hooks automate quality assurance without interfering with development flow
-- ✅ Platform maintains 100% functionality for users not using AI features
-- ✅ AI assistance reduces time-to-resolution for complex debugging by 50%+
-- ✅ Documentation clearly separates AI-assisted from traditional workflows
+- MCP servers integrate seamlessly with AI assistants supporting the protocol
+- Sub-agents provide accurate, domain-specific assistance for HostK8s workflows
+- Hooks automate quality assurance without interfering with development flow
+- Platform maintains 100% functionality for users not using AI features
+- AI assistance provides measurable time savings for complex debugging tasks
+- Documentation clearly separates AI-assisted from traditional workflows
 
 ## Related ADRs
 - [ADR-001: Host-Mode Architecture](001-host-mode-architecture.md) - Foundation platform architecture
-- [ADR-003: GitOps Stamp Pattern](003-gitops-stamp-pattern.md) - GitOps workflows enhanced by AI assistance
+- [ADR-003: GitOps Stack Pattern](003-gitops-stack-pattern.md) - GitOps workflows enhanced by AI assistance
