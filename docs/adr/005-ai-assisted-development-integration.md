@@ -4,7 +4,11 @@
 **Accepted** - 2025-07-30
 
 ## Context
-Modern development platforms benefit from AI assistance to accelerate complex operations, reduce cognitive load, and improve developer productivity. HostK8s, being a GitOps-focused Kubernetes development platform, involves intricate operations across cluster management, GitOps workflows, and debugging scenarios that are ideal candidates for AI enhancement. However, AI assistance must remain optional to preserve the platform's core accessibility and not create dependencies for users who prefer traditional workflows.
+Modern development platforms benefit from AI assistance to accelerate complex operations, reduce cognitive load, and improve developer productivity. HostK8s, being a GitOps-focused Kubernetes development platform, involves intricate operations across cluster management, GitOps workflows, and debugging scenarios that are ideal candidates for AI enhancement.
+
+The AI ecosystem spans diverse deployment models and cost structures: cloud-based proprietary services (Claude Code), enterprise services with local model support (GitHub Copilot), and open source solutions (Gemini, OpenAI Codex) that can run entirely locally. Organizations have varying requirements for data privacy, cost control, and infrastructure flexibility, making support for multiple AI deployment patterns essential.
+
+However, AI assistance must remain optional to preserve the platform's core accessibility and not create dependencies for users who prefer traditional workflows.
 
 ## Decision
 Integrate **optional AI-assisted development capabilities** through a three-layer architecture: MCP servers for cross-tool compatibility, specialized sub-agents for domain-specific tasks, and automated hooks for quality assurance. This integration enhances productivity for users who choose to enable it while maintaining full platform functionality for traditional development workflows.
@@ -12,7 +16,7 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 ## Rationale
 1. **Productivity Multiplier**: AI assistance reduces time for complex GitOps debugging and cluster analysis
 2. **Optional Enhancement**: Zero impact on users who prefer traditional workflows
-3. **Extensible Architecture**: MCP protocol enables future multi-tool compatibility
+3. **Flexible Deployment Models**: Support for cloud-based (Claude Code), hybrid local/cloud (GitHub Copilot), and fully local AI models (open source options)
 4. **Domain Specialization**: Targeted AI agents for specific HostK8s workflows
 5. **Quality Automation**: Automated enforcement of project standards without manual oversight
 6. **Learning Acceleration**: Natural language queries reduce learning curve for complex Kubernetes operations
@@ -91,22 +95,40 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 - Custom command prompts for common workflows
 - No sub-agent or hook support (architectural limitation)
 
-**Future Support (OpenAI Codex, Gemini CLI, Warp Terminal)**:
+**Open Source Support (OpenAI Codex, Gemini CLI, Warp Terminal)**:
 - MCP server compatibility as protocols mature
 - Custom command prompt support as capabilities develop
 - Sub-agent and hook support dependent on AI agent architecture evolution
+- **Local Model Advantages**: Full data privacy, zero ongoing costs, no internet dependency
+- **Apache License**: Completely free usage for any organization
 
 ### Feature Availability Matrix
 
-| Feature | Claude Code | GitHub Copilot | Future AI Agents |
-|---------|-------------|----------------|-------------------|
+| Feature | Claude Code | GitHub Copilot | Open Source (Gemini/Codex) |
+|---------|-------------|----------------|------------------------------|
 | MCP Servers | ✓ Full Access | ✓ Full Access | ✓ Protocol Compatible |
 | Custom Command Prompts | ✓ Full Support | ✓ Full Support | ✓ As Capabilities Allow |
 | Specialized Sub-Agents | ✓ Exclusive Access | ✗ Not Available | ✗ Architecture Dependent |
 | Automated Hooks | ✓ Exclusive Access | ✗ Not Available | ✗ Architecture Dependent |
+| Local Model Support | ✗ Cloud Only | ✓ Hybrid Support | ✓ Fully Local Capable |
+| Cost Model | Subscription | Enterprise/Free Tier | Apache License (Free) |
+
+### Deployment Model Considerations
+
+**Cloud-Based Models (Claude Code)**:
+- **Advantages**: Latest model capabilities, no local compute requirements, always up-to-date
+- **Considerations**: Requires internet connectivity, subscription costs, data sent to external service
+
+**Hybrid Models (GitHub Copilot)**:
+- **Advantages**: Enterprise integration, optional local model support, established enterprise pricing
+- **Considerations**: Mixed local/cloud deployment complexity, enterprise licensing requirements
+
+**Local Models (Open Source)**:
+- **Advantages**: Complete data privacy, zero ongoing costs, no internet dependency, full organizational control
+- **Considerations**: Local compute requirements, model management overhead, potentially reduced capabilities
 
 ### Implementation Priority
-The architecture supports multiple AI agents while focusing development effort on the most capable platforms first. This approach maximizes value for users while maintaining extensibility for the rapidly evolving AI ecosystem.
+The architecture supports multiple AI agents while focusing development effort on the most capable platforms first. This approach maximizes value for users while maintaining flexibility across deployment models, cost structures, and organizational requirements.
 
 ## Alternatives Considered
 
@@ -125,9 +147,9 @@ The architecture supports multiple AI agents while focusing development effort o
 - **Cons**: Misses opportunities for quality automation, higher cognitive load
 - **Decision**: Rejected in favor of hybrid manual/automated approach
 
-### 4. ChatOps-Style Integration
-- **Pros**: Familiar chat interface, team collaboration
-- **Cons**: Requires additional infrastructure, less integrated with development tools
+### 4. ChatOps-Style Integration (Chat-Based Only)
+- **Pros**: Familiar chat interface, team collaboration, centralized communication
+- **Cons**: Requires additional ChatOps infrastructure (Slack bots, Teams integrations), less integrated with individual development tools, context switching overhead
 - **Decision**: Rejected in favor of native development tool integration
 
 ## Consequences
