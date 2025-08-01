@@ -1,260 +1,207 @@
-# CLAUDE.md
+# HostK8s Claude Code Instructions
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+**applyTo**: `"**/*.{yaml,yml,sh,md,go}"`
 
-## Repository Overview
+## Context and Constraints
 
-HostK8s is a lightweight Kubernetes development platform built on Kind that combines host-mode architecture with GitOps software stacks for reproducible, efficient development workflows. It addresses common pain points like manual environment setup, environment drift, and heavy tooling overhead.
+**What HostK8s Does:**
+- Eliminates Docker-in-Docker complexity through host-mode Kind clusters
+- Provides GitOps-based reproducible development environments
+- Supports pluggable extensions via filesystem or Git sources
+- Manages complete application + infrastructure deployments
 
-## Essential SubAgents
-- `cluster-agent` - Infrastructure Kubernetes specialist for HostK8s clusters.
-- `software-agent` - GitOps/Flux Software specialist for HostK8s clusters.
+**What HostK8s Does NOT Do:**
+- Production Kubernetes cluster management
+- Multi-cluster orchestration
+- Service mesh configuration
+- CI/CD pipeline execution (provides foundation only)
 
-## Essential Commands
+**Technology Stack:**
+- **Container Runtime**: Docker (host-mode)
+- **Kubernetes**: Kind clusters
+- **GitOps**: Flux v2
+- **Load Balancing**: MetalLB
+- **Ingress**: NGINX or Traefik
+- **Languages**: Bash, Go, YAML
+- **Validation**: yamllint, shellcheck
 
-### Cluster Lifecycle
-- `make help` - Show all available commands
-- `make install` - Install required dependencies (kind, kubectl, helm, flux, flux-operator-mcp)
-- `make up` - Start basic cluster
-- `make up sample` - Start cluster with software stack (requires `FLUX_ENABLED=true`)
-- `make down` - Stop cluster (preserves data)
-- `make restart` - Quick cluster reset for development iteration
-- `make restart sample` - Restart with software stack
-- `make clean` - Complete cleanup (destroy cluster and data)
-- `make status` - Show cluster health and running services
+## SubAgent Delegation Strategy
 
-### Development Operations
-- `make deploy` - Deploy default app (simple)
-- `make deploy simple2` - Deploy specific application
-- `make test` - Run comprehensive cluster validation tests
-- `make logs` - View recent cluster events and logs
-- `make port-forward SVC=myservice PORT=8080` - Port forward a service
-- `make sync` - Force Flux reconciliation (GitOps environments)
+**Available Specialists:**
+- `cluster-agent` - Infrastructure Kubernetes specialist for HostK8s clusters
+- `software-agent` - GitOps/Flux Software specialist for HostK8s clusters
 
-### Build and Source Operations
-- `make build src/APP_NAME` - Build and push application from src/ directory
+**Delegation Decision Matrix:**
 
-### AI-Assisted Operations
-- `make mcp-status` - Check MCP server status and connectivity
+**Use `cluster-agent` for:**
+- Kind cluster configuration and management
+- Kubernetes resource troubleshooting (pods, services, deployments)
+- Infrastructure component setup (MetalLB, ingress controllers)
+- Node and cluster-level networking issues
+- Storage and volume management
+- RBAC and security policy configuration
+- Performance monitoring and resource allocation
 
-**Important:** Always use `make` commands instead of calling scripts directly (handles KUBECONFIG, validation).
+**Use `software-agent` for:**
+- GitOps repository structure and Flux configuration
+- Kustomization and Helm chart management
+- Application deployment specifications
+- Software stack composition and dependencies
+- Flux reconciliation and sync issues
+- Repository source management
+- Application-level configuration and secrets
 
-## Code Quality Requirements
+**Self-Handle (No Delegation) for:**
+- Make command orchestration and workflow coordination
+- Documentation updates and markdown file management
+- Cross-cutting concerns that span both infrastructure and software
+- Initial problem diagnosis before determining specialization needed
+- Simple status checks and basic troubleshooting
 
-### YAML Validation (CRITICAL)
-**ALWAYS validate YAML after any changes** to prevent CI/CD pipeline failures:
-
+**Delegation Patterns:**
 ```bash
-yamllint -c .yamllint.yaml .
+# Infrastructure issues → cluster-agent
+"Kind cluster won't start" → cluster-agent
+"LoadBalancer service not getting external IP" → cluster-agent
+"Pod stuck in pending state" → cluster-agent
+
+# Software deployment issues → software-agent
+"Flux kustomization failing to reconcile" → software-agent
+"GitOps repository structure optimization" → software-agent
+"Application helm chart not deploying" → software-agent
+
+# Workflow coordination → self-handle
+"Run full cluster setup with sample stack" → self-handle with make commands
+"Generate project documentation" → self-handle
+"Diagnose whether issue is infrastructure or software" → self-handle first
 ```
 
-Common issues that break pipelines:
-- Trailing spaces: `sed -i '' 's/[[:space:]]*$//' filename.yml`
-- Missing newlines at end of file (ensure exactly one newline at EOF)
-- Line length over 200 characters
-- Incorrect indentation (2 spaces for Kubernetes YAML)
+**Critical: Always use `make` commands** - direct script execution will fail due to missing KUBECONFIG and dependency management:
 
-## Git Commit Guidelines
+**Constraint**: Never run scripts in `scripts/` directory directly
+**Reason**: Make targets handle environment setup, KUBECONFIG paths, and dependency validation
+**Pattern**: All operations must go through Make interface
 
-**IMPORTANT: Commit Message Format** (Automatically Enforced)
-- **NEVER include** AI attribution in commit messages
-- Write clean, professional commit messages without AI signatures
-- Focus on **what changed** and **why** it changed
-- Use conventional commit format: `feat:`, `fix:`, `docs:`, etc.
-- Keep commit messages concise but descriptive
+## Task-Specific Execution Patterns
 
-## Quality Assurance
+**Common Tasks and Exact Commands:**
 
-HostK8s includes automatic quality assurance and GitOps integration through Claude Code hooks:
-- Git operations have automatic validation and professional standards enforcement
-- GitOps file changes trigger automatic Flux reconciliation
-- Pre-commit checks run automatically with gitops-committer subagent
-
-## AI Usage Guidelines
-
-### Use `make` commands for:
-- All standard operations (up, down, status, deploy, etc.)
-- User-facing recommendations
-- KUBECONFIG management
-
-### Use scripts directly for:
-- Understanding implementation details
-- Debugging Make target issues
-- Custom automation scenarios
-
-### Reference README.md for:
-- User getting-started information
-- Project structure overview
-- Basic troubleshooting
-
-## High-Level Architecture
-
-### Core Concepts
-
-**Host-Mode Architecture**: Uses Kind directly on host Docker daemon, eliminating Docker-in-Docker complexity for better stability and performance (4GB RAM vs 8GB typical).
-
-**Software Stacks**: Pre-configured complete development environments (infrastructure + applications) deployed as code. Applied via GitOps to keep environments version-controlled and consistent.
-
-### Key Components
-
-**Infrastructure Layer** (`infra/`):
-- `infra/scripts/` - All operational scripts for cluster lifecycle, utilities, and component setup
-- `infra/kubernetes/` - Kind configuration files (minimal, simple, default)
-
-**Software Layer** (`software/`):
-- `software/apps/` - Individual applications (simple, multi-tier, extensions/sample, registry-demo)
-- `software/components/` - Flux-managed infrastructure components (certs, registry, ingress)
-- `software/stack/` - Software stack templates for complete environments
-
-**Source Code** (`src/`):
-- Application source code for building and deploying custom applications
-
-### Software Stack Pattern
-
-The software stack pattern deploys complete environments:
-
-1. **Bootstrap Kustomization** (`software/stack/bootstrap.yaml`) - Entry point
-2. **Stack Kustomization** (e.g., `software/stack/sample/kustomization.yaml`) - Defines resources
-3. **Components** - Infrastructure services (database, ingress-nginx) via Helm
-4. **Applications** - Application manifests managed through GitOps
-
-### Network Architecture
-
-- API Server: `localhost:6443`
-- NodePort Services: `localhost:8080` (mapped from 30080)
-- Optional services when enabled:
-  - Container Registry: `localhost:5000`
-  - Prometheus: `localhost:9090`
-
-## Development Workflows
-
-### Manual Development
+**Cluster Management:**
 ```bash
-make up                    # Start basic cluster
-make deploy simple    # Deploy basic app
-make deploy simple2    # Deploy advanced app (needs MetalLB/Ingress)
-make status                # Check status
-make restart               # Reset for iteration
+make install       # Install dependencies (kind, kubectl, helm, flux)
+make up            # Start basic cluster
+make up sample     # Cluster + GitOps stack
+make clean         # Tear down cluster
 ```
 
-### GitOps Development
+**Application Deployment:**
 ```bash
-export FLUX_ENABLED=true
-make up sample            # Start with complete GitOps environment
-make status               # Monitor GitOps reconciliation
-make sync                 # Force reconciliation
-make restart sample       # Reset with stack
+make deploy simple              # Deploy single app
+make deploy extension/my-app    # Deploy filesystem extension
+make build src/extension/my-app # Build custom extension
 ```
 
-## Configuration
-
-### Environment Variables (.env)
-Copy `.env.example` to `.env` and customize:
-
-- `LOG_LEVEL` - debug, info, warn, error (default: debug)
-- `CLUSTER_NAME` - Cluster name (default: hostk8s)
-- `K8S_VERSION` - Kubernetes version (default: latest)
-- `KIND_CONFIG` - minimal, simple, default
-- `FLUX_ENABLED` - Enable GitOps (default: false)
-- `METALLB_ENABLED` - LoadBalancer support (default: false)
-- `INGRESS_ENABLED` - NGINX Ingress (default: false)
-- `GITOPS_REPO` - Git repository URL for Flux sync
-- `GITOPS_BRANCH` - Git branch (default: main)
-- `SOFTWARE_STACK` - Software stack to deploy (sample, sample-stack)
-
-### KUBECONFIG Management
-The platform automatically manages KUBECONFIG:
-- Location: `./data/kubeconfig/config`
-- Automatically set by Make targets
-- Compatible with kubectl, helm, flux commands
-
-## AI-Assisted Operations
-
-### MCP Integration
-The platform includes dual MCP servers for comprehensive AI assistance:
-
-**Kubernetes MCP Server**: Core Kubernetes operations (pods, services, deployments, logs, events)
-**Flux Operator MCP Server**: GitOps operations (Flux resources, documentation search, dependency analysis)
-
-Configuration files:
-- `.mcp.json` - Claude Code MCP configuration
-- `.vscode/mcp.json` - GitHub Copilot MCP configuration (if present)
-
-### AI Capabilities
-- Natural language cluster management and troubleshooting
-- AI-powered Flux resource analysis and deployment debugging
-- Cross-cluster management and comparison
-- Root cause analysis with dependency tracing
-- Visual diagrams of infrastructure and GitOps dependencies
-
-## Testing and Validation
-
-### Test Strategy
-- `make test` runs comprehensive cluster validation
-- Validates cluster health, node status, networking, and service accessibility
-- Supports both basic cluster and software stack configurations
-
-### CI/CD Integration
-- Hybrid CI/CD strategy using GitLab CI (fast validation) + GitHub Actions (comprehensive testing)
-- Branch-aware testing with different cluster configurations
-- Automatic YAML validation and make command testing
-
-## File Structure Patterns
-
-### Application Structure
-Each app in `software/apps/` follows the pattern:
-```
-app-name/
-├── README.md          # Application documentation
-└── app.yaml          # Kubernetes manifests
+**Status and Debugging:**
+```bash
+make status        # Cluster health and service status
+make logs          # Aggregate log viewing
+make sync          # Force GitOps synchronization
 ```
 
-### Stack Structure
-Each stack in `software/stack/` follows the pattern:
+**Configuration:** Set variables in `.env` (see `.env.example`):
+- `FLUX_ENABLED=true` → Enable GitOps
+- `METALLB_ENABLED=true` → LoadBalancer support
+- `INGRESS_ENABLED=true` → Ingress controllers
+- `GITOPS_REPO=<url>` → External GitOps stack source
+
+## Environment State Awareness
+
+**Always check current state before operations:**
+```bash
+cat .env               # Active configuration
+make status            # Cluster and service health
 ```
-stack-name/
-├── README.md          # Stack documentation
-├── kustomization.yaml # Stack entry point
-├── repository.yaml    # GitRepository source
-├── stack.yaml         # Component deployments
-├── components/        # Infrastructure Helm releases
-└── applications/      # Application manifests
+
+**Key states that affect available operations:**
+- No `.env` file → Using defaults from `.env.example`
+- `FLUX_ENABLED=false` → Manual deployment only, no GitOps commands
+- `METALLB_ENABLED=false` → No LoadBalancer service support
+- `INGRESS_ENABLED=false` → No ingress resources can be deployed
+
+## Architecture
+
+**Abstraction Layers:**
+1. **Make Interface** – CLI commands, KUBECONFIG auto-handling
+2. **Scripts** – Single-purpose, sourced from `common.sh`
+3. **Shared Utilities** – Common orchestration helpers
+
+**Software Stack Structure:**
+```
+software/stack/example/
+├── kustomization.yaml
+├── repository.yaml
+├── stack.yaml
+├── components/
+└── applications/
 ```
 
-### Script Conventions
-All operational scripts in `infra/scripts/` source `common.sh` for:
-- Consistent logging functions (log_debug, log_info, log_warn, log_error)
-- Color formatting and error handling
-- Environment variable management
+**Data Persistence:**
+- **Cluster operations preserve data:** `make down` stops cluster, `make clean` removes cluster
+- **Persistent locations:** `data/kubeconfig/` (cluster config), `data/local-storage/` (volumes)
+- **Data safety:** All `make` commands preserve `data/` directory - only manual deletion removes data
 
-## Important Notes
+## Extensions
 
-### Prerequisites
-- Docker Desktop v24+
-- 2+ CPU cores, 4GB+ RAM (8GB recommended)
-- Mac, Linux, or Windows WSL2
+**Filesystem-Based:**
+```bash
+make deploy extension/my-app   # software/apps/extension/my-app/app.yaml
+make build src/extension/my-app
+KIND_CONFIG=extension/custom   # infra/kubernetes/extension/kind-custom.yaml
+```
 
-### Kind Configurations
-- `minimal` - Lightweight for basic testing
-- `simple` - Basic development cluster
-- `default` - Full-featured development cluster (recommended)
+**Git-Based:**
+```bash
+export GITOPS_REPO=https://github.com/team/stack
+make up extension
+```
 
-### Dependencies
-Required tools installed via `make install`:
-- kind - Kubernetes cluster creation
-- kubectl - Kubernetes API interaction
-- helm - Package management
-- flux - GitOps operator
-- flux-operator-mcp - AI-assisted GitOps operations
+## Coding Conventions
 
-### Performance Characteristics
-- Cluster creation: < 2 minutes
-- Cluster destruction: < 30 seconds
-- Development reset: < 1 minute
-- Application deployment: < 30 seconds
+- **YAML:** Validate with `yamllint -c .yamllint.yaml .` (CI enforced)
+- **Labels:** Use `hostk8s.app: <name>` for all K8s resources
+- **Scripts:** Use `set -euo pipefail` and `common.sh` logging functions
 
-### GitOps Best Practices
-- Use stacks for complete environments rather than individual apps
-- Monitor Flux reconciliation with `make status` and `flux get all`
-- Force reconciliation with `make sync` when needed
-- Leverage AI assistance through MCP servers for troubleshooting
+## Error Recovery Patterns
+
+**When Tasks Fail:**
+
+1. **Triage and Delegation:**
+   ```bash
+   make status  # Check overall cluster state first
+   ```
+   - If infrastructure-related (cluster, networking, resources) → delegate to `cluster-agent`
+   - If software-related (Flux, apps, GitOps) → delegate to `software-agent`
+   - If workflow-related (make commands, coordination) → handle directly
+
+2. **Make Command Errors:**
+   ```bash
+   make status  # Check cluster state first
+   make logs    # Examine recent logs
+   ```
+
+3. **GitOps Sync Issues:**
+   ```bash
+   make sync    # Force reconciliation
+   # If sync continues failing → delegate to software-agent
+   ```
+
+4. **Debugging Tool Priority:**
+   - **First**: Use `make` commands for high-level health checks
+   - **Second**: Delegate to appropriate subagent based on problem domain
+   - **Third**: Use MCP tools for detailed analysis:
+     - `mcp_kubernetes_kubectl_get` → List resources
+     - `mcp_kubernetes_kubectl_describe` → Describe resources
+     - `mcp_kubernetes_kubectl_logs` → Fetch logs
+     - `mcp_flux-operator_get_flux_instance` → Flux status
+     - `mcp_flux-operator_reconcile_flux_kustomization` → Force sync
+   - **Fallback**: Raw CLI only if Make, subagents, and MCP unavailable
