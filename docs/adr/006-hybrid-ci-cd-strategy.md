@@ -21,22 +21,22 @@ Implement a **temporary hybrid CI/CD workaround** where GitLab CI handles valida
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    GitLab CI (Primary)                     │
-│  • YAML validation                                         │
-│  • Makefile syntax checks                                  │
-│  • Code synchronization to GitHub                          │
-│  • Smart change detection                                  │
+│                    GitLab CI (Primary)                      │
+│  • YAML validation                                          │
+│  • Makefile syntax checks                                   │
+│  • Code synchronization to GitHub                           │
+│  • Smart change detection                                   │
 └─────────────────────────────────────────────────────────────┘
                            │
                     Triggers via API
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│               GitHub Actions (Kubernetes Testing)          │
-│  • Kind cluster creation and testing                       │
-│  • Flux GitOps reconciliation validation                   │
-│  • Multi-environment testing scenarios                     │
-│  • Status reporting back to GitLab                         │
+│               GitHub Actions (Kubernetes Testing)           │
+│  • Kind cluster creation and testing                        │
+│  • Flux GitOps reconciliation validation                    │
+│  • Multi-environment testing scenarios                      │
+│  • Status reporting back to GitLab                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
