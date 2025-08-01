@@ -156,9 +156,9 @@ up: ## Start cluster (Usage: make up [minimal|simple|default|sample])
 - **Pattern**: `make target` → argument extraction → `./infra/scripts/target.sh args`
 
 ## Success Criteria
-- ✅ All operations accessible via consistent `make <command>` pattern
-- ✅ Self-documenting help system (`make help`) always current
-- ✅ Automatic environment management eliminates KUBECONFIG errors
-- ✅ New developers can discover and use all functions in < 5 minutes
-- ✅ Scripts can evolve without breaking user interface
-- ✅ Cross-platform consistency (same commands, same behavior)
+- All operations accessible via consistent `make <command>` pattern
+- Self-documenting help system (`make help`) always current
+- Automatic environment management eliminates KUBECONFIG errors
+- New developers can discover and use all functions in < 5 minutes
+- Scripts can evolve without breaking user interface
+- Cross-platform consistency (same commands, same behavior)
