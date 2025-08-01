@@ -68,7 +68,8 @@ make install  # Automatic dependency installation on Mac
 
 **Kubernetes Configuration (`infra/kubernetes/`)**
 - Single-node Kind cluster optimized for development
-- Balanced resource allocation (not over-optimized)
+- Multiple configuration presets: minimal, simple, default, ci
+- Extension support via `extension/` directory
 - Optional add-on support (MetalLB, NGINX Ingress)
 
 ### Automation Layer (`infra/scripts/`)
@@ -92,22 +93,29 @@ make install  # Automatic dependency installation on Mac
 **Standard Conventions (`Makefile`)**
 - Follows universal Make patterns (`up`, `down`, `test`, `clean`)
 - Automatic KUBECONFIG management
+- Unified interface for Kind configs and software stacks
 - Progressive complexity (simple to advanced)
 
 ```bash
-make help        # Show all commands
-make up          # Start cluster
-make deploy      # Deploy application (supports app selection)
-make restart     # Fast iteration
-make clean       # Complete cleanup
+make help                    # Show all commands
+make up                      # Start basic cluster
+make up minimal              # Start with minimal Kind config
+make up simple               # Start with simple Kind config
+make up default              # Start with default Kind config
+make up sample               # Start with sample software stack
+make up extension            # Start with extension software stack
+make deploy [app]            # Deploy application (supports app selection)
+make restart [stack]         # Fast iteration with optional stack
+make clean                   # Complete cleanup
 ```
 
 ### Application Layer (`software/`)
 
 **Structured App Deployment (`software/apps/`)**
-- **app1/**: Basic sample application (NodePort, 2 replicas)
-- **app2/**: Advanced sample with MetalLB + Ingress (3 replicas, multiple services)
-- **app3/**: Multi-service microservices (Frontend → API → Database, 5 replicas)
+- **simple/**: Basic sample application (NodePort, simple deployment)
+- **multi-tier/**: Advanced multi-service application with database integration
+- **registry-demo/**: Container registry demonstration application
+- **extension/sample/**: Example of custom extension application
 - **Convention-based**: Each app in own folder with `app.yaml` and `README.md`
 
 **Software Stacks (`software/stack/`)**
@@ -116,15 +124,79 @@ make clean       # Complete cleanup
 - **Bootstrap Workflow**: Universal bootstrap kustomization manages all stacks
 - **Selective Sync**: Git ignore patterns for efficient synchronization
 
+### Extension System (`extension/`)
+
+**Complete Extensibility Without Code Changes:**
+- **Custom Kind Configs**: Add cluster configurations in `infra/kubernetes/extension/`
+- **Custom Applications**: Deploy specialized apps via `software/apps/extension/`
+- **Custom Software Stacks**: Complete environments in `software/stack/extension/`
+
+**Template Processing for Extensions:**
+- **Environment Variable Substitution**: Extension stacks use `envsubst` for dynamic configuration
+- **Auto-Detection**: Platform automatically detects and processes extension stacks
+- **External Repository Support**: Extensions can reference external Git repositories
+
+**Extension System Architecture:**
+
+```
+infra/kubernetes/extension/
+├── kind-my-config.yaml          # Custom cluster configuration
+└── README.md                    # Extension documentation
+
+software/apps/extension/
+├── my-app/
+│   ├── app.yaml                 # Application manifests
+│   └── README.md               # App documentation
+└── README.md                   # Apps extension guide
+
+software/stack/extension/
+├── my-stack/
+│   ├── kustomization.yaml      # Stack entry point
+│   ├── repository.yaml         # GitRepository with ${GITOPS_REPO}
+│   ├── stack.yaml             # Component dependencies
+│   ├── components/            # Infrastructure Helm releases
+│   └── applications/          # Application manifests
+└── README.md                  # Stack extension guide
+```
+
+**Template Processing Mechanics:**
+```yaml
+# software/stack/extension/my-stack/repository.yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: external-stack-system
+spec:
+  url: ${GITOPS_REPO}           # Substituted via envsubst
+  ref:
+    branch: ${GITOPS_BRANCH}    # Substituted via envsubst
+  interval: 1m
+```
+
+**Extension Usage Patterns:**
+```bash
+# Custom cluster configurations
+export KIND_CONFIG=extension/my-config
+make up                              # Start with custom Kind config
+
+# Custom applications
+make deploy extension/my-app         # Deploy extension application
+
+# Custom software stacks with template processing
+export GITOPS_REPO=https://github.com/my-org/custom-stack
+export GITOPS_BRANCH=develop
+make up extension                    # Deploy external software stack
+```
+
 ```bash
 # Manual application deployment
-make deploy           # Deploy default app (sample/app1)
-make deploy sample/app2      # Deploy advanced app
-make deploy sample/app3      # Deploy multi-service app
+make deploy              # Deploy default app (simple)
+make deploy multi-tier   # Deploy advanced multi-service app
+make deploy registry-demo # Deploy registry demonstration app
 
 # Software stack deployment
-make up sample        # Start cluster with sample stack
-make restart sample   # Restart cluster with sample stack
+make up sample           # Start cluster with sample stack
+make restart sample      # Restart cluster with sample stack
 ```
 
 ### Software Stack Architecture
@@ -132,7 +204,7 @@ make restart sample   # Restart cluster with sample stack
 **Stack Pattern Structure**
 
 ```
-software/stamp/
+software/stack/
 ├── README.md              # Software stacks documentation
 ├── bootstrap.yaml         # Universal bootstrap kustomization
 └── sample/                # Sample stack (GitOps demonstration)
@@ -151,7 +223,7 @@ software/stamp/
 
 ```
 1. Bootstrap Kustomization (bootstrap.yaml)
-   └── Points to specific stack path (e.g., ./software/stamp/sample)
+   └── Points to specific stack path (e.g., ./software/stack/sample)
 
 2. Stack Kustomization (sample/kustomization.yaml)
    ├── repository.yaml     # Creates GitRepository source
@@ -258,7 +330,7 @@ Kind Network (172.18.0.0/16)
 - **Single-node efficiency**: Lower overhead than multi-node
 
 ### Timing Benchmarks
-- **Cluster creation**: < 2 minutes on modern hardware
+- **Cluster creation**: < 2 minutes on modern hardware (8GB RAM, 4+ CPU cores, SSD storage)
 - **Cluster destruction**: < 30 seconds
 - **Development reset**: < 1 minute (dev-cycle)
 - **Application deployment**: < 30 seconds
@@ -378,7 +450,7 @@ stages:
 
 **GitHub Actions (Comprehensive Track)**
 ```yaml
-# Branch-aware cluster testing
+# Branch-aware cluster testing with CI-specific configuration
 strategy:
   matrix:
     cluster_type: [minimal, default]
@@ -387,8 +459,13 @@ jobs:
   cluster-default:    # Main branch only (full GitOps)
 ```
 
+**CI Configuration Support**
+- **Special `ci` Kind config**: Optimized for GitLab CI with Docker-in-Docker networking
+- **Automatic kubeconfig fixes**: Replaces localhost with docker hostname for CI environments
+- **Resource-optimized**: Minimal resource allocation for CI pipelines
+
 **Integration Flow**
-1. **GitLab CI**: Fast validation + GitHub sync
+1. **GitLab CI**: Fast validation + GitHub sync using `ci` config
 2. **GitHub Actions**: Branch-aware comprehensive testing
 3. **Status Reporting**: Results reported back to GitLab
 
@@ -403,21 +480,21 @@ kubectl get pods
 
 **Manual App Deployment:**
 ```bash
-make up           # Start basic cluster
-make deploy sample/app1  # Deploy basic application
-make deploy sample/app2  # Deploy advanced app (requires MetalLB/Ingress)
-make logs         # Debug issues
-make restart      # Reset for iteration
+make up                 # Start basic cluster
+make deploy simple      # Deploy basic application
+make deploy multi-tier  # Deploy multi-service app (requires MetalLB/Ingress)
+make logs               # Debug issues
+make restart            # Reset for iteration
 ```
 
-**GitOps Stamp Deployment:**
+**GitOps Stack Deployment:**
 ```bash
-make up sample    # Start cluster with sample GitOps stamp
-make status       # Monitor GitOps reconciliation
-make sync         # Force Flux reconciliation
-flux get all      # Check Flux resources
-flux logs --follow # Watch GitOps sync logs
-make restart sample # Reset with stamp configuration
+make up sample          # Start cluster with sample GitOps stack
+make status             # Monitor GitOps reconciliation
+make sync               # Force Flux reconciliation
+flux get all            # Check Flux resources
+flux logs --follow      # Watch GitOps sync logs
+make restart sample     # Reset with stack configuration
 ```
 
 

@@ -21,12 +21,12 @@ Implement the **GitOps Stack Pattern** - a declarative template system for deplo
 
 ### Directory Structure
 ```
-software/stamp/
+software/stack/
 ├── bootstrap.yaml         # Universal bootstrap kustomization
-└── {stamp-name}/          # e.g., sample/, osdu-ci/
-    ├── kustomization.yaml # Stamp entry point
+└── {stack-name}/          # e.g., sample/, extension/
+    ├── kustomization.yaml # Stack entry point
     ├── repository.yaml    # GitRepository source
-    ├── stamp.yaml         # Component deployments (infrastructure)
+    ├── stack.yaml         # Component deployments (infrastructure)
     ├── components/        # Infrastructure (Helm releases)
     │   ├── database/      # PostgreSQL
     │   └── ingress-nginx/ # NGINX Ingress
@@ -38,13 +38,13 @@ software/stamp/
 ### Deployment Flow
 ```
 1. Bootstrap Kustomization (bootstrap.yaml)
-   └── Points to specific stamp path
+   └── Points to specific stack path
 
-2. Stamp Kustomization (kustomization.yaml)
+2. Stack Kustomization (kustomization.yaml)
    ├── repository.yaml     # Creates GitRepository source
-   └── stamp.yaml          # Deploys infrastructure components
+   └── stack.yaml          # Deploys infrastructure components
 
-3. Component Dependencies (stamp.yaml)
+3. Component Dependencies (stack.yaml)
    ├── component-certs     # Certificate management
    ├── component-certs-ca  # Root CA certificate
    └── component-certs-issuer # Certificate issuer
@@ -88,9 +88,9 @@ software/stamp/
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: bootstrap-stamp
+  name: bootstrap-stack
 spec:
-  path: ./software/stamp/sample  # Configurable stamp path
+  path: ./software/stack/sample  # Configurable stack path
   sourceRef:
     kind: GitRepository
     name: flux-system
@@ -98,7 +98,7 @@ spec:
 
 ### Component Dependencies
 ```yaml
-# stamp.yaml - Infrastructure with dependencies
+# stack.yaml - Infrastructure with dependencies
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -120,7 +120,7 @@ spec:
     /*
     # include only relevant paths
     !/software/components/
-    !/software/stamp/sample/
+    !/software/stack/sample/
 ```
 
 ## Consequences
@@ -137,25 +137,25 @@ spec:
 - **Learning Curve**: Developers must understand GitOps concepts
 - **Debugging Complexity**: Multi-layer abstraction can complicate troubleshooting
 - **Bootstrap Dependency**: Universal bootstrap creates single point of failure
-- **Git Repository Coupling**: Stamps tied to specific repository structure
+- **Git Repository Coupling**: Stacks tied to specific repository structure
 
 ## Usage Patterns
 
-### Stamp Deployment
+### Stack Deployment
 ```bash
-make up sample      # Deploy sample stamp
+make up sample      # Deploy sample stack
 make status         # Monitor reconciliation
 make sync           # Force reconciliation
 flux get all        # Check Flux resources
 ```
 
-### Stamp Development
+### Stack Development
 ```bash
-# Create new stamp
-mkdir software/stamp/myapp
+# Create new stack
+mkdir software/stack/myapp
 # Define components, applications, dependencies
-# Update bootstrap.yaml to point to new stamp
-make restart myapp  # Test new stamp
+# Update bootstrap.yaml to point to new stack
+make restart myapp  # Test new stack
 ```
 
 ## Success Criteria
@@ -164,4 +164,4 @@ make restart myapp  # Test new stamp
 - ✅ Platform-agnostic pattern (works for any software stack)
 - ✅ Git sync efficiency (ignore patterns reduce sync by 80%)
 - ✅ Clear observability via `make status` and Flux tools
-- ✅ Stamp reusability across different contexts
+- ✅ Stack reusability across different contexts

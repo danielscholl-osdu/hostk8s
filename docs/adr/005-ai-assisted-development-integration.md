@@ -58,9 +58,9 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 - **Configuration**: `.mcp.json` for Claude Code, `.vscode/mcp.json` for GitHub Copilot
 
 ### Layer 2: Specialized Subagents
-- **hostk8s-analyzer**: Infrastructure analysis specialist for cluster health and troubleshooting
-- **gitops-troubleshooter**: GitOps and Flux specialist for deployment issues and pipeline analysis
-- **gitops-committer**: Git workflow specialist for maintaining clean development cycles
+- **cluster-agent**: Infrastructure analysis specialist for HostK8s clusters (cluster health checks, pod troubleshooting, service accessibility issues, node problems)
+- **software-agent**: GitOps and Flux specialist for HostK8s (deployment failures, GitOps pipeline issues, Kustomization problems, HelmRelease troubleshooting, Flux resource analysis)
+- **gitops-committer**: Git workflow specialist for HostK8s GitOps development (maintaining clean git history, branch management, pre-commit hook issues)
 
 ### Layer 3: Automated Hooks
 - **PreToolUse Hooks**: Git validation, branch naming enforcement
@@ -111,9 +111,9 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 ```
 
 ### Subagent Specializations
-- **Infrastructure Focus**: Cluster health, node issues, pod troubleshooting
-- **GitOps Focus**: Flux resource analysis, deployment debugging, dependency tracing
-- **Git Workflow Focus**: Clean commit history, branch management, automated quality
+- **cluster-agent Focus**: Kubernetes infrastructure analysis, cluster health checks, pod troubleshooting, service accessibility issues, node problems
+- **software-agent Focus**: GitOps and Flux specialist operations, deployment failures, pipeline issues, Kustomization problems, HelmRelease troubleshooting, Flux resource analysis
+- **gitops-committer Focus**: Git workflow management, clean commit history, branch management, pre-commit hook automation
 
 ### Hook Integration Points
 - **Git Operations**: Automatic validation and professional standards enforcement
