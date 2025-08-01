@@ -24,29 +24,30 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    AI Assistant Layer                       │
-│            (Currently Claude Code primary)                 │
+│  Primary: Claude Code | Secondary: GitHub Copilot           │
+│  Future: OpenAI Codex, Gemini CLI, Warp Terminal            │
 └─────────────────────────────────────────────────────────────┘
                            │
-                    MCP Protocol
+        MCP Protocol + Custom Command Prompts (Universal)
                            │
                            ▼
 ┌─────────────────┬───────────────────────────────────────────┐
 │   Layer 1:      │           Layer 2:                        │
-│   MCP Servers   │           Specialized Sub-Agents          │
-│                 │                                           │
+│   MCP Servers   │    Specialized Sub-Agents (Claude Only)   │
+│   (Universal)   │                                           │
 │ • kubernetes    │ • cluster-agent                           │
 │ • flux-operator │ • software-agent                          │
 │                 │ • gitops-committer                        │
 └─────────────────┴───────────────────────────────────────────┘
                            │
-                    Layer 3: Automated Hooks
+              Layer 3: Automated Hooks (Claude Only)
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
 │           Quality Assurance & Automation                    │
 │ • Git commit validation and enhancement                     │
 │ • Branch naming enforcement                                 │
-│ • Post-commit GitOps reconciliation                        │
+│ • Post-commit GitOps reconciliation                         │
 │ • Pre-commit checks automation                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -55,19 +56,57 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 - **kubernetes**: Core Kubernetes operations (pods, services, deployments, logs, events)
 - **flux-operator-mcp**: GitOps operations (Flux resources, documentation, dependency analysis)
 - **Cross-Tool Protocol**: Standard MCP interface designed for multiple AI assistants
-- **Current Reality**: Primary integration with Claude Code, architecture supports expansion
+- **Multi-Agent Support**: All MCP-compatible AI agents can access these servers
 
-### Layer 2: Specialized Sub-Agents
+### Layer 2: Specialized Sub-Agents (Claude Code Exclusive)
 - **cluster-agent**: Infrastructure analysis specialist (cluster health, pod troubleshooting, node problems)
 - **software-agent**: GitOps and Flux specialist (deployment failures, Kustomization problems, HelmRelease troubleshooting)
 - **gitops-committer**: Git workflow specialist (clean history, branch management, pre-commit automation)
-- **Current Availability**: Claude Code exclusive, extensible architecture for future tools
+- **Availability**: Currently exclusive to Claude Code due to specialized sub-agent architecture
+- **Future Expansion**: Other AI agents may gain sub-agent support as their architectures evolve
 
-### Layer 3: Automated Hooks
+### Layer 3: Automated Hooks (Claude Code Exclusive)
 - **Quality Enhancement**: Automatic commit message improvement and branch naming enforcement
 - **GitOps Integration**: Automatic Flux reconciliation when GitOps files change
 - **Development Acceleration**: Pre-commit checks and standards enforcement
 - **Graceful Degradation**: Platform functions normally when hooks disabled
+- **Availability**: Currently exclusive to Claude Code hook system
+
+### Cross-Agent Features
+- **Custom Command Prompts**: Available in Claude Code and GitHub Copilot
+- **MCP Server Access**: Universal protocol supporting all compatible AI agents
+
+## Multi-Agent Support Strategy
+
+### Tiered Capability Approach
+**Primary Support (Claude Code)**:
+- Full MCP server access for Kubernetes operations
+- Exclusive access to specialized sub-agents (cluster-agent, software-agent, gitops-committer)
+- Automated hooks for quality assurance and GitOps integration
+- Custom command prompts for workflow automation
+- Priority for new feature development
+
+**Secondary Support (GitHub Copilot)**:
+- MCP server access for basic Kubernetes operations
+- Custom command prompts for common workflows
+- No sub-agent or hook support (architectural limitation)
+
+**Future Support (OpenAI Codex, Gemini CLI, Warp Terminal)**:
+- MCP server compatibility as protocols mature
+- Custom command prompt support as capabilities develop
+- Sub-agent and hook support dependent on AI agent architecture evolution
+
+### Feature Availability Matrix
+
+| Feature | Claude Code | GitHub Copilot | Future AI Agents |
+|---------|-------------|----------------|-------------------|
+| MCP Servers | ✓ Full Access | ✓ Full Access | ✓ Protocol Compatible |
+| Custom Command Prompts | ✓ Full Support | ✓ Full Support | ✓ As Capabilities Allow |
+| Specialized Sub-Agents | ✓ Exclusive Access | ✗ Not Available | ✗ Architecture Dependent |
+| Automated Hooks | ✓ Exclusive Access | ✗ Not Available | ✗ Architecture Dependent |
+
+### Implementation Priority
+The architecture supports multiple AI agents while focusing development effort on the most capable platforms first. This approach maximizes value for users while maintaining extensibility for the rapidly evolving AI ecosystem.
 
 ## Alternatives Considered
 
@@ -97,16 +136,18 @@ Integrate **optional AI-assisted development capabilities** through a three-laye
 - Significant productivity improvement for complex debugging and analysis tasks
 - Natural language interface reduces learning curve for Kubernetes operations
 - Automated quality assurance reduces manual oversight burden
-- Extensible architecture positions platform for evolving AI landscape
+- Multi-agent support accommodates diverse developer AI preferences
+- Tiered capability approach maximizes value from most capable AI agents
 - Optional nature maintains platform accessibility for all users
 - Specialized agents provide domain expertise for HostK8s-specific workflows
 
 **Negative:**
 - Additional architectural complexity
-- Current dependency on specific AI service for enhanced features
+- Varying capabilities across different AI agents create uneven user experiences
+- Primary dependency on Claude Code for advanced features
 - Learning curve for users adopting AI-assisted workflows
 - Additional installation requirements for full AI capabilities
-- Documentation overhead for explaining AI capabilities and usage patterns
+- Documentation overhead for explaining different AI agent capabilities
 
 **Neutral:**
 - Users can adopt AI assistance incrementally (MCP servers, then sub-agents, then hooks)
