@@ -512,6 +512,8 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 | 002 | Make Interface Standardization     | acc    | [ADR-002](adr/002-make-interface-standardization.md) |
 | 003 | GitOps Stamp Pattern               | acc    | [ADR-003](adr/003-gitops-stamp-pattern.md) |
 | 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](adr/004-hybrid-ci-cd-strategy.md) |
+| 005 | AI-Assisted Development Integration | acc    | [ADR-005](adr/005-ai-assisted-development-integration.md) |
+| 006 | Extension System Architecture       | acc    | [ADR-006](adr/006-extension-system-architecture.md) |
 
 ### ADR Summaries
 
@@ -525,8 +527,8 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Benefits**: Universal familiarity, standard conventions, automatic KUBECONFIG handling, discoverability
 - **Tradeoffs**: Abstraction layer, Make dependency, argument limitations
 
-**ADR-003: GitOps Stamp Pattern**
-- **Decision**: Implement stamp pattern for deploying complete environments via Flux with component/application separation
+**ADR-003: GitOps Stack Pattern**
+- **Decision**: Implement stack pattern for deploying complete environments via Flux with component/application separation
 - **Benefits**: Complete environments, platform agnostic, dependency management, reusability
 - **Tradeoffs**: Learning curve, debugging complexity, bootstrap dependency
 
@@ -534,6 +536,16 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Branch-aware hybrid CI/CD combining GitLab CI (fast) with GitHub Actions (comprehensive)
 - **Benefits**: Fast feedback (2-3 min), comprehensive testing (8-10 min), branch-aware optimization
 - **Tradeoffs**: Dual platform complexity, sync overhead
+
+**ADR-005: AI-Assisted Development Integration**
+- **Decision**: Integrate optional AI-assisted development capabilities through three-layer architecture (MCP servers, specialized subagents, automated hooks)
+- **Benefits**: Productivity multiplier, optional enhancement, multi-tool compatibility, domain specialization
+- **Tradeoffs**: Architectural complexity, AI service dependency, learning curve
+
+**ADR-006: Extension System Architecture**
+- **Decision**: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration
+- **Benefits**: Complete customization, first-class experience, dynamic configuration, external integration
+- **Tradeoffs**: Discovery challenge, template complexity, documentation overhead, testing complexity
 
 Each ADR documents the context, decision, alternatives considered, and consequences - providing the "why" behind HostK8s's unique architecture.
 

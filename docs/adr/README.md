@@ -8,9 +8,10 @@ Optimized ADR Index for Agent Context
 | --- | ----------------------------------- | ------ | ------- |
 | 001 | Host-Mode Architecture              | acc    | [ADR-001](001-host-mode-architecture.md) |
 | 002 | Make Interface Standardization     | acc    | [ADR-002](002-make-interface-standardization.md) |
-| 003 | GitOps Stamp Pattern               | acc    | [ADR-003](003-gitops-stamp-pattern.md) |
+| 003 | GitOps Stack Pattern               | acc    | [ADR-003](003-gitops-stack-pattern.md) |
 | 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](004-hybrid-ci-cd-strategy.md) |
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](005-ai-assisted-development-integration.md) |
+| 006 | Extension System Architecture       | acc    | [ADR-006](006-extension-system-architecture.md) |
 
 ---
 
@@ -100,4 +101,22 @@ why: |
 tradeoffs:
 positive: [productivity enhancement, optional adoption, multi-tool support, domain expertise]
 negative: [architectural complexity, AI service dependency, learning curve]
+```
+
+--------------------------------------------
+```yaml
+id: 006
+title: Extension System Architecture
+status: accepted
+date: 2025-08-01
+decision: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration.
+why: |
+• Zero code modification: Complete customization without touching HostK8s core
+• First-class integration: Extensions work identically to built-in components
+• Dynamic configuration: Template processing enables environment-specific customization
+• External repository support: Extensions can reference external Git repositories
+• Platform agnostic: Works for any domain or specialized use case
+tradeoffs:
+positive: [complete customization, first-class experience, dynamic configuration, external integration]
+negative: [discovery challenge, template complexity, documentation overhead, testing complexity]
 ```
