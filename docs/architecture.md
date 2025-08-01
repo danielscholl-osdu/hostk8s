@@ -309,7 +309,7 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 
 **ADR-001: Host-Mode Architecture**
 - **Decision**: Use Kind directly on host Docker daemon, eliminating Docker-in-Docker complexity
-- **Benefits**: Stability, 50% faster startup, lower resource usage (4GB vs 8GB), standard kubectl/kind workflow
+- **Benefits**: Stability, faster startup, lower resource usage, standard kubectl/kind workflow
 - **Tradeoffs**: Less isolation, Docker Desktop dependency, single-node limitation
 
 **ADR-002: Make Interface Standardization**
@@ -336,14 +336,3 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Temporary workaround using GitLab CI for validation then triggering GitHub Actions for Kubernetes testing due to GitLab runner limitations
 - **Benefits**: Preserves GitLab workflow, accesses GitHub K8s tooling, smart change detection
 - **Tradeoffs**: Operational complexity, dual platform dependency, temporary solution
-
-Each ADR documents the context, decision, alternatives considered, and consequences - providing the "why" behind HostK8s's unique architecture.
-
----
-
-## Navigation
-
-- **← [Back to README](../README.md)** - Getting started guide
-- **→ [AI-Assisted Development](ai-assisted-development.md)** - Optional AI capabilities and usage scenarios
-- **→ [ADR Catalog](adr/README.md)** - All architecture decisions
-- **→ [Sample Apps](../software/apps/README.md)** - Available applications
