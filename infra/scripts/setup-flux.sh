@@ -51,14 +51,8 @@ GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
 # Set default value first
 SOFTWARE_STACK=${SOFTWARE_STACK:-""}
 
-# Auto-detect extension stack if SOFTWARE_STACK not set but extension stacks exist
-if [ -z "$SOFTWARE_STACK" ] && [ -d "software/stack/extension" ]; then
-    # Find the first available extension stack
-    EXTENSION_STACK=$(find software/stack/extension -maxdepth 1 -type d -name "*-stack" | head -1 | sed 's|software/stack/||')
-    if [ -n "$EXTENSION_STACK" ]; then
-        SOFTWARE_STACK="$EXTENSION_STACK"
-    fi
-fi
+# SOFTWARE_STACK should only be set explicitly via environment variable or make command
+# No auto-detection to prevent unexpected behavior
 
 # Show Flux configuration (only in debug mode)
 if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -178,10 +172,4 @@ if [ -n "$SOFTWARE_STACK" ]; then
     log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
     log_debug "  Stack: ${CYAN}$SOFTWARE_STACK${NC}"
     log_debug "  Path: ${CYAN}./software/stack/$SOFTWARE_STACK${NC}"
-else
-    log_info "Flux installed - ready for GitOps configuration"
-    log_info "Next steps:"
-    log_info "1. Configure stack: make restart sample"
-    log_info "2. Check status: make status"
-    log_info "3. Monitor log_infos: flux log_infos --follow"
 fi

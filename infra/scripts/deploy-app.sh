@@ -1,5 +1,5 @@
 #!/bin/bash
-# infra/scripts/deploy.sh - Deploy application to cluster
+# infra/scripts/deploy-app.sh - Deploy application to cluster
 source "$(dirname "$0")/common.sh"
 
 show_usage() {

@@ -68,3 +68,77 @@ spec:
   path: ./software/components/certs-issuer
   prune: true
   wait: true
+---
+######################
+## Ingress Controller
+## Required for applications with ingress
+######################
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-ingress-nginx
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-certs-issuer
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stack/sample/components/ingress-nginx
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: ingress-nginx-controller
+      namespace: ingress-nginx
+---
+######################
+## Sample Applications
+## Deployed after infrastructure is ready
+######################
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-sample-website
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-ingress-nginx
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stack/sample/applications/website
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: sample-website
+      namespace: sample-website
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-sample-api
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-ingress-nginx
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stack/sample/applications/api
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: sample-api
+      namespace: sample-api

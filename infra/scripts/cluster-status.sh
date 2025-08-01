@@ -1,5 +1,5 @@
 #!/bin/bash
-# infra/scripts/status.sh - Show cluster health and running services
+# infra/scripts/cluster-status.sh - Show cluster health and running services
 source "$(dirname "$0")/common.sh"
 
 show_kubeconfig_info() {
@@ -28,7 +28,7 @@ show_git_repositories() {
             echo
             return 0
         fi
-        
+
         echo "$git_output" | grep -v "^NAME" | while IFS=$'\t' read -r name revision suspended ready message; do
             [ -z "$name" ] && continue
             local repo_url=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name" -n flux-system -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown")

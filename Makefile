@@ -38,10 +38,24 @@ up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|def
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
 		echo "Detected local software stack: $$ARG"; \
-		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
+		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
+			echo "Cluster exists - deploying software stack to existing cluster..."; \
+			SOFTWARE_STACK="$$ARG" ./infra/scripts/deploy-stack.sh; \
+		else \
+			echo "Creating new cluster with software stack..."; \
+			FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
+		fi; \
 	elif [ "$$ARG" = "extension" ]; then \
 		echo "Detected extension software stack"; \
-		FLUX_ENABLED=true ./infra/scripts/cluster-up.sh; \
+		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
+			echo "Cluster exists - deploying extension stack to existing cluster..."; \
+			echo "Available extension stacks:"; \
+			find software/stack/extension -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' 2>/dev/null || true; \
+			echo "Use: make deploy-stack extension/stack-name"; \
+		else \
+			echo "Creating new cluster with extension capability..."; \
+			FLUX_ENABLED=true ./infra/scripts/cluster-up.sh; \
+		fi; \
 	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
 		echo "Detected Kind config: $$ARG"; \
 		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
@@ -55,6 +69,10 @@ up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|def
 
 # Handle arguments as targets to avoid "No rule to make target" errors
 minimal simple default sample extension:
+	@:
+
+# Handle extension/* patterns
+extension/%:
 	@:
 
 down: ## Stop the Kind cluster (preserves data)
@@ -82,22 +100,22 @@ clean: ## Complete cleanup (destroy cluster and data)
 	@docker system prune -f >/dev/null 2>&1 || true
 
 status: ## Show cluster health and running services
-	@./infra/scripts/status.sh
+	@./infra/scripts/cluster-status.sh
 
 sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])
 	@if [ -n "$(REPO)" ]; then \
-		./infra/scripts/sync.sh --repo "$(REPO)"; \
+		./infra/scripts/flux-sync.sh --repo "$(REPO)"; \
 	elif [ -n "$(KUSTOMIZATION)" ]; then \
-		./infra/scripts/sync.sh --kustomization "$(KUSTOMIZATION)"; \
+		./infra/scripts/flux-sync.sh --kustomization "$(KUSTOMIZATION)"; \
 	else \
-		./infra/scripts/sync.sh; \
+		./infra/scripts/flux-sync.sh; \
 	fi
 
 ##@ Tools
 
 deploy: ## Deploy application (Usage: make deploy [simple])
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	./infra/scripts/deploy.sh "$$APP_NAME"
+	./infra/scripts/deploy-app.sh "$$APP_NAME"
 
 # Handle app arguments as targets to avoid "No rule to make target" errors
 multi-tier extension/sample registry-demo:
@@ -110,7 +128,7 @@ src/%:
 test: ## Run comprehensive cluster validation tests
 	$(call check_cluster)
 	@echo "🧪 Running comprehensive validation tests..."
-	@./infra/scripts/validate-cluster.sh
+	@./infra/scripts/cluster-validate.sh
 
 logs: ## View recent cluster events and logs
 	$(call check_cluster)

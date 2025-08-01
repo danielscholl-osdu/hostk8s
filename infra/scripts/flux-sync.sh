@@ -1,5 +1,5 @@
 #!/bin/bash
-# infra/scripts/sync.sh - Force Flux reconciliation
+# infra/scripts/flux-sync.sh - Force Flux reconciliation
 source "$(dirname "$0")/common.sh"
 
 show_usage() {

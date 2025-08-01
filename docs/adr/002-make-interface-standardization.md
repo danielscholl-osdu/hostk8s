@@ -38,13 +38,13 @@ Implement a **Make interface as thin orchestration layer** that provides consist
 # Make handles interface and routing
 deploy: ## Deploy application (Usage: make deploy [sample/app1])
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	./infra/scripts/deploy.sh "$$APP_NAME"
+	./infra/scripts/deploy-app.sh "$$APP_NAME"
 ```
 
 ```bash
 # Script handles all operational complexity
 # - App validation, kubectl operations, error handling, help system
-./infra/scripts/deploy.sh sample/app2
+./infra/scripts/deploy-app.sh sample/app2
 ```
 
 ## Alternatives Considered
@@ -145,9 +145,9 @@ up: ## Start cluster (Usage: make up [minimal|simple|default|sample])
 - `infra/scripts/common.sh` - Shared utilities (logging, validation, kubectl helpers)
 - `infra/scripts/install.sh` - Dependency installation and validation
 - `infra/scripts/prepare.sh` - Development environment setup
-- `infra/scripts/status.sh` - Comprehensive cluster status reporting
-- `infra/scripts/deploy.sh` - Application deployment with validation
-- `infra/scripts/sync.sh` - Flux reconciliation operations
+- `infra/scripts/cluster-status.sh` - Comprehensive cluster status reporting
+- `infra/scripts/deploy-app.sh` - Application deployment with validation
+- `infra/scripts/flux-sync.sh` - Flux reconciliation operations
 - `infra/scripts/build.sh` - Docker application build and registry push
 
 ### Makefile Simplification

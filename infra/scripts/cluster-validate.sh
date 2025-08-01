@@ -5,7 +5,7 @@ set -euo pipefail
 set +x
 
 # Cluster validation script - supports both simple and comprehensive validation
-# Usage: ./validate-cluster.sh [--simple]
+# Usage: ./cluster-validate.sh [--simple]
 
 # Colors for output
 GREEN='\033[0;32m'
