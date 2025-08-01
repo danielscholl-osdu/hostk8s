@@ -1,501 +1,294 @@
 # HostK8s Architecture
 
-## Overview
+## Problem Statement
 
-HostK8s provides a **host-mode Kubernetes development platform** using Kind (Kubernetes in Docker) running directly on the host Docker daemon. The architecture prioritizes stability, simplicity, and rapid development iteration by eliminating Docker-in-Docker complexity.
+HostK8s solves the development environment complexity problem by running Kubernetes clusters directly on your local Docker daemon. This host-mode architecture eliminates the performance overhead and operational complexity of traditional cloud-based or VM-based development environments.
 
-**Key Innovation:** software stack pattern for deploying complete, declarative environments. The platform is application-agnostic - the "sample" stack demonstrates the pattern, while additional stacks can provide domain-specific complete environments.
+**The Development Environment Challenge:**
+Developers need production-like Kubernetes environments for testing, but traditional solutions create barriers:
+- Cloud environments require shared resource allocation, introduce network dependencies, and lock teams into specific provider ecosystems
+- VM-based solutions consume excessive local resources
+- Docker-in-Docker approaches create stability and networking complexity
+- Manual environment setup leads to "works on my machine" problems
+
+**Host-Mode Solution:**
+Host-mode runs Kubernetes clusters directly on your local Docker daemon, providing:
+- Dedicated per-developer environments without operational overhead
+- Direct container access for debugging
+- Faster startup and lower resource usage
+- Complete cloud vendor neutrality
+- Reproducible environments through declarative configuration
+
+## Core Architectural Decisions
+
+HostK8s is built on three foundational architectural decisions (detailed rationale in [ADR-001](adr/001-host-mode-architecture.md), [ADR-002](adr/002-make-interface-standardization.md), [ADR-003](adr/003-gitops-stack-pattern.md)):
+
+1. **Host-Mode Execution**: Use Kind directly on host Docker daemon rather than nested virtualization
+2. **Abstraction Interface**: Provide familiar Make commands that hide operational complexity
+3. **Software Stack Pattern**: Deploy complete environments rather than individual applications
+
+These decisions work together to create a platform that prioritizes developer productivity while maintaining production-like capabilities.
 
 ## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Host Environment                         │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────── │
-│  │   Developer     │  │   CI/CD         │  │   Local      | │
-│  │   Workstation   │  │   Pipeline      │  │   Testing    | │
-│  └─────────────────┘  └─────────────────┘  └─────────────── │
+│                  Development Environment                    │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │   Interactive   │  │   Automated     │  │   Testing    │ │
+│  │   Development   │  │   Validation    │  │   Workflows  │ │
+│  └─────────────────┘  └─────────────────┘  └──────────────┘ │
 │           │                  │                    │         │
-│    make up/scripts       make test            make clean    │
+│        Familiar           Hybrid               Comprehensive│
+│        Commands           Strategy             Validation   │
 └─────────────────────────────────────────────────────────────┘
                            │
-                    Host Tools Layer
-                           │
-                           ▼
-┌───────────────────────────────────────────────────────────-──┐
-│                Host Docker Daemon                            │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │              Kind Cluster (Single Node)                 │ │
-│  │  ┌─────────────────────────────────────────────────────┐│ │
-│  │  │  Control Plane + Worker (Combined)                  ││ │
-│  │  │  • API Server                                       ││ │
-│  │  │  • etcd                                             ││ │
-│  │  │  • kubelet + containerd                             ││ │
-│  │  │  • Optional: MetalLB (LoadBalancer)                 ││ │
-│  │  │  • Optional: NGINX Ingress.                         ││ │
-│  │  │  • Optional: Flux (GitOps)                          ││ │
-│  │  └─────────────────────────────────────────────────────┘│ │
-│  └─────────────────────────────────────────────────────────┘ │
-└──────────────────────────────────────────────────────────-───┘
-                           │
-                    Port Mappings (NodePort only)
+                  Abstraction Interface
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    Host Integration                         │
-│  • API Server: localhost:6443                               │
-│  • NodePort Services: localhost:8080 (from 30080)           │
-│  • Kubeconfig: ./data/kubeconfig/config                     │
-│  • Optional Services: registry:5000, prometheus:9090        │
+│              HostK8s Platform Architecture                  │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │                Make Interface Layer                     ││
+│  │             (Standardized Commands)                     ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │             Script Orchestration Layer                  ││
+│  │           (Lifecycle Management)                        ││
+│  └─────────────────────────────────────────────────────────┘│
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              Common Utilities Layer                     ││
+│  │            (Shared Operations)                          ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                           │
+                  Host-Mode Integration
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Host Docker Environment                      │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │           Kubernetes Development Cluster                ││
+│  │    • Direct Container Access (No Nested Virtualization) ││
+│  │    • Progressive Complexity (Minimal → Full Featured)   ││
+│  │    • Software Stack Deployments                         ││
+│  │    • Extension Points for Customization                 ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
+                           │
+                  Transparent Integration
+                           │
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                Developer Experience                         │
+│  • Standard Kubernetes Tooling (kubectl, helm, flux)        │
+│  • Automatic Environment Management                         │
+│  • Progressive Service Access (NodePort → LoadBalancer)     │
+│  • Extension Points for Custom Workflows                    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ## Component Architecture
 
-### Host Tools Layer
-**Required Dependencies:**
-- **Kind**: Cluster creation and management
-- **kubectl**: Kubernetes API interaction
-- **Helm**: Package management
-- **Docker**: Container runtime (Docker Desktop)
+### Three-Layer Abstraction Strategy
 
-**Installation via Make:**
-```bash
-make install  # Automatic dependency installation on Mac
-```
+The platform simplifies complex Kubernetes operations through a three-layer abstraction:
 
-### Infrastructure Layer (`infra/`)
+1. **Make Interface Layer** - Standardized commands engineers recognize (`install`, `up`, `down`, `test`, `clean`)
+2. **Script Orchestration Layer** - Single-responsibility scripts managing specific operations
+3. **Common Utilities Layer** - Shared functions ensuring consistent behavior (logging, error handling, environment management)
 
-**Kubernetes Configuration (`infra/kubernetes/`)**
-- Single-node Kind cluster optimized for development
-- Multiple configuration presets: minimal, simple, default, ci
-- Extension support via `extension/` directory
-- Optional add-on support (MetalLB, NGINX Ingress)
+For example, when you run `make up`, the Make interface validates dependencies, the orchestration layer selects the appropriate Kind configuration, and the utilities layer handles KUBECONFIG setup and provides consistent logging—all transparently.
 
-### Automation Layer (`infra/scripts/`)
+This strategy delivers complexity abstraction, automatic environment management, and clean separation of concerns. (Design decision rationale in [ADR-002](adr/002-make-interface-standardization.md))
 
-**Cluster Lifecycle Scripts:**
-- `cluster-up.sh`: Primary cluster creation with validation and convention-based Kind config selection
-- `cluster-down.sh`: Clean cluster shutdown
-- `cluster-restart.sh`: Fast reset for development iteration
-- `validate-cluster.sh`: Cluster validation (--simple for basic tests, full mode for comprehensive)
+### Dependencies and Tool Integration
 
-**Development Utilities:**
-- `utils.sh`: Essential development utilities (status, logs, port forwarding)
+The platform integrates with four essential tools, automatically installed to ensure consistent environments:
 
-**Component Setup:**
-- `setup-metallb.sh`: LoadBalancer configuration with IPv4 subnet detection
-- `setup-ingress.sh`: Ingress controller setup with MetalLB integration
-- `setup-flux.sh`: GitOps operator setup (requires flux CLI via `make install`)
+- **Kind** for cluster creation and management
+- **kubectl** for Kubernetes API interaction
+- **Helm** for package management
+- **Docker** as the container runtime foundation
 
-### Make Interface Layer
+This integration approach eliminates manual dependency management while preserving standard Kubernetes tooling compatibility.
 
-**Standard Conventions (`Makefile`)**
-- Follows universal Make patterns (`up`, `down`, `test`, `clean`)
-- Automatic KUBECONFIG management
-- Unified interface for Kind configs and software stacks
-- Progressive complexity (simple to advanced)
+### Cluster Lifecycle Management
 
-```bash
-make help                    # Show all commands
-make up                      # Start basic cluster
-make up minimal              # Start with minimal Kind config
-make up simple               # Start with simple Kind config
-make up default              # Start with default Kind config
-make up sample               # Start with sample software stack
-make up extension            # Start with extension software stack
-make deploy [app]            # Deploy application (supports app selection)
-make restart [stack]         # Fast iteration with optional stack
-make clean                   # Complete cleanup
-```
+**Managed Lifecycle Approach:**
+The platform treats cluster operations as a managed lifecycle rather than ad-hoc commands. Development clusters progress through predictable phases:
 
-### Application Layer (`software/`)
+- **Creation** - Dependency validation and configuration selection
+- **Validation** - Ensuring cluster meets operational requirements
+- **Iteration** - Fast reset capabilities for development cycles
+- **Cleanup** - Proper resource deallocation
 
-**Structured App Deployment (`software/apps/`)**
-- **simple/**: Basic sample application (NodePort, simple deployment)
-- **multi-tier/**: Advanced multi-service application with database integration
-- **registry-demo/**: Container registry demonstration application
-- **extension/sample/**: Example of custom extension application
-- **Convention-based**: Each app in own folder with `app.yaml` and `README.md`
+**Configuration Strategy:**
+Cluster configurations follow a progressive complexity model:
+- **Minimal → Simple → Default** - Increasing capability presets
+- **CI-optimized** - Specialized for automated testing environments
+- **Extension Points** - Custom configurations without core platform modification
 
-**Software Stacks (`software/stack/`)**
-- **Stack Pattern**: Declarative deployment templates for complete environments
-- **Component/Application Separation**: Infrastructure vs application deployment patterns
-- **Bootstrap Workflow**: Universal bootstrap kustomization manages all stacks
-- **Selective Sync**: Git ignore patterns for efficient synchronization
+**Operational Consistency:**
+All lifecycle phases share common operational patterns through shared utilities, enabling individual component testing while maintaining system-wide behavioral consistency.
 
-### Extension System (`extension/`)
 
-**Complete Extensibility Without Code Changes:**
-- **Custom Kind Configs**: Add cluster configurations in `infra/kubernetes/extension/`
-- **Custom Applications**: Deploy specialized apps via `software/apps/extension/`
-- **Custom Software Stacks**: Complete environments in `software/stack/extension/`
-
-**Template Processing for Extensions:**
-- **Environment Variable Substitution**: Extension stacks use `envsubst` for dynamic configuration
-- **Auto-Detection**: Platform automatically detects and processes extension stacks
-- **External Repository Support**: Extensions can reference external Git repositories
-
-**Extension System Architecture:**
-
-```
-infra/kubernetes/extension/
-├── kind-my-config.yaml          # Custom cluster configuration
-└── README.md                    # Extension documentation
-
-software/apps/extension/
-├── my-app/
-│   ├── app.yaml                 # Application manifests
-│   └── README.md               # App documentation
-└── README.md                   # Apps extension guide
-
-software/stack/extension/
-├── my-stack/
-│   ├── kustomization.yaml      # Stack entry point
-│   ├── repository.yaml         # GitRepository with ${GITOPS_REPO}
-│   ├── stack.yaml             # Component dependencies
-│   ├── components/            # Infrastructure Helm releases
-│   └── applications/          # Application manifests
-└── README.md                  # Stack extension guide
-```
-
-**Template Processing Mechanics:**
-```yaml
-# software/stack/extension/my-stack/repository.yaml
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: GitRepository
-metadata:
-  name: external-stack-system
-spec:
-  url: ${GITOPS_REPO}           # Substituted via envsubst
-  ref:
-    branch: ${GITOPS_BRANCH}    # Substituted via envsubst
-  interval: 1m
-```
-
-**Extension Usage Patterns:**
-```bash
-# Custom cluster configurations
-export KIND_CONFIG=extension/my-config
-make up                              # Start with custom Kind config
-
-# Custom applications
-make deploy extension/my-app         # Deploy extension application
-
-# Custom software stacks with template processing
-export GITOPS_REPO=https://github.com/my-org/custom-stack
-export GITOPS_BRANCH=develop
-make up extension                    # Deploy external software stack
-```
-
-```bash
-# Manual application deployment
-make deploy              # Deploy default app (simple)
-make deploy multi-tier   # Deploy advanced multi-service app
-make deploy registry-demo # Deploy registry demonstration app
-
-# Software stack deployment
-make up sample           # Start cluster with sample stack
-make restart sample      # Restart cluster with sample stack
-```
 
 ### Software Stack Architecture
 
-**Stack Pattern Structure**
+**The Problem:**
+Microservice applications require multiple supporting services (databases, message queues, ingress controllers). Managing these dependencies individually creates complexity and inconsistency.
+
+**The Solution:**
+Software stacks deploy complete, coherent environments rather than individual applications. Each stack represents a fully functional technology environment.
+
+**Key Principles:**
+- **Component/Application Separation** - Infrastructure and applications deployed independently with proper dependency management
+- **Declarative Composition** - Complete environments defined as code
+- **Bootstrap Pattern** - Universal entry point for any stack configuration
+- **Convention-Based Discovery** - Automatic detection and deployment of stack components
+
+**Implementation Approach:**
+Stacks use GitOps patterns with Flux for continuous deployment, enabling complete environment reproducibility and version control. (Detailed design in [ADR-003](adr/003-gitops-stack-pattern.md))
+
+### Extensibility Architecture
+
+**The Innovation Challenge:**
+Default scenarios provide immediate value but quickly become restrictive barriers to innovation. As systems grow in complexity, the operational overhead increases exponentially—managing dependencies, coordinating deployments, and debugging interactions becomes increasingly difficult. While comprehensive software stacks offer deep capabilities, developers need flexibility to integrate, modify, experiment, and build upon existing foundations without being constrained by rigid implementations.
+
+**Abstraction Framework Solution:**
+The platform's common abstraction framework ensures that operational complexity remains constant regardless of stack sophistication or application complexity. Whether deploying a simple web app or a complex distributed system with multiple databases, message queues, and microservices, the developer experience remains `make build`, `make deploy`, `make up` the framework handles the underlying orchestration complexity transparently.
+
+**Extension Points as Interfaces:**
+The platform treats extensibility as a **contract-based architecture**. Extension points function as defined interfaces, the platform provides orchestration capabilities while users provide implementations that adhere to established contracts.
+
+For example:
+- `make deploy <my_app>` works with any application following the deployment contract (standardized manifest structure)
+- `make build <my_app>` can build any application with a defined build contract (docker-compose, Dockerfile, etc.), automatically pushing to the cluster registry
+- `make up <my_stack>` deploys any software stack meeting the stack contract (kustomization structure, dependency definitions)
+
+**Separation of Platform and User Concerns:**
+This contract-based approach enables **zero-coupling extensibility**. You can build, deploy, and orchestrate applications without their code being directly related to the platform codebase. The platform handles environment management, orchestration, and lifecycle operations while users focus on their specific domain implementations.
+
+**Innovation Enablement:**
+Extension points preserve the platform's automation benefits while enabling:
+- **Creative experimentation** with new technologies and patterns
+- **Rapid iteration** on custom configurations and workflows
+- **Integration flexibility** for external systems and existing stacks
+- **Debugging capabilities** for complex, domain-specific scenarios
+
+(Contract specifications and design rationale in [ADR-006](adr/006-extension-system-architecture.md))
+
+
+## Integration Architecture
+
+### Filesystem Plugin Architecture
+
+The platform implements a **filesystem-based plugin architecture** using .gitignore patterns to create clean separation between platform code and extension code:
 
 ```
-software/stack/
-├── README.md              # Software stacks documentation
-├── bootstrap.yaml         # Universal bootstrap kustomization
-└── sample/                # Sample stack (GitOps demonstration)
-    ├── kustomization.yaml # Stack entry point
-    ├── repository.yaml    # GitRepository source definition
-    ├── stack.yaml         # Component deployments (infrastructure)
-    ├── components/        # Infrastructure components (Helm releases)
-    │   ├── database/      # PostgreSQL deployment
-    │   └── ingress-nginx/ # NGINX Ingress controller
-    └── applications/      # Application deployments (GitOps apps)
-        ├── api/           # Sample API service
-        └── website/       # Sample website service
+extension/
+├── .gitignore          # Excludes all content except samples
+├── README.md           # Documentation preserved
+├── sample-extension/   # Example extension (platform-maintained)
+└── my-team-extension/  # External repository (team-maintained)
 ```
 
-**Stack Deployment Flow**
+**Repository Isolation Strategy:** Extension directories use `*` .gitignore patterns, meaning teams can clone entire external repositories into these locations without affecting the main platform repository. This enables **independent development** where extension teams maintain separate version control while the platform provides integration infrastructure.
+
+### Convention-Based Discovery Pattern
+
+The platform uses **convention-over-configuration** for seamless integration of both local and external extensions:
 
 ```
-1. Bootstrap Kustomization (bootstrap.yaml)
-   └── Points to specific stack path (e.g., ./software/stack/sample)
-
-2. Stack Kustomization (sample/kustomization.yaml)
-   ├── repository.yaml     # Creates GitRepository source
-   └── stack.yaml          # Deploys infrastructure components
-
-3. Component Dependencies (stack.yaml)
-   ├── component-certs     # Certificate management (cert-manager)
-   ├── component-certs-ca  # Root CA certificate
-   └── component-certs-issuer # Certificate issuer
-
-4. Infrastructure Helm Releases (components/)
-   ├── database/           # PostgreSQL via Helm
-   └── ingress-nginx/      # NGINX Ingress via Helm
-
-5. Application Manifests (applications/)
-   ├── api/               # GitOps-managed API deployment
-   └── website/           # GitOps-managed website deployment
+make deploy extension/my-app        →  maps to extension/my-app/app.yaml
+make build src/extension/my-app     →  maps to src/extension/my-app/
+git clone <external-repo> extension/my-app  →  immediately available
 ```
 
-### Component Services Layer
+**Path Resolution:** The platform uses direct path-based routing to locate extension files - `extension/my-app` maps directly to the filesystem location, regardless of whether extensions originate from the main repository, external clones, or manual file placement.
 
-**Flux-Managed Components (`software/components/`)**
-- **Registry**: Container registry deployed via Flux (available in stacks)
-- **Certificate Management**: cert-manager for TLS certificates
-- **Ingress**: NGINX Ingress controller for HTTP routing
-- **All services**: Declaratively managed through GitOps
+### Dual Integration Patterns
 
-## Design Principles
+The platform uses **different integration strategies** for different extension types, optimized for their specific architectural requirements:
 
-### 1. Host-Mode Stability
-- **No Docker-in-Docker**: Eliminates nested container instability
-- **Direct Kind usage**: Leverages Kind's native host integration
-- **Standard tooling**: Uses host-installed tools as designed
+**Filesystem-Based Extensions:**
+- **Cluster Configurations:** `KIND_CONFIG=extension/sample` → `infra/kubernetes/extension/kind-sample.yaml`
+- **Source Code Builds:** `make build src/extension/my-app` → `src/extension/my-app/` (build and push to cluster registry)
+- **Application Deployments:** `make deploy extension/sample` → `software/apps/extension/sample/app.yaml`
 
-### 2. Ephemeral by Design
-- **Disposable clusters**: Create/destroy in under 2 minutes
-- **No persistent state**: Everything reproducible from code
-- **Fast iteration**: `make restart` for quick resets
 
-### 3. Development-First
-- **Single-node simplicity**: No multi-node complexity
-- **NodePort access**: Simple, reliable service access
-- **Minimal resources**: 4GB RAM sufficient
+**Git Repository-Based Extensions:**
+- **Software Stacks:** Complete environments sourced from external repositories via Flux GitRepository resources. Each stack can reference different repositories and branches:
+  ```bash
+  export GITOPS_REPO=https://gitlab.com/team-a/software-stack
+  export GITOPS_BRANCH=main
+  make up extension  # Deploys complete stack from external repository
+  ```
 
-### 4. Cross-Platform Consistency
-- **Identical behavior**: Mac, Windows WSL2, Linux
-- **Standard tools**: Same commands everywhere
-- **Make interface**: Universal developer experience
+**Stack Composition Architecture:**
+Multiple teams can develop independent stacks that compose into larger environments:
+- **Stack A** (component) from `gitlab.com/team-a/software-stack-a`
+- **Stack B** (applications) from `gitlab.com/team-b/software-stack-b` (depends on Stack A)
+- **Independent versioning** with cross-stack dependency management via GitOps
 
-### 5. Progressive Complexity
-- **Simple by default**: Basic cluster with no add-ons
-- **Opt-in features**: Enable MetalLB/Ingress when needed
-- **Graceful degradation**: Missing components don't break core functionality
+This dual approach enables **extension isolation** at both filesystem (individual components) and repository (complete environments) levels.
 
-## Network Architecture
+### Template Processing Integration
 
-```
-Host Network (localhost)
-├── :6443    → Kubernetes API Server
-├── :8080    → NodePort Services (mapped from 30080)
-├── :8443    → HTTPS NodePort (mapped from 30443)
-├── :5000    → Container Registry (optional)
-└── :9090    → Prometheus (optional)
+For external system integration, the platform uses **environment variable substitution** to enable dynamic configuration without hardcoding values:
 
-Kind Network (172.18.0.0/16)
-└── Single Node: 172.18.0.2
-    ├── Control Plane + Worker
-    ├── MetalLB Pool: 172.18.255.200-250 (if enabled)
-    └── Ingress Controller: Routes HTTP/HTTPS to services
+```yaml
+# Extension repository.yaml
+spec:
+  url: ${GITOPS_REPO}           # Dynamically configured
+  ref:
+    branch: ${GITOPS_BRANCH}    # Release specific
 ```
 
-## Data Flow
+**Conditional Template Processing:** The platform automatically applies `envsubst` template processing to extension files (path contains `"extension/"`) while applying core platform files directly without processing, enabling parameterized extensions without affecting platform stability.
 
-### Development Workflow
-1. **Developer** runs `make up`
-2. **Make** calls `infra/scripts/cluster-up.sh`
-3. **Script** validates dependencies and Docker resources
-4. **Kind** creates cluster using convention-based configuration
-5. **Kubeconfig** exported to `data/kubeconfig/config`
-6. **Make** sets KUBECONFIG automatically for subsequent commands
-
-### Service Access
-- **NodePort**: Primary access method via localhost:8080 (mapped from 30080)
-- **LoadBalancer**: External IPs (172.18.255.200-250) when MetalLB enabled
-- **Ingress**: HTTP routing via NGINX Ingress with MetalLB LoadBalancer integration
-
-## Security Model
-
-### Development Security
-- **Host tool access**: Scripts run with user permissions
-- **Docker socket**: Read-only access for Kind operations
-- **No privileged containers**: Eliminated DinD security risks
-
-### Isolation Boundaries
-- **Container-level**: Kind cluster isolated in Docker container
-- **Kubernetes namespaces**: Standard pod-to-pod isolation
-- **Host filesystem**: Limited volume mounts for kubeconfig only
-
-## Performance Characteristics
-
-### Resource Requirements
-- **Minimum**: 4GB RAM, 2 CPU cores
-- **Recommended**: 8GB RAM, 4 CPU cores
-- **Single-node efficiency**: Lower overhead than multi-node
-
-### Timing Benchmarks
-- **Cluster creation**: < 2 minutes on modern hardware (8GB RAM, 4+ CPU cores, SSD storage)
-- **Cluster destruction**: < 30 seconds
-- **Development reset**: < 1 minute (dev-cycle)
-- **Application deployment**: < 30 seconds
-
-## AI-Assisted Operations Integration (Optional)
-
-### MCP Server Architecture
-
-HostK8s optionally integrates **dual MCP servers** to enable comprehensive AI-assisted operations through the Model Context Protocol (MCP). This optional integration bridges AI assistants with both Kubernetes infrastructure and GitOps pipelines for users who choose to enable AI assistance.
-
-**MCP Integration Flow**
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    AI Assistant (Claude)                    │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │   Natural Language Operations                           ││
-│  │   • "Show me cluster status and health"                 ││
-│  │   • "Analyze Flux deployment issues"                    ││
-│  │   • "Compare resources between clusters"                ││
-│  │   • "Debug failing pods and trace dependencies"         ││
-│  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-                           │
-                    MCP Protocol
-                           │
-                           ▼
-┌─────────────────┬───────────────────────────────────────────┐
-│   Kubernetes    │           Flux Operator                   │
-│   MCP Server    │           MCP Server                      │
-│  ┌──────────────┴┐ ┌───────────────────────────────────────┐│
-│  │ Core K8s Ops  │ │     GitOps Operations                 ││
-│  │ • Pod mgmt    │ │     • get_flux_instance               ││
-│  │ • Svc access  │ │     • get_kubernetes_resources        ││
-│  │ • Logs/events │ │     • search_flux_docs                ││
-│  │ • Deployment  │ │     • apply_kubernetes_resource       ││
-│  └───────────────┘ └───────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-                           │
-                    KUBECONFIG Auth
-                           │
-                           ▼
-┌─────────────────────────────────────────────────────────────┐
-│              HostK8s Kubernetes Cluster                     │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │   Complete Kubernetes & GitOps Resources                ││
-│  │   • Pods, Services, Deployments                         ││
-│  │   • FluxInstance, ResourceSets                          ││
-│  │   • GitRepository, Kustomizations                       ││
-│  │   • HelmRelease, OCIRepository                          ││
-│  │   • Application Deployments                             ││
-│  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
-```
-
-**Key Features**
-
-- **Comprehensive Kubernetes Operations**: Natural language queries for cluster management, pod troubleshooting, and resource analysis
-- **Advanced GitOps Operations**: AI-powered Flux resource management, dependency visualization, and deployment debugging
-- **Root Cause Analysis**: Automated investigation of failed deployments with cross-resource dependency tracing
-- **Cross-Cluster Management**: Compare configurations and resources between different environments using either MCP server
-- **Documentation Integration**: Search and reference latest Flux documentation during operations
-- **Visual Diagrams**: Generate Mermaid diagrams showing both infrastructure and GitOps dependencies
-
-### MCP Server Configuration
-
-Both MCP servers are configured for multiple AI assistants:
-
-**Claude Code** (`.mcp.json`)
-**GitHub Copilot** (`.vscode/mcp.json`)
-
-```json
-{
-  "mcpServers": {
-    "kubernetes": {
-      "command": "npx",
-      "args": ["mcp-server-kubernetes"],
-      "env": {
-        "KUBECONFIG_PATH": "./data/kubeconfig/config"
-      }
-    },
-    "flux-operator-mcp": {
-      "command": "flux-operator-mcp",
-      "args": ["serve"],
-      "env": {
-        "KUBECONFIG": "./data/kubeconfig/config"
-      }
-    }
-  }
-}
-```
-
-**Server Responsibilities**
-- **Kubernetes MCP Server**: Core Kubernetes operations (pods, services, deployments, logs, events)
-- **Flux Operator MCP Server**: GitOps operations (Flux resources, documentation search, dependency analysis)
-
-**Security Model**
-- Uses existing KUBECONFIG permissions (same as `kubectl` access)
-- Supports read-only mode via `FLUX_MCP_READ_ONLY=true`
-- Automatically masks sensitive data in Kubernetes Secrets
-- No additional cluster permissions required
 
 
 
 ## Integration Points
 
-### Hybrid CI/CD Integration
+### CI/CD Enablement Architecture
 
-**GitLab CI (Fast Track)**
-```yaml
-# GitLab CI pipeline
-stages:
-  - validate    # YAML, Makefile validation (2-3 min)
-  - deploy      # GitHub sync and branch management
-  - test        # Smart GitHub Actions triggering
-```
+**Platform Capabilities for CI/CD**
 
-**GitHub Actions (Comprehensive Track)**
-```yaml
-# Branch-aware cluster testing with CI-specific configuration
-strategy:
-  matrix:
-    cluster_type: [minimal, default]
-jobs:
-  cluster-minimal:    # Always runs (GitRepository validation)
-  cluster-default:    # Main branch only (full GitOps)
-```
+HostK8s provides architectural primitives that enable sophisticated CI/CD patterns without mandating specific implementations:
 
-**CI Configuration Support**
-- **Special `ci` Kind config**: Optimized for GitLab CI with Docker-in-Docker networking
-- **Automatic kubeconfig fixes**: Replaces localhost with docker hostname for CI environments
-- **Resource-optimized**: Minimal resource allocation for CI pipelines
+**Built-in Quality Validation:**
+- **YAML Linting** - Platform includes .yamllint configuration and pre-commit hooks for complex YAML validation
+- **Pre-commit Framework** - Implemented hooks for local validation (format checking, lint enforcement, standards compliance)
+- **CI Integration Examples** - Basic Kind cluster creation and validation using built-in samples
+- **Make Interface Consistency** - Uniform commands across different CI/CD systems
 
-**Integration Flow**
-1. **GitLab CI**: Fast validation + GitHub sync using `ci` config
-2. **GitHub Actions**: Branch-aware comprehensive testing
-3. **Status Reporting**: Results reported back to GitLab
+**Ephemeral Testing Capabilities:**
 
-### IDE Integration
+The platform's lightweight architecture enables CI/CD systems to implement **disposable test environments**:
 ```bash
-# Automatic kubectl context
-export KUBECONFIG=$(pwd)/data/kubeconfig/config
-kubectl get pods
+# CI/CD systems can leverage these patterns
+make up minimal           # Create lightweight validation cluster
+make up custom-stack     # Test specific software stack in isolation
+make test                # Validate functionality
+make clean               # Destroy environment
 ```
 
-### Local Development
+**Architectural Enablement:**
+- **Isolation Capabilities** - Kind's container-based architecture enables independent test environments
+- **Resource Efficiency** - Fast cluster creation/destruction enables parallel testing strategies
+- **Stack Composition Testing** - Software stack pattern enables testing complex dependencies
+- **Composable Validation** - Platform primitives support modular testing approaches
 
-**Manual App Deployment:**
-```bash
-make up                 # Start basic cluster
-make deploy simple      # Deploy basic application
-make deploy multi-tier  # Deploy multi-service app (requires MetalLB/Ingress)
-make logs               # Debug issues
-make restart            # Reset for iteration
-```
+**Future CI/CD Potential:**
 
-**GitOps Stack Deployment:**
-```bash
-make up sample          # Start cluster with sample GitOps stack
-make status             # Monitor GitOps reconciliation
-make sync               # Force Flux reconciliation
-flux get all            # Check Flux resources
-flux logs --follow      # Watch GitOps sync logs
-make restart sample     # Reset with stack configuration
-```
+This architecture enables CI/CD systems to move away from **dedicated monolithic testing infrastructure** toward **composable, isolated validation** patterns, though implementation remains the responsibility of individual CI/CD configurations.
+
+**Integration Capabilities**
+
+The platform integrates with existing CI/CD systems through standard tooling compatibility. KUBECONFIG, networking, and tool configuration are handled transparently, enabling standard Kubernetes tooling (`kubectl`, `helm`, `flux`) to work seamlessly in automated environments.
 
 
 ---
@@ -510,7 +303,7 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 | --- | ----------------------------------- | ------ | ------- |
 | 001 | Host-Mode Architecture              | acc    | [ADR-001](adr/001-host-mode-architecture.md) |
 | 002 | Make Interface Standardization     | acc    | [ADR-002](adr/002-make-interface-standardization.md) |
-| 003 | GitOps Stamp Pattern               | acc    | [ADR-003](adr/003-gitops-stamp-pattern.md) |
+| 003 | GitOps Stack Pattern               | acc    | [ADR-003](adr/003-gitops-stack-pattern.md) |
 | 004 | Hybrid CI/CD Strategy              | acc    | [ADR-004](adr/004-hybrid-ci-cd-strategy.md) |
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](adr/005-ai-assisted-development-integration.md) |
 | 006 | Extension System Architecture       | acc    | [ADR-006](adr/006-extension-system-architecture.md) |
