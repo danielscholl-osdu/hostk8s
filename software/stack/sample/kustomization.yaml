@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
   - repository.yaml
   - stack.yaml
+  - ../../components/flux-resources

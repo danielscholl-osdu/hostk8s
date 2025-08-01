@@ -1,244 +1,123 @@
 # AI Guide
 
-This guide teaches you how to use AI effectively with HostK8s, focusing on proven interaction patterns rather than technical implementation details.
+This guide shows you how to use AI assistance with HostK8s to accelerate development and troubleshooting.
 
-> **Note:** AI technology evolves rapidly. This guide reflects current capabilities as of 2025, but features and availability may change as AI tools mature and expand their HostK8s integration.
+> **Note:** AI technology evolves rapidly. This guide reflects current capabilities as of 2025, but features and availability may change as AI tools mature.
 
 ## Core Principle
 
-AI in HostK8s is **optional** and designed to accelerate complex operations while preserving traditional workflows. Use AI when it adds value; use standard commands when they're faster.
+AI assistance in HostK8s is **optional** and designed to accelerate complex operations while preserving traditional workflows. Use AI when it adds value; use standard commands when they're faster.
 
-## AI Technology Integration
+## Getting Started with AI
 
-HostK8s integrates with popular **primary AI agents** like Claude Code and GitHub Copilot. These AI tools provide the foundation for intelligent assistance in your development workflow.
+HostK8s works with AI tools like **Claude Code** and **GitHub Copilot**. Claude Code provides the richest experience with specialized knowledge of your cluster and GitOps deployments.
 
-### Specialized Sub-Agents (Claude Code Only)
+### Start Here: Quick Commands
 
-Currently, **Claude Code** includes two specialized sub-agents that understand your HostK8s cluster:
+The fastest way to get AI help is with built-in slash commands:
 
-- **`cluster-agent`** - Infrastructure specialist for Kubernetes operations (pods, services, nodes, resource usage)
-- **`software-agent`** - GitOps specialist for Flux resources (GitRepository, Kustomizations, HelmReleases)
-
-**Important:** These sub-agents are currently exclusive to Claude Code. Other AI tools like GitHub Copilot have basic HostK8s support but don't yet have access to these specialized sub-agents.
-
-Address sub-agents directly by prefixing your questions: `cluster-agent: "your question"` or `software-agent: "your question"`.
-
-### Evolving AI Landscape
-
-AI technology evolves rapidly. While these sub-agents are currently Claude Code-specific, the AI ecosystem may expand to include similar specialized capabilities in other tools as the technology matures.
-
-### Quick Examples
-
-**Cluster Operations:**
 ```
-cluster-agent: "What applications are currently running?"
-cluster-agent: "Show me any failing pods and their logs"
-cluster-agent: "Which pods are consuming the most resources?"
+/cluster-health     # Comprehensive cluster assessment
+/prime             # Quick project orientation
+/commit "message"  # GitLab workflow assistant
 ```
 
-**GitOps Operations:**
+### Natural Language Questions
+
+Just ask questions naturally - AI automatically understands what you need:
+
+**Cluster Questions:**
 ```
-software-agent: "What's the status of all Flux resources?"
-software-agent: "Why isn't my GitRepository reconciling?"
-software-agent: "Show me the deployment order of the sample stamp"
-```
-
-## Command Prompts - Powerful Shortcuts
-
-HostK8s includes pre-built command prompts (slash commands) that execute complex workflows with a single command.
-These are stored in `.claude/commands/` and provide instant access to common operations.
-
-### Available Commands
-
-**`/cluster-health`** - Comprehensive cluster assessment
-```
-/cluster-health
-```
-Uses both agents to analyze infrastructure and software deployment status, providing actionable intelligence about your development environment.
-
-**`/commit`** - GitLab workflow assistant
-```
-/commit "description of changes"
-```
-Guides you through the complete GitLab workflow: branch creation, conventional commits, merge request creation with proper issue linking.
-
-**`/prime`** - Quick project orientation
-```
-/prime
-```
-Rapidly understand project context by reading key documentation and exploring the codebase structure without diving into implementation details.
-
-### Using Command Prompts
-
-Command prompts are more powerful than individual agent questions because they:
-- **Execute multi-step workflows** automatically
-- **Combine multiple agents** for comprehensive analysis
-- **Follow project conventions** (commit formats, branch naming, etc.)
-- **Provide structured outputs** with actionable next steps
-
-**Example:**
-```
-/cluster-health
-```
-This single command will:
-1. Use cluster-agent to check node health, pod status, and resource usage
-2. Use software-agent to analyze GitOps resources and dependencies
-3. Present a unified report with development readiness assessment
-
-### Creating Custom Commands
-
-You can create your own command prompts by adding markdown files to `.claude/commands/`:
-
-**Example: `.claude/commands/debug-app.md`**
-```markdown
-# Application Debug Assistant
-
-Analyze the failing application specified in the arguments and provide comprehensive troubleshooting steps.
-
-Use cluster-agent to check pod status, logs, and resource usage.
-Use software-agent to verify GitOps deployment status.
-
-Focus on actionable solutions developers can implement immediately.
+"What's the current status of my cluster?"
+"Show me any failing pods and their logs"
+"Which applications are running and are they healthy?"
 ```
 
-**Usage:**
+**GitOps Questions:**
 ```
-/debug-app sample-app
+"What's the status of my Flux deployments?"
+"Why isn't my GitRepository reconciling?"
+"Show me the deployment order of components"
 ```
 
 ## Quick Start: Your First AI Interaction
 
 **Start your environment:**
 ```bash
-make up sample  # Creates cluster with sample GitOps stamp
+make up sample  # Creates cluster with sample GitOps stack
 ```
 
-**Try your first AI interaction** (choose based on your AI tool):
+**Try AI assistance:**
 
-**Option 1: Command prompt** (Claude Code - recommended for beginners):
+**Option 1: Comprehensive health check**
 ```
 /cluster-health
 ```
 
-**Option 2: Sub-agent question** (Claude Code only):
+**Option 2: Natural language questions**
 ```
-cluster-agent: "Show me the overall health of my cluster and highlight any issues"
-```
-
-**Option 3: GitOps sub-agent** (Claude Code only):
-```
-software-agent: "Show me the status of all Flux resources in dependency order"
-```
-
-**Option 4: Generic AI question** (works with any AI tool):
-```
-"What's the current status of my Kubernetes cluster?"
+"What's the overall health of my cluster and highlight any issues"
+"Show me the status of all deployments"
+"Are there any problems I should know about?"
 ```
 
 If any of these work, you have AI assistance running. If not, see [Troubleshooting](#troubleshooting) below.
 
 ---
 
-## Understanding MCP Server Routing
-
-Claude Code automatically routes your questions to the appropriate MCP server based on the content of your query:
-
-### Kubernetes MCP Server Handles:
-- **Pod operations:** "Show me failing pods and their logs"
-- **Node health:** "Check cluster connectivity issues"
-- **Service accessibility:** "Debug why I can't reach the website service"
-- **Resource usage:** "Which pods are consuming the most CPU?"
-- **Network troubleshooting:** "Why can't my pod connect to the database?"
-
-### Flux Operator MCP Server Handles:
-- **GitOps resources:** "Analyze the sample stamp deployment status"
-- **Dependency tracing:** "Why isn't my GitRepository reconciling?"
-- **Configuration analysis:** "Generate a diagram of stamp relationships"
-- **Flux troubleshooting:** "Show me the status of all HelmReleases"
-- **Stamp operations:** "What components are deployed in the sample stamp?"
-
-### Automatic Server Selection:
-Claude Code intelligently uses **both servers** for complex queries:
-- "Debug the failing website application" → Uses Kubernetes MCP for pod status + Flux MCP for GitOps analysis
-- "Show me complete cluster health" → Combines infrastructure status + GitOps deployment status
-
-**Pro tip:** You don't need to specify which server to use - Claude Code handles routing automatically based on your question's context.
-
----
-
 ## Effective AI Interaction Patterns
 
-### Pattern 1: The Investigation Ladder
-Start broad, then narrow down based on what AI finds.
+### Pattern 1: Start Broad, Then Focus
+Ask general questions first, then drill down based on what AI finds.
 
 **Example: Debugging a failing application**
 
 ```
-1. "What's the overall cluster status?"
-   → AI: "3 pods failing in sample namespace"
+1. "What's the overall health of my cluster?"
+   → "3 pods failing in sample namespace"
 
-2. "Focus on the failing pods in sample namespace"
-   → AI: "website pod in CrashLoopBackOff, database connection failing"
+2. "Show me details about the failing pods in sample namespace"
+   → "website pod in CrashLoopBackOff, database connection failing"
 
-3. "Show me the website pod logs and network connectivity"
-   → AI: "Database service not found, DNS resolution failing"
+3. "Show me the website pod logs and check network connectivity"
+   → "Database service not found, DNS resolution failing"
 
 4. "Check if the database service exists and is healthy"
-   → AI: "PostgreSQL pod not ready, init container stuck"
+   → "PostgreSQL pod not ready, init container stuck"
 ```
 
-**Why this works:** Each query builds on the previous answer, letting AI guide you through the problem systematically.
+**Why this works:** Each question builds on the previous answer, letting AI guide you through the problem systematically.
 
-### Pattern 2: Cross-Context Analysis
-Use AI to compare and correlate information across different resources.
+### Pattern 2: Ask for Connections and Context
+AI can analyze relationships between different parts of your system.
 
-**GitOps Resource Relationships:**
+**Examples:**
 ```
 "Show me the dependency chain from GitRepository to the failing website pod"
-```
-
-**Environment Comparisons:**
-```
-"Compare the sample stamp configuration between this cluster and production"
-```
-
-**Resource Usage Patterns:**
-```
 "Which pods are consuming the most resources and how does that compare to their requests?"
+"What's the relationship between my ingress configuration and the certificate issues?"
 ```
 
-**Why this works:** AI can hold multiple contexts in memory and identify patterns humans might miss.
+**Why this works:** AI can hold multiple contexts in memory and identify patterns you might miss.
 
 ### Pattern 3: Root Cause Analysis
-Let AI trace problems back to their source across the entire stack.
+Ask AI to trace problems back to their source across the entire stack.
 
-**GitOps Pipeline Issues:**
+**Examples:**
 ```
 "The website isn't accessible. Trace this from the GitOps deployment through to the running pod"
-```
-
-**Certificate Problems:**
-```
 "HTTPS isn't working for my ingress. Check the certificate chain from cert-manager to the ingress controller"
 ```
 
 **Why this works:** AI can follow complex dependency chains across Kubernetes, GitOps, and networking layers.
 
-### Pattern 4: Documentation and Learning
-Use AI as an interactive manual for complex operations.
+### Pattern 4: Learning and Guidance
+Use AI as an interactive guide for complex operations.
 
-**Understanding Flux Resources:**
+**Examples:**
 ```
 "Explain what this Kustomization resource is doing and why it might be failing"
-```
-
-**Best Practices:**
-```
 "What's the recommended way to handle database migrations in this GitOps setup?"
-```
-
-**Troubleshooting Guidance:**
-```
 "I need to update the ingress configuration. Walk me through the GitOps process step by step"
 ```
 
@@ -247,46 +126,31 @@ Use AI as an interactive manual for complex operations.
 ## When to Use AI vs Traditional Commands
 
 ### Use AI When:
-- **Complex analysis needed:** software-agent: "Why is my GitOps deployment stuck?" or `/cluster-health`
-- **Multiple resources involved:** cluster-agent: "Show me all resources related to the website application"
-- **Pattern recognition:** cluster-agent: "Are there any resource issues I should be concerned about?" or `/cluster-health`
-- **Learning:** software-agent: "How does this stamp pattern work?" or `/prime`
-- **Cross-environment comparison:** software-agent: "What's different between my clusters?"
+- **Complex analysis needed:** "Why is my GitOps deployment stuck?" or `/cluster-health`
+- **Multiple resources involved:** "Show me all resources related to the website application"
+- **Pattern recognition:** "Are there any resource issues I should be concerned about?"
+- **Learning:** "How does this deployment pattern work?" or `/prime`
+- **Cross-environment comparison:** "What's different between my environments?"
 
 ### Use Traditional Commands When:
 - **Simple operations:** `kubectl get pods` (faster than asking AI)
 - **Muscle memory tasks:** `make restart` (you know exactly what you want)
-- **Debugging AI suggestions:** Verify AI recommendations with direct kubectl
+- **Verifying AI suggestions:** Always double-check with `kubectl` before making changes
 - **Emergency fixes:** When speed matters more than analysis
 
-### Hybrid Approach (Best of Both):
+### Best Approach: Combine Both
 
 **Development Workflow:**
 ```bash
-# Traditional HostK8s workflow
+# Start environment
 make up sample
-make status
 
-# Enhanced with AI assistance
-make up sample
-"Show me the overall cluster health and running pods"
-"Analyze the sample stamp deployment and report issues"
+# AI-enhanced monitoring
+/cluster-health
+"Show me the status of all deployments"
 ```
 
 **Troubleshooting Workflow:**
-```bash
-# Traditional debugging
-kubectl get pods -A
-kubectl describe pod failing-pod
-kubectl logs failing-pod
-
-# AI-assisted troubleshooting
-"Debug the failing website pod and show me its logs"
-"Why is the website application failing in sample namespace?"
-# AI automatically uses appropriate servers and provides root cause analysis
-```
-
-**Problem Resolution:**
 ```bash
 # Let AI identify the problem
 "What pods are failing and why?"
@@ -296,18 +160,18 @@ kubectl delete pod failing-pod
 kubectl apply -f fixed-config.yaml
 
 # Let AI verify the fix
-"Confirm that the website application is now healthy"
+"Confirm that the application is now healthy"
 ```
 
 ---
 
 ## GitOps-Specific AI Patterns
 
-### Understanding Stamp Deployments
+### Understanding Stack Deployments
 ```
-"Analyze the sample stamp and show me the deployment order of components"
+"Analyze the sample stack and show me the deployment order of components"
 "Which GitOps resources are waiting for dependencies?"
-"Generate a visual diagram of the stamp architecture"
+"Explain how this stack is structured"
 ```
 
 ### Flux Troubleshooting
@@ -317,43 +181,43 @@ kubectl apply -f fixed-config.yaml
 "What's preventing the HelmRelease from installing?"
 ```
 
-### Stamp Evolution
+### Stack Evolution
 ```
-"Help me understand what would happen if I add a new component to this stamp"
+"Help me understand what would happen if I add a new component to this stack"
 "Show me how to safely update the database component version"
 ```
 
 ---
 
-## Quality Automation Patterns
+## Built-in AI Automation
 
-When you make commits, AI automatically improves your workflow:
+HostK8s includes helpful automation that runs in the background:
 
 ### Commit Message Enhancement
-**Before:** `git commit -m "fix stuff"`
-**After:** AI automatically improves to: `fix: resolve pod startup issues in sample namespace`
+AI automatically improves commit messages:
+- **Before:** `git commit -m "fix stuff"`
+- **After:** `fix: resolve pod startup issues in sample namespace`
 
-### Branch Naming Enforcement
-**Before:** Creating branch `random-fixes`
-**After:** AI suggests: `fix/pod-startup-issues` or `feat/add-monitoring`
+### Branch Naming Guidance
+AI suggests proper branch naming:
+- **Instead of:** `random-fixes`
+- **Suggests:** `fix/pod-startup-issues` or `feat/add-monitoring`
 
 ### GitOps Sync Automation
-**Before:** Manual `flux reconcile` after changes
-**After:** AI automatically triggers reconciliation when it detects GitOps file changes
+AI automatically triggers Flux reconciliation when it detects GitOps file changes.
 
 **Pro tip:** Let automation handle routine quality tasks while you focus on development.
 
 ---
 
-## Advanced AI Interaction Techniques
+## Advanced Techniques
 
-### Contextual Follow-ups
+### Follow-up Questions
 Once AI understands your environment, ask follow-up questions:
 
 ```
 Initial: "Analyze cluster health"
 Follow-up: "Focus on the networking issues you mentioned"
-Follow-up: "Show me the configuration that's causing the DNS problems"
 Follow-up: "What's the recommended fix for this?"
 ```
 
@@ -367,95 +231,77 @@ Break complex tasks into AI-assisted steps:
 "Verify that the certificate was issued correctly"
 ```
 
-### Environment-Aware Queries
-Take advantage of AI's context awareness:
+### Context-Aware Questions
+Take advantage of AI's understanding of your specific setup:
 
 ```
-"Based on my current stamp configuration, what monitoring should I add?"
+"Based on my current stack configuration, what monitoring should I add?"
 "Given my resource usage patterns, how should I optimize replica counts?"
 "What security improvements would you recommend for this setup?"
 ```
 
 ---
 
-## Common Interaction Mistakes
+## Common Mistakes to Avoid
 
 ### ❌ Being Too Vague
 **Don't ask:** "Something is broken"
 **Instead ask:** "The website pod in the sample namespace isn't starting - what's wrong?"
 
-### ❌ Asking for Impossible Tasks
+### ❌ Asking AI to Make Changes
 **Don't ask:** "Fix my cluster" (AI can't make changes for you)
 **Instead ask:** "Identify the problems and suggest fixes I can implement"
 
-### ❌ Ignoring Context
+### ❌ Ignoring Your Specific Context
 **Don't ask:** "How do I deploy an app?" (generic)
-**Instead ask:** "How do I add a new application to my sample stamp?"
+**Instead ask:** "How do I add a new application to my sample stack?"
 
-### ❌ Not Verifying AI Suggestions
-Always double-check AI recommendations with `kubectl` commands before applying changes.
+### ✅ Always Verify AI Suggestions
+Double-check AI recommendations with `kubectl` commands before applying changes.
 
 ---
 
 ## Integration with Your Workflow
 
-### IDE Integration
+### Development Iteration
 ```bash
-# AI automatically uses your cluster context
-export KUBECONFIG=$(pwd)/data/kubeconfig/config
-# Now AI commands work with your active cluster
+make up sample           # Start with stack
+/cluster-health          # Quick AI check
+make restart sample      # Iterate
+"Confirm everything redeployed correctly"
 ```
 
 ### CI/CD Integration
 Use AI insights to improve your pipelines:
 ```
 "Analyze why the CI pipeline is failing on the GitOps validation step"
-"What would happen if I deploy this stamp to staging?"
-```
-
-### Development Iteration
-```bash
-make up sample           # Start with stamp
-# Quick check: /cluster-health
-# Or ask: cluster-agent: "What applications are deployed?"
-make restart sample      # Iterate
-# Quick check: /cluster-health
-# Or ask: cluster-agent: "Confirm everything redeployed correctly"
+"What would happen if I deploy this stack to staging?"
 ```
 
 ---
 
-## Troubleshooting AI Features
+## Troubleshooting
 
 ### Quick Diagnostics
 ```bash
-make mcp-status     # Check AI tool connectivity
-kubectl get nodes   # Verify cluster access
+kubectl get nodes   # Verify cluster is running
+/cluster-health     # Test AI connectivity
 ```
 
 ### Common Issues
 
-**"Sub-agents don't respond"** (Claude Code only)
-- Check: `make mcp-status` - should show flux-operator-mcp binary found
+**"AI doesn't respond to cluster questions"**
 - Verify: `kubectl get nodes` - cluster should be accessible
 - Fix: `make up` if no cluster is running
-- Note: Other AI tools don't have access to cluster-agent/software-agent
+- Try: `/cluster-health` to test connectivity
 
-**"AI can't see my cluster"** (any AI tool)
-- Verify: `echo $KUBECONFIG` points to `./data/kubeconfig/config`
-- Fix: `make up` to ensure cluster is running
-- Try generic questions instead of sub-agent specific ones
+**"AI can't see my cluster"**
+- Ensure cluster is running: `make status`
+- Try simple questions first: "What pods are running?"
 
 **"AI gives outdated information"**
-- AI reads real-time cluster state (Claude Code) or may need context refresh (other tools)
-- Try: cluster-agent: "Refresh and show me current pod status" (Claude Code)
-- Or: "What's the current status of pods in my cluster?" (any AI tool)
-
-**"Wrong response type"** (Claude Code)
-- Use explicit sub-agent prefixes: `cluster-agent: "question"` or `software-agent: "question"`
-- Or use command prompts: `/cluster-health`, `/prime`, `/commit`
-- cluster-agent: for pods, services, nodes, resource usage
-- software-agent: for GitOps, Flux resources, stamp analysis
+- AI reads real-time cluster state
+- Try: "Refresh and show me current pod status"
 
 **"Automation isn't working"**
 - Check: `.claude/settings.json` exists
@@ -471,14 +317,32 @@ AI assistance is designed to fail gracefully:
 
 ## Best Practices Summary
 
-1. **Start conversations broadly, then narrow down**
-2. **Use AI for analysis, kubectl for action**
-3. **Let AI explain complex relationships and dependencies**
-4. **Verify AI suggestions before implementing**
-5. **Use automation for routine quality tasks**
+1. **Start with `/cluster-health` for comprehensive status**
+2. **Ask broad questions first, then drill down**
+3. **Use AI for analysis, `kubectl` for actions**
+4. **Let AI explain complex relationships and dependencies**
+5. **Always verify AI suggestions before implementing**
 6. **Combine AI assistance with traditional tools based on the situation**
 
 Remember: AI assistance enhances your Kubernetes expertise but doesn't replace it. Use it as a powerful analytical tool while maintaining hands-on control of your infrastructure.
+
+---
+
+## Advanced: Explicit Subagent Usage
+
+For power users, you can explicitly call specialized agents:
+
+**Infrastructure specialist:**
+```
+cluster-agent: "Show me detailed resource usage and any infrastructure issues"
+```
+
+**GitOps specialist:**
+```
+software-agent: "Analyze the Flux deployment status and dependency chain"
+```
+
+However, natural language questions work just as well and are easier to remember.
 
 ---
 
