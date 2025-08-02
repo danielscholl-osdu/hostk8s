@@ -8,18 +8,60 @@ This guide shows you how to use AI assistance with HostK8s to accelerate develop
 
 AI assistance in HostK8s is **optional** and designed to accelerate complex operations while preserving traditional workflows. Use AI when it adds value; use standard commands when they're faster.
 
+## Multi-Agent Architecture
+
+HostK8s uses specialized AI agents, each tuned for specific domains and capabilities:
+
+### Agent Specializations
+
+**Claude Code** - Infrastructure & GitOps Specialist:
+- **cluster-agent**: Kubernetes infrastructure readiness and troubleshooting
+- **software-agent**: GitOps deployments, Flux management, and application composition
+- **gitops-committer**: Git commits for Flux-triggered deployments
+- **developer-agent**: Full-stack development with isolated worktrees
+
+**GitHub Copilot** - Development Workflow Specialist:
+- Code generation and completion
+- Commit message enhancement
+- Development environment setup
+- Code review and optimization
+
+### Agent-Specific Syntax
+
+Each agent has specialized commands optimized for its expertise:
+
+```bash
+# Claude Code commands (infrastructure focus)
+$claude > /health           # Comprehensive cluster assessment
+$claude > /optimize         # Resource optimization through GitOps
+$claude > /prime           # Project orientation and context
+
+# GitHub Copilot commands (development focus)
+$copilot > /commit          # Enhanced commit workflows
+$copilot > /worktree        # Development environment setup
+```
+
+This architecture ensures you get the most relevant expertise for each task while maintaining familiar command patterns.
+
 ## Getting Started with AI
 
-HostK8s works with AI tools like **Claude Code** and **GitHub Copilot**. Claude Code provides the richest experience with specialized knowledge of your cluster and GitOps deployments.
+HostK8s works with multiple AI agents like **Claude Code** and **GitHub Copilot**. Each agent is tuned for specific tasks and provides specialized capabilities for your cluster and GitOps deployments.
 
-### Start Here: Quick Commands
+### Start Here: Agent-Specific Commands
 
-The fastest way to get AI help is with built-in slash commands:
+The fastest way to get AI help is with agent-specific slash commands. Each AI agent has specialized commands tuned to its expertise:
 
+**Claude Code (Infrastructure & GitOps):**
 ```
-/cluster-health     # Comprehensive cluster assessment
-/prime             # Quick project orientation
-/commit "message"  # GitLab workflow assistant
+$claude > /health           # Comprehensive cluster assessment
+$claude > /optimize         # Resource optimization through GitOps
+$claude > /prime           # Quick project orientation
+```
+
+**GitHub Copilot (Development Workflows):**
+```
+$copilot > /commit "message"  # Enhanced commit workflows
+$copilot > /worktree          # Development environment setup
 ```
 
 ### Natural Language Questions
@@ -51,7 +93,7 @@ make up sample  # Creates cluster with sample GitOps stack
 
 **Option 1: Comprehensive health check**
 ```
-/cluster-health
+$claude > /health
 ```
 
 **Option 2: Natural language questions**
@@ -126,10 +168,10 @@ Use AI as an interactive guide for complex operations.
 ## When to Use AI vs Traditional Commands
 
 ### Use AI When:
-- **Complex analysis needed:** "Why is my GitOps deployment stuck?" or `/cluster-health`
+- **Complex analysis needed:** "Why is my GitOps deployment stuck?" or `$claude > /health`
 - **Multiple resources involved:** "Show me all resources related to the website application"
 - **Pattern recognition:** "Are there any resource issues I should be concerned about?"
-- **Learning:** "How does this deployment pattern work?" or `/prime`
+- **Learning:** "How does this deployment pattern work?" or `$claude > /prime`
 - **Cross-environment comparison:** "What's different between my environments?"
 
 ### Use Traditional Commands When:
@@ -146,7 +188,7 @@ Use AI as an interactive guide for complex operations.
 make up sample
 
 # AI-enhanced monitoring
-/cluster-health
+$claude > /health
 "Show me the status of all deployments"
 ```
 
@@ -266,7 +308,7 @@ Double-check AI recommendations with `kubectl` commands before applying changes.
 ### Development Iteration
 ```bash
 make up sample           # Start with stack
-/cluster-health          # Quick AI check
+$claude > /health        # Quick AI check
 make restart sample      # Iterate
 "Confirm everything redeployed correctly"
 ```
@@ -284,8 +326,8 @@ Use AI insights to improve your pipelines:
 
 ### Quick Diagnostics
 ```bash
-kubectl get nodes   # Verify cluster is running
-/cluster-health     # Test AI connectivity
+kubectl get nodes       # Verify cluster is running
+$claude > /health       # Test AI connectivity
 ```
 
 ### Common Issues
@@ -293,7 +335,7 @@ kubectl get nodes   # Verify cluster is running
 **"AI doesn't respond to cluster questions"**
 - Verify: `kubectl get nodes` - cluster should be accessible
 - Fix: `make up` if no cluster is running
-- Try: `/cluster-health` to test connectivity
+- Try: `$claude > /health` to test connectivity
 
 **"AI can't see my cluster"**
 - Ensure cluster is running: `make status`
@@ -317,32 +359,43 @@ AI assistance is designed to fail gracefully:
 
 ## Best Practices Summary
 
-1. **Start with `/cluster-health` for comprehensive status**
+1. **Start with `$claude > /health` for comprehensive status**
 2. **Ask broad questions first, then drill down**
 3. **Use AI for analysis, `kubectl` for actions**
 4. **Let AI explain complex relationships and dependencies**
 5. **Always verify AI suggestions before implementing**
 6. **Combine AI assistance with traditional tools based on the situation**
+7. **Use agent-specific commands for specialized expertise**
 
 Remember: AI assistance enhances your Kubernetes expertise but doesn't replace it. Use it as a powerful analytical tool while maintaining hands-on control of your infrastructure.
 
 ---
 
-## Advanced: Explicit Subagent Usage
+## Advanced: Agent-Specific Interactions
 
-For power users, you can explicitly call specialized agents:
+For power users, you can explicitly target specialized agents within Claude Code:
 
-**Infrastructure specialist:**
+**Infrastructure specialist (cluster-agent):**
 ```
-cluster-agent: "Show me detailed resource usage and any infrastructure issues"
-```
-
-**GitOps specialist:**
-```
-software-agent: "Analyze the Flux deployment status and dependency chain"
+$claude > cluster-agent: "Show me detailed resource usage and any infrastructure issues"
 ```
 
-However, natural language questions work just as well and are easier to remember.
+**GitOps specialist (software-agent):**
+```
+$claude > software-agent: "Analyze the Flux deployment status and dependency chain"
+```
+
+**GitOps deployment specialist (gitops-committer):**
+```
+$claude > gitops-committer: "Update resource limits for cert-manager and commit the changes"
+```
+
+**Development specialist (developer-agent):**
+```
+$claude > developer-agent: "Set up an isolated worktree for feature development"
+```
+
+However, natural language questions work just as well and Claude Code automatically routes to the appropriate specialist.
 
 ---
 

@@ -81,7 +81,7 @@ make up sample # Start cluster with a sample software stack
 * **2+ CPU cores, 4GB+ RAM** (8GB recommended)
 * **Mac, Linux, or Windows WSL2**
 
-> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install`. Run `make prepare` to setup pre-commit hooks and automation for development workflows.
+> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install`.
 
 ---
 

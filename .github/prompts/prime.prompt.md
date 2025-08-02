@@ -2,7 +2,7 @@
 description: "Prime Copilot with HostK8s project context and architecture understanding for development tasks"
 mode: agent
 tools: ["codebase", "search", "editFiles"]
-model: gpt-4.1
+model: GPT-4.1
 ---
 
 # HostK8s Context Primer
