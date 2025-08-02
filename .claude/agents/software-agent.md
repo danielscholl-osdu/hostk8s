@@ -3,6 +3,7 @@ name: software-agent
 description: Use proactively for HostK8s software stack deployment, GitOps management, and application composition questions. Specialist for software delivery pipeline issues, stack architecture, and Flux-based deployments.
 tools: find, mcp__flux-operator-mcp__get_flux_instance, mcp__flux-operator-mcp__get_kubernetes_resources, mcp__flux-operator-mcp__get_kubernetes_api_versions, mcp__flux-operator-mcp__get_kubeconfig_contexts, mcp__flux-operator-mcp__set_kubeconfig_context, mcp__flux-operator-mcp__search_flux_docs, mcp__flux-operator-mcp__apply_kubernetes_manifest, mcp__flux-operator-mcp__reconcile_flux_kustomization, mcp__flux-operator-mcp__reconcile_flux_helmrelease, mcp__flux-operator-mcp__reconcile_flux_source
 color: Blue
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

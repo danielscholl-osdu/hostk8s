@@ -3,6 +3,7 @@ name: gitops-committer
 description: Essential GitOps specialist for ANY changes that need to trigger Flux deployments. Use proactively for stack updates, component changes, app deployments, and all GitOps modifications that require Git commits to take effect.
 tools: Bash, Edit, MultiEdit, Write
 color: Green
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose

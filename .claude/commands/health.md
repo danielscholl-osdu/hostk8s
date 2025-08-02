@@ -2,6 +2,7 @@
 allowed-tools: Task, mcp__kubernetes__kubectl_get, mcp__kubernetes__kubectl_describe, mcp__flux-operator-mcp__get_flux_instance, mcp__flux-operator-mcp__get_kubernetes_resources, mcp__flux-operator-mcp__get_kubernetes_metrics
 argument-hint: [component] [--detailed] | Examples: cert-manager | ingress-nginx --detailed | --quick
 description: Comprehensive cluster health assessment with infrastructure and GitOps analysis
+model: claude-sonnet-4-20250514
 ---
 
 # Cluster Health Report

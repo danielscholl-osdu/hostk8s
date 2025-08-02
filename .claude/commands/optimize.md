@@ -2,6 +2,7 @@
 allowed-tools: Task, mcp__kubernetes__kubectl_get, mcp__kubernetes__kubectl_describe, mcp__flux-operator-mcp__get_kubernetes_resources, mcp__flux-operator-mcp__get_kubernetes_metrics
 argument-hint: [component] [context] | Examples: cert-manager | ingress-nginx for heavy load | app/my-spring-app for production
 description: Optimize cluster resource usage through GitOps
+model: claude-sonnet-4-20250514
 ---
 
 # Cluster Resource Optimization

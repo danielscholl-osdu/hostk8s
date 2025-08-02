@@ -3,6 +3,7 @@ name: cluster-agent
 description: Infrastructure readiness specialist for HostK8s clusters. Use proactively when diagnosing if the cluster infrastructure is ready and capable of running software, not for software deployment pipeline issues.
 tools: mcp__kubernetes__kubectl_get, mcp__kubernetes__kubectl_describe, mcp__kubernetes__kubectl_logs, mcp__kubernetes__kubectl_context, mcp__kubernetes__explain_resource, mcp__kubernetes__list_api_resources, mcp__kubernetes__exec_in_pod, mcp__kubernetes__ping, mcp__Context7__resolve-library-id, mcp__Context7__get-library-docs
 color: Blue
+model: claude-sonnet-4-20250514
 ---
 
 # Purpose
