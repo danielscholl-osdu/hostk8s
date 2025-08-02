@@ -96,7 +96,7 @@ restart: ## Quick cluster reset for development iteration (Usage: make restart [
 clean: ## Complete cleanup (destroy cluster and data)
 	@./infra/scripts/cluster-down.sh 2>/dev/null || true
 	@kind delete cluster --name hostk8s 2>/dev/null || true
-	@rm -rf data/kubeconfig/ 2>/dev/null || true
+	@rm -rf data/ 2>/dev/null || true
 	@docker system prune -f >/dev/null 2>&1 || true
 
 status: ## Show cluster health and running services
