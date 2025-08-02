@@ -185,12 +185,41 @@ create_worktree() {
     cd "$worktree_dir"
     if ! git ls-remote --exit-code --heads origin "$branch_name" >/dev/null 2>&1; then
         log_debug "Pushing new branch to remote"
-        git add .env "infra/kubernetes/extension/kind-${name}.yaml" 2>/dev/null || true
-        git commit --allow-empty -m "Initialize ${name} development branch
+
+        # Verify files exist before adding them
+        files_to_add=()
+        if [[ -f ".env" ]]; then
+            files_to_add+=(".env")
+        fi
+        if [[ -f "infra/kubernetes/extension/kind-${name}.yaml" ]]; then
+            files_to_add+=("infra/kubernetes/extension/kind-${name}.yaml")
+        fi
+
+        # Only add files if they exist
+        if [[ ${#files_to_add[@]} -gt 0 ]]; then
+            log_debug "Adding files to git: ${files_to_add[*]}"
+            git add "${files_to_add[@]}"
+        else
+            log_debug "No files to add, creating empty commit"
+        fi
+
+        # Check if there are staged changes or if we need an empty commit
+        if git diff --staged --quiet && [[ ${#files_to_add[@]} -eq 0 ]]; then
+            # No staged changes, use --allow-empty
+            git commit --allow-empty -m "Initialize ${name} development branch
 
 - Environment configured for ${name} cluster
 - Custom Kind config with unique ports
 - GitOps enabled for branch ${branch_name}"
+        else
+            # Has staged changes, normal commit
+            git commit -m "Initialize ${name} development branch
+
+- Environment configured for ${name} cluster
+- Custom Kind config with unique ports
+- GitOps enabled for branch ${branch_name}"
+        fi
+
         git push -u origin "$branch_name"
     fi
 
