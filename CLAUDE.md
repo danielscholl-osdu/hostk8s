@@ -195,6 +195,15 @@ export GITOPS_REPO=https://github.com/team/stack
 make up extension
 ```
 
+## Resource Management Philosophy
+
+**Flux Controllers**: Accept default resource limits (1GB memory per controller, ~6GB total) as a stable GitOps overhead. This trade-off prioritizes:
+- **Simplicity**: Standard `flux install` without custom manifests
+- **Stability**: Default limits ensure Flux controllers never OOM
+- **Maintainability**: No custom patches to break during upgrades
+
+**Optimization Focus**: Target user-deployed components (ingress controllers, applications, stack components) where GitOps can manage resource limits effectively.
+
 ## Coding Conventions
 
 - **YAML:** Validate with `yamllint -c .yamllint.yaml .` (CI enforced)
