@@ -7,11 +7,11 @@ Optimized ADR Index for Agent Context
 | id  | title                               | status | details |
 | --- | ----------------------------------- | ------ | ------- |
 | 001 | Host-Mode Architecture              | acc    | [ADR-001](001-host-mode-architecture.md) |
-| 002 | Make Interface Standardization     | acc    | [ADR-002](002-make-interface-standardization.md) |
-| 003 | GitOps Stack Pattern               | acc    | [ADR-003](003-gitops-stack-pattern.md) |
+| 002 | Make Interface Standardization      | acc    | [ADR-002](002-make-interface-standardization.md) |
+| 003 | GitOps Stack Pattern                | acc    | [ADR-003](003-gitops-stack-pattern.md) |
 | 004 | Extension System Architecture       | acc    | [ADR-004](004-extension-system-architecture.md) |
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](005-ai-assisted-development-integration.md) |
-| 006 | Hybrid CI/CD Strategy              | acc    | [ADR-006](006-hybrid-ci-cd-strategy.md) |
+| 006 | Hybrid CI/CD Strategy               | acc    | [ADR-006](006-hybrid-ci-cd-strategy.md) |
 
 ---
 

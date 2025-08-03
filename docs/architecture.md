@@ -294,45 +294,34 @@ The platform integrates with existing CI/CD systems through standard tooling com
 
 For detailed rationale behind key design choices, see our Architecture Decision Records:
 
-### ADR Index
-
-| id  | title                               | status | details |
-| --- | ----------------------------------- | ------ | ------- |
-| 001 | Host-Mode Architecture              | acc    | [ADR-001](adr/001-host-mode-architecture.md) |
-| 002 | Make Interface Standardization     | acc    | [ADR-002](adr/002-make-interface-standardization.md) |
-| 003 | GitOps Stack Pattern               | acc    | [ADR-003](adr/003-gitops-stack-pattern.md) |
-| 004 | Extension System Architecture       | acc    | [ADR-004](adr/004-extension-system-architecture.md) |
-| 005 | AI-Assisted Development Integration | acc    | [ADR-005](adr/005-ai-assisted-development-integration.md) |
-| 006 | Hybrid CI/CD Strategy              | temp   | [ADR-006](adr/006-hybrid-ci-cd-strategy.md) |
-
 ### ADR Summaries
 
-**ADR-001: Host-Mode Architecture**
+**[ADR-001: Host-Mode Architecture](adr/001-host-mode-architecture.md)**
 - **Decision**: Use Kind directly on host Docker daemon, eliminating Docker-in-Docker complexity
 - **Benefits**: Stability, faster startup, lower resource usage, standard kubectl/kind workflow
 - **Tradeoffs**: Less isolation, Docker Desktop dependency, single-node limitation
 
-**ADR-002: Make Interface Standardization**
+**[ADR-002: Make Interface Standardization](adr/002-make-interface-standardization.md)**
 - **Decision**: Implement standardized Make interface wrapping all operational scripts with consistent conventions
 - **Benefits**: Universal familiarity, standard conventions, automatic KUBECONFIG handling, discoverability
 - **Tradeoffs**: Abstraction layer, Make dependency, argument limitations
 
-**ADR-003: GitOps Stack Pattern**
+**[ADR-003: GitOps Stack Pattern](adr/003-gitops-stack-pattern.md)**
 - **Decision**: Implement stack pattern for deploying complete environments via Flux with component/application separation
 - **Benefits**: Complete environments, platform agnostic, dependency management, reusability
 - **Tradeoffs**: Learning curve, debugging complexity, bootstrap dependency
 
-**ADR-004: Extension System Architecture**
+**[ADR-004: Extension System Architecture](adr/004-extension-system-architecture.md)**
 - **Decision**: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration
 - **Benefits**: Complete customization, first-class experience, dynamic configuration, external integration
 - **Tradeoffs**: Discovery challenge, template complexity, documentation overhead, testing complexity
 
-**ADR-005: AI-Assisted Development Integration**
+**[ADR-005: AI-Assisted Development Integration](adr/005-ai-assisted-development-integration.md)**
 - **Decision**: Integrate optional AI-assisted development capabilities through three-layer architecture (MCP servers, specialized subagents, automated hooks)
 - **Benefits**: Productivity multiplier, optional enhancement, extensible architecture, domain specialization
 - **Tradeoffs**: Architectural complexity, current AI service dependency, learning curve
 
-**ADR-006: Temporary Hybrid CI/CD Workaround**
+**[ADR-006: Temporary Hybrid CI/CD Workaround](adr/006-hybrid-ci-cd-strategy.md)**
 - **Decision**: Temporary workaround using GitLab CI for validation then triggering GitHub Actions for Kubernetes testing due to GitLab runner limitations
 - **Benefits**: Preserves GitLab workflow, accesses GitHub K8s tooling, smart change detection
 - **Tradeoffs**: Operational complexity, dual platform dependency, temporary solution
