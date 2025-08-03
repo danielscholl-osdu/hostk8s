@@ -123,6 +123,11 @@ show_gitops_applications() {
     done
 }
 
+is_ingress_controller_ready() {
+    local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
+    [ "$ingress_ready" = "ready" ]
+}
+
 show_ingress_controller_status() {
     local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
 
@@ -197,16 +202,21 @@ show_app_ingress() {
         [ -z "$ns" ] && continue
 
         if [ "$hosts" = "localhost" ]; then
-            local access=$(get_ingress_access "$app_name" "$ns $name $class $hosts $address $ports $age")
-            if [ "$app_type" = "application" ]; then
-                local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
-                if [ "$path" = "/" ]; then
-                    echo "   Access: http://localhost:8080/ ($name ingress)"
+            if is_ingress_controller_ready; then
+                local access=$(get_ingress_access "$app_name" "$ns $name $class $hosts $address $ports $age")
+                if [ "$app_type" = "application" ]; then
+                    local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                    if [ "$path" = "/" ]; then
+                        echo "   Access: http://localhost:8080/ ($name ingress)"
+                    else
+                        echo "   Access: http://localhost:8080$path ($name ingress)"
+                    fi
                 else
-                    echo "   Access: http://localhost:8080$path ($name ingress)"
+                    echo "   Ingress: $name ($access)"
                 fi
             else
-                echo "   Ingress: $name ($access)"
+                echo "   Ingress: $name (configured but controller not ready)"
+                echo "   Enable with: export INGRESS_ENABLED=true && make restart"
             fi
         else
             echo "   Ingress: $name (hosts: $hosts)"
@@ -278,6 +288,72 @@ show_mcp_status() {
     fi
 }
 
+show_addon_status() {
+    # Check if any addons are installed
+    local has_addons=false
+
+    if has_metallb || has_ingress; then
+        has_addons=true
+    fi
+
+    if [ "$has_addons" = "false" ]; then
+        return 0
+    fi
+
+    log_info "Cluster Addons"
+
+    # Show MetalLB status if installed
+    if has_metallb; then
+        local metallb_status="NotReady"
+        local metallb_message=""
+
+        # Check if MetalLB pods are running
+        local metallb_pods=$(kubectl get pods -n metallb-system -l app=metallb --no-headers 2>/dev/null | awk '{print $3}' | tr '\n' ' ')
+        if echo "$metallb_pods" | grep -q "Running"; then
+            local running_count=$(echo "$metallb_pods" | grep -o "Running" | wc -l | tr -d ' ')
+            local total_count=$(echo "$metallb_pods" | wc -w | tr -d ' ')
+            if [ "$running_count" = "$total_count" ] && [ "$total_count" -gt 0 ]; then
+                metallb_status="Ready"
+                metallb_message="LoadBalancer support available"
+            else
+                metallb_status="Pending"
+                metallb_message="$running_count/$total_count pods running"
+            fi
+        else
+            metallb_status="NotReady"
+            metallb_message="Pods not running"
+        fi
+
+        echo "🔗 MetalLB (LoadBalancer): $metallb_status"
+        [ -n "$metallb_message" ] && echo "   Status: $metallb_message"
+    fi
+
+    # Show Ingress status if installed
+    if has_ingress; then
+        local ingress_status="NotReady"
+        local ingress_message=""
+
+        # Check if ingress controller deployment is ready
+        local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print a[1] "/" a[2]}' || echo "not found")
+
+        if [ "$ingress_ready" = "ready" ]; then
+            ingress_status="Ready"
+            ingress_message="HTTP/HTTPS ingress available at localhost:8080/8443"
+        elif [ "$ingress_ready" = "not found" ]; then
+            ingress_status="NotReady"
+            ingress_message="Controller deployment not found"
+        else
+            ingress_status="Pending"
+            ingress_message="Controller deployment $ingress_ready ready"
+        fi
+
+        echo "🌐 NGINX Ingress: $ingress_status"
+        [ -n "$ingress_message" ] && echo "   Status: $ingress_message"
+    fi
+
+    echo
+}
+
 # Main function
 main() {
     # Check if cluster exists (but allow status to show when not running)
@@ -294,6 +370,7 @@ main() {
 
     show_kubeconfig_info
     show_gitops_status
+    show_addon_status
     show_gitops_applications
     show_manual_deployed_apps
     show_health_check

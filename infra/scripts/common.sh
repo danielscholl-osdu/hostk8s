@@ -173,6 +173,15 @@ get_flux_version() {
     fi
 }
 
+# Addon detection functions
+has_metallb() {
+    kubectl get namespace metallb-system >/dev/null 2>&1
+}
+
+has_ingress() {
+    kubectl get namespace ingress-nginx >/dev/null 2>&1
+}
+
 # Argument parsing helpers
 parse_make_args() {
     # Extract arguments from MAKECMDGOALS-style input

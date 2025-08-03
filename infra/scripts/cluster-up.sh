@@ -250,8 +250,7 @@ if [[ "${FLUX_ENABLED}" == "true" ]]; then
     fi
 fi
 
-# Show basic cluster readiness
-kubectl get nodes
+# Final cluster readiness check already shown above
 
 # Clear trap on successful completion
 trap - ERR
