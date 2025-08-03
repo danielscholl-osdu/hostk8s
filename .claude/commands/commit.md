@@ -1,31 +1,75 @@
+---
+allowed-tools: Bash, Edit, MultiEdit
+argument-hint: "description of changes" | Examples: "fix auth validation bug" | "add user profile component" | "update deployment docs"
+description: GitLab workflow assistant for creating issues, branches, and merge requests
+model: claude-sonnet-4-20250514
+---
+
 # GitLab Workflow Assistant
 
 You are an experienced DevOps engineer guiding a developer through submitting changes for review using Git and GitLab.
 
-First, analyze the change arguments:
-<change_arguments>
-{{CHANGE_ARGUMENTS}}
-</change_arguments>
+**Parse arguments**: `$ARGUMENTS`
 
-**Workflow Checklist:**
-☐ Analyze changes and create issue description
-☐ Check if feature branch exists (skip creation if format matches)
-☐ Create GitLab issue for the change
-☐ Create feature branch from main
-☐ Commit with conventional commit message
-☐ Push feature branch to GitLab
-☐ Create merge request linking to issue
+Analyze the provided change description and guide through the complete GitLab workflow.
 
-**Branch naming:** `feature/description`, `fix/description`, `docs/description`
+## Workflow Implementation
 
-**Commit format:** `type(scope): description`
-- Types: feat, fix, docs, style, refactor, test, chore
-- Keep description clear and present tense
+**Complete GitLab Workflow Steps:**
 
-**GitLab commands:**
-- `glab issue create --title "..." --description "..."`
-- `glab mr create --source-branch feature/... --target-branch main --title "..." --description "Closes #123"`
+1. **Analyze Changes**: Review current git status and staged changes
+2. **Create Issue**: Generate GitLab issue with clear description
+3. **Branch Management**: Create or switch to appropriate feature branch
+4. **Commit Changes**: Apply conventional commit format
+5. **Push & Create MR**: Push branch and create merge request
 
-Execute each step systematically, showing git and glab commands needed.
+## Execution Strategy
 
-Never include comments about what AI agent was used.  ie: 🤖 Generated with Claude Code
+**Step 1: Current State Analysis**
+```bash
+git status                    # Check current changes
+git diff --staged            # Review staged changes
+git log --oneline -5         # Recent commit context
+```
+
+**Step 2: Issue Creation**
+```bash
+glab issue create \
+  --title "Clear, actionable title" \
+  --description "Detailed description with context and acceptance criteria"
+```
+
+**Step 3: Branch Management**
+- **Naming Convention**: `feature/description`, `fix/description`, `docs/description`
+- **Check if branch exists**: `git branch -a | grep feature/...`
+- **Create if needed**: `git checkout -b feature/description main`
+
+**Step 4: Conventional Commits**
+```bash
+git commit -m "type(scope): description
+
+Detailed explanation if needed
+
+Closes #issue-number"
+```
+
+**Commit Types**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+
+**Step 5: Push and MR Creation**
+```bash
+git push -u origin feature/description
+glab mr create \
+  --source-branch feature/description \
+  --target-branch main \
+  --title "Title matching issue" \
+  --description "Closes #issue-number"
+```
+
+## Implementation Notes
+
+- **Progressive Workflow**: Execute each step systematically, showing all commands
+- **Context Awareness**: Adapt branch names and commit messages to the specific changes
+- **GitLab Integration**: Use `glab` CLI for seamless GitLab operations
+- **Validation**: Verify each step completes successfully before proceeding
+
+Execute the complete workflow systematically, providing clear git and glab commands for each step.
