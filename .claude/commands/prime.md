@@ -1,43 +1,35 @@
 ---
-description: "Prime Copilot with HostK8s project context and architecture understanding for development tasks"
-mode: agent
-tools: ["codebase", "search", "editFiles"]
-model: gpt-4.1
+allowed-tools: Read, Bash(git ls-files:*), Bash(eza:*), Bash(find:*)
+argument-hint: [focus-area]
+description: Prime Claude with project context and architecture understanding
+model: claude-sonnet-4-20250514
 ---
 
-# HostK8s Context Primer
+## Context Discovery
 
-You are an expert Kubernetes platform engineer with deep knowledge of Kind, GitOps (Flux), extension-based architecture, and Makefile-driven workflows. You have 8+ years of experience in cloud-native development and infrastructure automation.
+- Project README: @README.md
+- Architecture overview: @docs/architecture.md
+- All tracked files: !`git ls-files`
+- Project structure: !`find . -maxdepth 3 -type f -not -path './.git/*' | head -30`
 
-## Task
-- Gather and synthesize project context from README, architecture docs, and file structure
-- Summarize key patterns: 3-layer abstraction (Make → Scripts → Utilities), GitOps with Flux, extension system
-- Recognize and describe the main directory structure:
-  - `/infra/` - Kubernetes configs and orchestration
-  - `/software/` - GitOps applications and stacks
-  - `/src/` - Source code for applications
-  - `/docs/` - Architecture documentation
-- If `${input:focusArea}` is provided, highlight relevant context for that area
-- Recommend specialized agents for specific tasks when appropriate
+## Your task
 
-## Instructions
-1. Read and summarize `README.md` and `docs/architecture.md`
-2. List tracked files and project structure using workspace tools
-3. Synthesize key patterns and architecture
-4. If a focus area is provided, include a dedicated section
-5. Output a markdown summary with clear sections
-6. If files are missing, note gracefully
+You are now primed with the HostK8s project context. Based on the above information:
 
-## Context/Input
-- Uses `README.md`, `docs/architecture.md`, file listing
-- Accepts `${input:focusArea}` as an optional variable
+1. **Understand the architecture**: This is a Kubernetes development platform built on Kind with host-mode execution
+2. **Know the key patterns**: 3-layer abstraction (Make → Scripts → Utilities), GitOps with Flux, extension system
+3. **Recognize the structure**:
+   - `/infra/` - Kubernetes configs and orchestration
+   - `/software/` - GitOps applications and stacks
+   - `/src/` - Source code for applications
+   - `/docs/` - Architecture documentation
 
-## Output
-- Markdown summary of project context, architecture, and key patterns
-- Dedicated section for focus area if provided
-- No file creation or modification
+${ARGUMENTS:+## Focus Area
 
-## Quality/Validation
-- Output includes summaries of README, architecture, file list, and structure
-- Copilot is primed with accurate, concise project context and architecture
-- Graceful error handling for missing files
+The user wants you to pay special attention to: $ARGUMENTS}
+
+You are now ready to assist with HostK8s development tasks. Use the specialized agents when appropriate:
+- `cluster-agent` for infrastructure and Kubernetes issues
+- `software-agent` for GitOps and Flux deployments
+- `gitops-committer` for any changes requiring Git commits
+- `developer-agent` specific autonomous work using a worktree development flow
