@@ -6,7 +6,7 @@ This guide shows you how to use AI assistance with HostK8s to accelerate develop
 
 ## Core Principle
 
-AI assistance in HostK8s is **optional** and designed to accelerate complex operations while preserving traditional workflows. Use AI when it adds value; use standard commands when they're faster.
+AI assistance in HostK8s is designed to accelerate complex operations while preserving traditional workflows. Use AI when it adds value; use standard commands when they're faster.
 
 ## Multi-Agent Architecture
 
@@ -14,55 +14,51 @@ HostK8s uses specialized AI agents, each tuned for specific domains and capabili
 
 ### Agent Specializations
 
-**Claude Code** - Infrastructure & GitOps Specialist:
-- **cluster-agent**: Kubernetes infrastructure readiness and troubleshooting
-- **software-agent**: GitOps deployments, Flux management, and application composition
-- **gitops-committer**: Git commits for Flux-triggered deployments
-- **developer-agent**: Full-stack development with isolated worktrees
+HostK8s supports two main AI agents, each with overlapping capabilities and unique strengths. Both agents can operate in agent mode (modifying files and automating workflows), but their optimal environments and specialties differ:
 
-**GitHub Copilot** - Development Workflow Specialist:
-- Code generation and completion
-- Commit message enhancement
-- Development environment setup
-- Code review and optimization
+**Claude Code** – Infrastructure, GitOps, and Specialist Subagents:
+- Works best for infrastructure analysis, GitOps automation, and complex troubleshooting
+- Offers specialist subagents for focused tasks:
+  - **cluster-agent**: Kubernetes infrastructure readiness and troubleshooting
+  - **software-agent**: GitOps deployments, Flux management, and application composition
+  - **gitops-committer**: Git commits for Flux-triggered deployments
+  - **developer-agent**: Full-stack development with isolated worktrees
+- Ideal for command-line, automation, and deep system analysis
+
+**GitHub Copilot** – Development Workflow and IDE Assistance:
+- Excels in AI assistive mode within IDEs (code completion, suggestions, inline help)
+- Can also operate in agent mode to modify files, automate commits, and optimize code
+- Specializes in development environment setup, code review, and workflow enhancement
+- Best for interactive development and exploration
+
+**Similarities:**
+- Both agents can automate file changes, enhance commit workflows, and support development tasks
+- Both understand HostK8s context and can answer natural language questions
+
+**Differences:**
+- Claude Code provides specialist subagents for infrastructure and GitOps
+- Copilot is optimized for IDE integration and developer productivity
+
+Choose the agent that best fits your workflow: use Copilot for exploration and IDE tasks, and Claude Code for infrastructure, GitOps, and advanced automation.
 
 ### Agent-Specific Syntax
 
-Each agent has specialized commands optimized for its expertise:
+Each agent can execute specialized command prompts for reoccuring development workflows:
 
 ```bash
-# Claude Code commands (infrastructure focus)
-$claude > /health           # Comprehensive cluster assessment
-$claude > /optimize         # Resource optimization through GitOps
-$claude > /prime           # Project orientation and context
-
-# GitHub Copilot commands (development focus)
-$copilot > /commit          # Enhanced commit workflows
-$copilot > /worktree        # Development environment setup
+$agent > /commit           # Enhanced commit workflows
+$agent > /health           # Comprehensive cluster assessment
+$agent > /optimize         # Resource optimization through GitOps
+$agent > /prime            # Project orientation and context
+$agent > /worktree         # Development environment setup
 ```
 
-This architecture ensures you get the most relevant expertise for each task while maintaining familiar command patterns.
+This architecture ensures you get repeatable expertise for each workflow while maintaining familiar command patterns.
 
 ## Getting Started with AI
 
 HostK8s works with multiple AI agents like **Claude Code** and **GitHub Copilot**. Each agent is tuned for specific tasks and provides specialized capabilities for your cluster and GitOps deployments.
 
-### Start Here: Agent-Specific Commands
-
-The fastest way to get AI help is with agent-specific slash commands. Each AI agent has specialized commands tuned to its expertise:
-
-**Claude Code (Infrastructure & GitOps):**
-```
-$claude > /health           # Comprehensive cluster assessment
-$claude > /optimize         # Resource optimization through GitOps
-$claude > /prime           # Quick project orientation
-```
-
-**GitHub Copilot (Development Workflows):**
-```
-$copilot > /commit "message"  # Enhanced commit workflows
-$copilot > /worktree          # Development environment setup
-```
 
 ### Natural Language Questions
 
@@ -93,7 +89,7 @@ make up sample  # Creates cluster with sample GitOps stack
 
 **Option 1: Comprehensive health check**
 ```
-$claude > /health
+$agent > /health
 ```
 
 **Option 2: Natural language questions**
@@ -103,7 +99,7 @@ $claude > /health
 "Are there any problems I should know about?"
 ```
 
-If any of these work, you have AI assistance running. If not, see [Troubleshooting](#troubleshooting) below.
+If any of these work, you have AI assistance running.
 
 ---
 
@@ -313,53 +309,11 @@ make restart sample      # Iterate
 "Confirm everything redeployed correctly"
 ```
 
-### CI/CD Integration
-Use AI insights to improve your pipelines:
-```
-"Analyze why the CI pipeline is failing on the GitOps validation step"
-"What would happen if I deploy this stack to staging?"
-```
-
----
-
-## Troubleshooting
-
-### Quick Diagnostics
-```bash
-kubectl get nodes       # Verify cluster is running
-$claude > /health       # Test AI connectivity
-```
-
-### Common Issues
-
-**"AI doesn't respond to cluster questions"**
-- Verify: `kubectl get nodes` - cluster should be accessible
-- Fix: `make up` if no cluster is running
-- Try: `$claude > /health` to test connectivity
-
-**"AI can't see my cluster"**
-- Ensure cluster is running: `make status`
-- Try simple questions first: "What pods are running?"
-
-**"AI gives outdated information"**
-- AI reads real-time cluster state
-- Try: "Refresh and show me current pod status"
-
-**"Automation isn't working"**
-- Check: `.claude/settings.json` exists
-- Test: Make a simple commit and watch for automatic improvements
-
-### When AI Fails
-AI assistance is designed to fail gracefully:
-- Traditional `make` commands always work
-- Use `kubectl` to verify AI suggestions
-- AI will tell you when it can't access something
-
 ---
 
 ## Best Practices Summary
 
-1. **Start with `$claude > /health` for comprehensive status**
+1. **Start with `$agent > /health` for comprehensive status**
 2. **Ask broad questions first, then drill down**
 3. **Use AI for analysis, `kubectl` for actions**
 4. **Let AI explain complex relationships and dependencies**
