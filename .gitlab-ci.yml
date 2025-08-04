@@ -122,6 +122,7 @@ execute:
       \"gitlab_commit_sha\":\"$CI_COMMIT_SHA\",
       \"gitlab_ref\":\"$CI_COMMIT_REF_NAME\",
       \"gitlab_pipeline_url\":\"$CI_PIPELINE_URL\",
+      \"gitlab_project_id\":\"$CI_PROJECT_ID\",
       \"gitops_repo\":\"https://github.com/$GITHUB_REPO\",
       \"trigger_source\":\"gitlab-ci\",
       \"test_type\":\"gitops-reconciliation\"}}"
@@ -132,7 +133,7 @@ execute:
       curl -X POST
       -H "PRIVATE-TOKEN: $GITLAB_TOKEN"
       -H "Content-Type: application/json"
-      https://community.opengroup.org/api/v4/projects/1595/statuses/$CI_COMMIT_SHA
+      https://community.opengroup.org/api/v4/projects/$CI_PROJECT_ID/statuses/$CI_COMMIT_SHA
       -d "{\"state\": \"running\",
       \"target_url\": \"https://github.com/$GITHUB_REPO/actions\",
       \"description\": \"GitOps reconciliation tests are running...\",
