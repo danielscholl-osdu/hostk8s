@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install clean up down restart prepare test status deploy logs port-forward build mcp-status
+.PHONY: help install clean up down restart prepare status deploy logs build
 
 # Environment setup
 KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
@@ -118,49 +118,22 @@ deploy: ## Deploy application (Usage: make deploy [simple])
 	./infra/scripts/deploy-app.sh "$$APP_NAME"
 
 # Handle app arguments as targets to avoid "No rule to make target" errors
-multi-tier extension/sample registry-demo:
+extension/sample registry-demo:
 	@:
 
 # Handle src/* arguments as targets to avoid "No rule to make target" errors
 src/%:
 	@:
 
-test: ## Run comprehensive cluster validation tests
-	$(call check_cluster)
-	@echo "🧪 Running comprehensive validation tests..."
-	@./infra/scripts/cluster-validate.sh
 
 logs: ## View recent cluster events and logs
 	$(call check_cluster)
 	@./infra/scripts/utils.sh logs $(filter-out logs,$(MAKECMDGOALS))
 
-port-forward: ## Port forward a service (make port-forward SVC=myservice PORT=8080)
-	$(call check_cluster)
-	@SVC=${SVC}; PORT=${PORT:-8080}; \
-	if [ -z "$$SVC" ]; then \
-		echo "Usage: make port-forward SVC=myservice [PORT=8080]"; \
-		echo "Available services:"; \
-		kubectl get svc; \
-	else \
-		./infra/scripts/utils.sh forward "$$SVC" "$$PORT"; \
-	fi
-
-##@ Source Code Operations
-
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
 	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
 	./infra/scripts/build.sh "$$APP_PATH"
 
-##@ AI-Assisted GitOps
-
-mcp-status: ## Check MCP server status and connectivity
-	@echo "🤖 Checking MCP server status..."
-	@if command -v flux-operator-mcp >/dev/null 2>&1; then \
-		echo "✅ flux-operator-mcp binary found"; \
-		flux-operator-mcp --version 2>/dev/null || echo "⚠️  flux-operator-mcp version check failed"; \
-	else \
-		echo "❌ flux-operator-mcp not found. Run 'make install' to install."; \
-	fi
 	@if [ -f "$(KUBECONFIG_PATH)" ]; then \
 		echo "✅ Kubeconfig found: $(KUBECONFIG_PATH)"; \
 		echo "🔗 MCP configuration: .mcp.json"; \
