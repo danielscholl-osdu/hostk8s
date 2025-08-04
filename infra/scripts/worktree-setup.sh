@@ -19,6 +19,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GIT_USER=""
 ARGUMENT=""
 ARGUMENT_TYPE=""
+CURRENT_WORKTREE_DIR=""
 
 # Port allocation strategy to prevent conflicts
 # Using simple function instead of associative arrays for bash 3.2 compatibility
@@ -28,6 +29,53 @@ BASE_API_PORT=6443
 BASE_HTTP_PORT=8080
 BASE_HTTPS_PORT=8443
 BASE_REGISTRY_PORT=5001
+
+# Cleanup function for partial failures
+cleanup_on_failure() {
+    log_debug "Cleaning up partial worktree setup..."
+
+    # Remove incomplete worktree directory if it exists
+    if [[ -n "${CURRENT_WORKTREE_DIR}" && -d "${CURRENT_WORKTREE_DIR}" ]]; then
+        log_debug "Removing incomplete worktree: ${CURRENT_WORKTREE_DIR}"
+        rm -rf "${CURRENT_WORKTREE_DIR}" 2>/dev/null || true
+    fi
+
+    # Remove orphaned git worktree entries
+    if [[ -n "${CURRENT_WORKTREE_DIR}" ]]; then
+        git worktree prune 2>/dev/null || true
+    fi
+
+    log_debug "Cleanup completed"
+}
+
+# Set trap for cleanup on script exit due to error
+trap 'cleanup_on_failure' ERR
+
+# Retry function with exponential backoff
+retry_with_backoff() {
+    local max_attempts=3
+    local delay=2
+    local attempt=1
+    local description="$1"
+    shift
+
+    while [ $attempt -le $max_attempts ]; do
+        log_debug "Attempt $attempt: $description"
+        if "$@"; then
+            return 0
+        fi
+
+        if [ $attempt -eq $max_attempts ]; then
+            log_error "Failed after $max_attempts attempts: $description"
+            return 1
+        fi
+
+        log_warn "Attempt $attempt failed, retrying in ${delay}s..."
+        sleep $delay
+        delay=$((delay * 2))
+        attempt=$((attempt + 1))
+    done
+}
 
 # Get normalized git username
 get_git_user() {
@@ -108,15 +156,14 @@ create_kind_config() {
     mkdir -p "$worktree_dir/infra/kubernetes/extension"
     cp "$PROJECT_ROOT/infra/kubernetes/kind-config.yaml" "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
 
-    # Update cluster name and ports
-    sed -i.bak "s/name: hostk8s/name: ${name}/" "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
-    sed -i.bak "s/containerPort: 80/containerPort: 80/" "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
-    sed -i.bak "s/hostPort: 8080/hostPort: ${http_port}/" "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
-    sed -i.bak "s/containerPort: 443/containerPort: 443/" "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
-    sed -i.bak "s/hostPort: 8443/hostPort: ${https_port}/" "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
-
-    # Clean up backup files
-    rm -f "$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml.bak"
+    # Update cluster name and ports using cross-platform helper
+    local config_file="$worktree_dir/infra/kubernetes/extension/kind-${name}.yaml"
+    if ! cross_platform_sed_inplace "s/name: hostk8s/name: ${name}/" "$config_file" || \
+       ! cross_platform_sed_inplace "s/hostPort: 8080/hostPort: ${http_port}/" "$config_file" || \
+       ! cross_platform_sed_inplace "s/hostPort: 8443/hostPort: ${https_port}/" "$config_file"; then
+        log_error "Failed to update Kind configuration file"
+        exit 1
+    fi
 
     log_debug "Created custom Kind config: ${CYAN}infra/kubernetes/extension/kind-${name}.yaml${NC}"
 }
@@ -131,25 +178,10 @@ configure_environment() {
     # Copy environment template
     cp "$PROJECT_ROOT/.env.example" "$worktree_dir/.env"
 
-    # Update configuration - handle both commented and uncommented lines
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS sed syntax
-        sed -i '' "s/^# *CLUSTER_NAME=.*/CLUSTER_NAME=${name}/" "$worktree_dir/.env"
-        sed -i '' "s/^CLUSTER_NAME=.*/CLUSTER_NAME=${name}/" "$worktree_dir/.env"
-        sed -i '' "s/^# *GITOPS_BRANCH=.*/GITOPS_BRANCH=user\/${GIT_USER}\/${name}/" "$worktree_dir/.env"
-        sed -i '' "s/^GITOPS_BRANCH=.*/GITOPS_BRANCH=user\/${GIT_USER}\/${name}/" "$worktree_dir/.env"
-        sed -i '' "s/^# *FLUX_ENABLED=.*/FLUX_ENABLED=true/" "$worktree_dir/.env"
-        sed -i '' "s/^FLUX_ENABLED=.*/FLUX_ENABLED=true/" "$worktree_dir/.env"
-        echo "KIND_CONFIG=extension/${name}" >> "$worktree_dir/.env"
-    else
-        # Linux sed syntax
-        sed -i "s/^# *CLUSTER_NAME=.*/CLUSTER_NAME=${name}/" "$worktree_dir/.env"
-        sed -i "s/^CLUSTER_NAME=.*/CLUSTER_NAME=${name}/" "$worktree_dir/.env"
-        sed -i "s/^# *GITOPS_BRANCH=.*/GITOPS_BRANCH=user\/${GIT_USER}\/${name}/" "$worktree_dir/.env"
-        sed -i "s/^GITOPS_BRANCH=.*/GITOPS_BRANCH=user\/${GIT_USER}\/${name}/" "$worktree_dir/.env"
-        sed -i "s/^# *FLUX_ENABLED=.*/FLUX_ENABLED=true/" "$worktree_dir/.env"
-        sed -i "s/^FLUX_ENABLED=.*/FLUX_ENABLED=true/" "$worktree_dir/.env"
-        echo "KIND_CONFIG=extension/${name}" >> "$worktree_dir/.env"
+    # Update configuration using common.sh helper
+    if ! update_env_file "$worktree_dir/.env" "$name" "$GIT_USER" "$name"; then
+        log_error "Failed to update environment file"
+        exit 1
     fi
 
     log_success "Environment configured for ${CYAN}${name}${NC}"
@@ -163,16 +195,27 @@ create_worktree() {
 
     log_info "Creating worktree: ${CYAN}${name}${NC}"
 
+    # Set global variable for cleanup purposes
+    CURRENT_WORKTREE_DIR="$worktree_dir"
+
     # Create trees directory if it doesn't exist
     mkdir -p "$PROJECT_ROOT/trees"
 
-    # Check if branch exists
+    # Check if branch exists and create worktree with retry logic
     if git show-ref --verify --quiet "refs/heads/$branch_name"; then
         log_debug "Branch ${CYAN}${branch_name}${NC} already exists, using existing branch"
-        git worktree add "$worktree_dir" "$branch_name"
+        if ! retry_with_backoff "Adding worktree from existing branch" \
+            git worktree add "$worktree_dir" "$branch_name"; then
+            log_error "Failed to create worktree from existing branch"
+            exit 1
+        fi
     else
         log_debug "Creating new branch: ${CYAN}${branch_name}${NC}"
-        git worktree add -b "$branch_name" "$worktree_dir"
+        if ! retry_with_backoff "Adding worktree with new branch" \
+            git worktree add -b "$branch_name" "$worktree_dir"; then
+            log_error "Failed to create worktree with new branch"
+            exit 1
+        fi
     fi
 
     # Configure environment
@@ -220,7 +263,11 @@ create_worktree() {
 - GitOps enabled for branch ${branch_name}"
         fi
 
-        git push -u origin "$branch_name"
+        if ! retry_with_backoff "Pushing branch to remote" \
+            git push -u origin "$branch_name"; then
+            log_error "Failed to push branch after multiple attempts"
+            exit 1
+        fi
     fi
 
     # Start cluster
@@ -228,6 +275,10 @@ create_worktree() {
     make up
 
     cd "$PROJECT_ROOT"
+
+    # Clear the current worktree directory since creation was successful
+    CURRENT_WORKTREE_DIR=""
+
     log_success "Worktree ${CYAN}${name}${NC} created and cluster started"
 }
 
@@ -326,6 +377,9 @@ main() {
     log_info "To switch between worktrees:"
     log_info "  ${CYAN}cd trees/[worktree-name]${NC}"
     log_info "  ${CYAN}make status${NC}"
+
+    # Clear trap on successful completion
+    trap - ERR
 }
 
 # Execute main function with all arguments

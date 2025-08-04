@@ -9,7 +9,7 @@ source "$(dirname "$0")/common.sh"
 
 # Function for error handling
 error_exit() {
-    log_info_error "$1"
+    log_error "$1"
     exit 1
 }
 
