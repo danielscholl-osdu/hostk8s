@@ -7,16 +7,32 @@ show_kubeconfig_info() {
     echo
 }
 
-show_gitops_status() {
+show_gitops_resources() {
     if ! has_flux; then
         return 0
     fi
 
-    local flux_version=$(get_flux_version)
-    log_info "GitOps Status (Flux:$flux_version)"
-    echo
-    show_git_repositories
-    show_kustomizations
+    # Only show this section if there are actual GitOps resources configured
+    local has_git_repos=0
+    local has_kustomizations=0
+
+    if has_flux_cli; then
+        local git_output=$(flux get sources git 2>/dev/null)
+        if [ -n "$git_output" ] && echo "$git_output" | grep -q "^NAME"; then
+            has_git_repos=$(echo "$git_output" | grep -v "^NAME" | grep -c "." || echo "0")
+        fi
+
+        local kustomization_output=$(flux get kustomizations 2>/dev/null)
+        if [ -n "$kustomization_output" ] && echo "$kustomization_output" | grep -q "^NAME"; then
+            has_kustomizations=$(echo "$kustomization_output" | grep -v "^NAME" | grep -c "." || echo "0")
+        fi
+    fi
+
+    if [ "$has_git_repos" -gt 0 ] || [ "$has_kustomizations" -gt 0 ]; then
+        log_info "GitOps Resources"
+        show_git_repositories
+        show_kustomizations
+    fi
 }
 
 show_git_repositories() {
@@ -212,7 +228,7 @@ show_app_ingress() {
                         echo "   Access: http://localhost:8080$path ($name ingress)"
                     fi
                 else
-                    echo "   Ingress: $name ($access)"
+                    echo "   Ingress: $name -> $access"
                 fi
             else
                 echo "   Ingress: $name (configured but controller not ready)"
@@ -263,44 +279,66 @@ show_health_check() {
     fi
 }
 
-show_cluster_status() {
-    log_info "Cluster Status"
-    kubectl get nodes
-}
+show_control_plane_status() {
+    local control_plane_status="NotReady"
+    local control_plane_message=""
 
-show_mcp_status() {
-    if has_flux; then
-        log_info "AI-Assisted GitOps (MCP)"
-        if command -v flux-operator-mcp >/dev/null 2>&1; then
-            local version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "unknown")
-            echo "🤖 Flux MCP Server: Available (v$version)"
-            echo "   Configuration: .mcp.json"
-            if [ -f "$(pwd)/.mcp.json" ]; then
-                echo "   Status: Ready for AI assistance"
-            else
-                echo "   Status: Configuration file not found"
-            fi
+    # Get control plane node info
+    local node_info=$(kubectl get nodes --no-headers 2>/dev/null | grep "control-plane")
+    if [ -n "$node_info" ]; then
+        local node_status=$(echo "$node_info" | awk '{print $2}')
+        local node_age=$(echo "$node_info" | awk '{print $4}')
+        local k8s_version=$(echo "$node_info" | awk '{print $5}')
+
+        if [ "$node_status" = "Ready" ]; then
+            control_plane_status="Ready"
+            control_plane_message="Kubernetes $k8s_version (up ${node_age})"
         else
-            echo "🤖 Flux MCP Server: Not installed"
-            echo "   Install with: make install"
+            control_plane_status="$node_status"
+            control_plane_message="Node status: $node_status"
         fi
-        echo
+    else
+        control_plane_status="NotFound"
+        control_plane_message="Control plane node not found"
     fi
+
+    echo "⚙️  Control Plane: $control_plane_status"
+    [ -n "$control_plane_message" ] && echo "   Status: $control_plane_message"
 }
 
 show_addon_status() {
-    # Check if any addons are installed
-    local has_addons=false
-
-    if has_metallb || has_ingress; then
-        has_addons=true
-    fi
-
-    if [ "$has_addons" = "false" ]; then
-        return 0
-    fi
-
+    # Always show addons section since control plane is always present
     log_info "Cluster Addons"
+
+    # Show control plane status (always required)
+    show_control_plane_status
+
+    # Show Flux status if installed
+    if has_flux; then
+        local flux_status="NotReady"
+        local flux_message=""
+        local flux_version=$(get_flux_version)
+
+        # Check if Flux controllers are running
+        local flux_pods=$(kubectl get pods -n flux-system --no-headers 2>/dev/null | awk '{print $3}' | tr '\n' ' ')
+        if echo "$flux_pods" | grep -q "Running"; then
+            local running_count=$(echo "$flux_pods" | grep -o "Running" | wc -l | tr -d ' ')
+            local total_count=$(echo "$flux_pods" | wc -w | tr -d ' ')
+            if [ "$running_count" = "$total_count" ] && [ "$total_count" -gt 0 ]; then
+                flux_status="Ready"
+                flux_message="GitOps automation available ($flux_version)"
+            else
+                flux_status="Pending"
+                flux_message="$running_count/$total_count controllers running"
+            fi
+        else
+            flux_status="NotReady"
+            flux_message="Controllers not running"
+        fi
+
+        echo "🔄 Flux (GitOps): $flux_status"
+        [ -n "$flux_message" ] && echo "   Status: $flux_message"
+    fi
 
     # Show MetalLB status if installed
     if has_metallb; then
@@ -369,13 +407,11 @@ main() {
     fi
 
     show_kubeconfig_info
-    show_gitops_status
     show_addon_status
+    show_gitops_resources
     show_gitops_applications
     show_manual_deployed_apps
     show_health_check
-    show_cluster_status
-    show_mcp_status
 }
 
 # Run if called directly

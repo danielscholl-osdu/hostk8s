@@ -10,6 +10,7 @@ model: claude-sonnet-4-20250514
 - Project README: @README.md
 - Architecture overview: @docs/architecture.md
 - ADR index: @docs/adr/README.md
+- Script Guidance: @infra/scripts/README.md
 - All tracked files: !`git ls-files`
 - Project structure: !`find . -maxdepth 3 -type f -not -path './.git/*' | head -30`
 

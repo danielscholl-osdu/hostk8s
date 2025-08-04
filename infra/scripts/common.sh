@@ -265,7 +265,10 @@ get_ingress_access() {
         # Dynamically get the path from the ingress resource
         local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
         if [ -n "$path" ] && [ "$path" != "/" ]; then
-            echo "http://localhost:8080$path"
+            # Clean up nginx rewrite patterns for user-friendly display
+            # Convert "/sample/frontend(/|$)(.*)" to "/sample/frontend"
+            local clean_path=$(echo "$path" | sed 's/([^)]*)//g')
+            echo "http://localhost:8080$clean_path"
         else
             echo "http://localhost:8080"
         fi

@@ -49,24 +49,55 @@ dev_status() {
 # Focused log viewing
 dev_logs() {
     local target=${1:-}
+    local lines=${2:-20}
+
+    # Debug: show what parameters we received
+    #echo "DEBUG: target='$target', lines='$lines', all args: $*"
 
     if [ -z "$target" ]; then
         log "Recent cluster events:"
         kubectl get events --sort-by=.metadata.creationTimestamp -A | tail -10
         echo
-        log "Usage: $0 logs <pod-name|deployment-name>"
-        log "       $0 logs -l app=myapp"
+        log "Usage: make logs <app-name|pod-name|deployment-name>"
+        log "       make logs sample         # All logs from 'sample' app components"
+        log "       make logs simple         # All logs from 'simple' app components"
+        log "       make logs pod-name       # Specific pod logs (fallback)"
         return
     fi
 
-    # Try as pod first, then deployment
+    # Check if it's a valid app name by looking for deployments with hostk8s.app label
+    local app_deployments=$(kubectl get deployments -l "hostk8s.app=$target" --all-namespaces --no-headers 2>/dev/null)
+
+    if [ -n "$app_deployments" ]; then
+        # App-level logs: show logs from all components of the app
+        log "Logs for app '$target' (last $lines lines per component):"
+        echo
+
+        echo "$app_deployments" | while read -r namespace deployment ready up total age; do
+            [ -z "$namespace" ] && continue
+
+            echo "=== [$deployment] ==="
+            kubectl logs "deployment/$deployment" -n "$namespace" --tail="$lines" 2>/dev/null || \
+                echo "  No logs available for $deployment"
+            echo
+        done
+        return
+    fi
+
+    # Fallback: try as pod first, then deployment
     if kubectl get pod "$target" >/dev/null 2>&1; then
-        kubectl logs -f "$target" --tail=50
+        kubectl logs "$target" --tail="$lines"
     elif kubectl get deployment "$target" >/dev/null 2>&1; then
-        kubectl logs -f "deployment/$target" --tail=50
+        kubectl logs "deployment/$target" --tail="$lines"
     else
-        # Assume it's a label selector
-        kubectl logs -f "$target" --tail=50
+        # Check if it looks like a label selector
+        if echo "$target" | grep -q "="; then
+            kubectl logs -l "$target" --tail="$lines"
+        else
+            log "Error: '$target' not found as app, pod, deployment, or label selector"
+            log "Available apps:"
+            kubectl get deployments -l "hostk8s.app" --all-namespaces -o jsonpath='{.items[*].metadata.labels.hostk8s\.app}' 2>/dev/null | tr ' ' '\n' | sort -u | sed 's/^/  /' || echo "  No apps found"
+        fi
     fi
 }
 
@@ -150,7 +181,7 @@ case "${1:-help}" in
         dev_status
         ;;
     "logs"|"l")
-        dev_logs "${2:-}"
+        dev_logs "${2:-}" "${3:-}"
         ;;
     "shell"|"sh")
         dev_shell "${2:-}"

@@ -68,7 +68,7 @@ up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|def
 	fi
 
 # Handle arguments as targets to avoid "No rule to make target" errors
-minimal simple default sample extension:
+minimal simple default sample extension multi-tier %:
 	@:
 
 # Handle extension/* patterns
@@ -132,7 +132,7 @@ test: ## Run comprehensive cluster validation tests
 
 logs: ## View recent cluster events and logs
 	$(call check_cluster)
-	@./infra/scripts/utils.sh logs
+	@./infra/scripts/utils.sh logs $(filter-out logs,$(MAKECMDGOALS))
 
 port-forward: ## Port forward a service (make port-forward SVC=myservice PORT=8080)
 	$(call check_cluster)
