@@ -36,12 +36,12 @@ dev_status() {
     log "=== Cluster Status ==="
     kubectl get nodes
     echo
-    
+
     log "=== System Health ==="
     kubectl get pods -A --field-selector=status.phase!=Running,status.phase!=Succeeded | \
         grep -v "^NAMESPACE" || log "✓ All pods running"
     echo
-    
+
     log "=== Services ==="
     kubectl get svc -A -o wide | grep -v "ClusterIP.*<none>" || log "No external services"
 }
@@ -49,7 +49,7 @@ dev_status() {
 # Focused log viewing
 dev_logs() {
     local target=${1:-}
-    
+
     if [ -z "$target" ]; then
         log "Recent cluster events:"
         kubectl get events --sort-by=.metadata.creationTimestamp -A | tail -10
@@ -58,7 +58,7 @@ dev_logs() {
         log "       $0 logs -l app=myapp"
         return
     fi
-    
+
     # Try as pod first, then deployment
     if kubectl get pod "$target" >/dev/null 2>&1; then
         kubectl logs -f "$target" --tail=50
@@ -66,17 +66,17 @@ dev_logs() {
         kubectl logs -f "deployment/$target" --tail=50
     else
         # Assume it's a label selector
-        kubectl logs -f $target --tail=50
+        kubectl logs -f "$target" --tail=50
     fi
 }
 
 # Simple shell access
 dev_shell() {
     local pod=${1:-}
-    
+
     if [ -z "$pod" ]; then
         log "Creating debug pod..."
-        kubectl run debug-$(date +%s) --image=busybox --rm -it --restart=Never -- /bin/sh
+        kubectl run "debug-$(date +%s)" --image=busybox --rm -it --restart=Never -- /bin/sh
     else
         kubectl exec -it "$pod" -- /bin/sh 2>/dev/null || \
         kubectl exec -it "$pod" -- /bin/bash
@@ -87,13 +87,13 @@ dev_shell() {
 dev_forward() {
     local service=${1:-}
     local port=${2:-8080}
-    
+
     if [ -z "$service" ]; then
         log "Available services:"
         kubectl get svc
         return
     fi
-    
+
     log "Forwarding $service to localhost:$port (Ctrl+C to stop)"
     kubectl port-forward "svc/$service" "$port:80"
 }
@@ -101,13 +101,13 @@ dev_forward() {
 # Development cleanup
 dev_cleanup() {
     log "Cleaning up development resources..."
-    
+
     # Remove debug pods
     kubectl delete pods -l "run" --field-selector=status.phase=Succeeded --ignore-not-found=true -q
-    
-    # Remove failed pods  
+
+    # Remove failed pods
     kubectl delete pods --field-selector=status.phase=Failed --ignore-not-found=true -q
-    
+
     log "✓ Cleanup complete"
 }
 
@@ -115,17 +115,17 @@ dev_cleanup() {
 dev_deploy() {
     local image=${1:-mcr.microsoft.com/azurelinux/base/nginx}
     local name=${2:-test-$(date +%s)}
-    
+
     log "Deploying $image as $name..."
-    
+
     kubectl create deployment "$name" --image="$image"
     kubectl expose deployment "$name" --port=80 --type=NodePort
-    
+
     log "Waiting for deployment..."
     kubectl wait --for=condition=available --timeout=60s "deployment/$name"
-    
+
     local nodeport=$(kubectl get svc "$name" -o jsonpath='{.spec.ports[0].nodePort}')
-    
+
     log "✓ Deployed successfully"
     log "  Access: http://localhost:$nodeport"
     log "  Cleanup: kubectl delete deployment,service $name"
@@ -168,7 +168,7 @@ case "${1:-help}" in
         dev_info
         ;;
     *)
-        echo "OSDU-CI Development Tools (Simple)"
+        echo "HostK8s Development Tools (Simple)"
         echo
         echo "Commands:"
         echo "  status (s)           Show cluster health"
