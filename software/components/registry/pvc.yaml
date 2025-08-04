@@ -8,6 +8,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
+  storageClassName: ""
+  volumeName: registry-data-pv
   resources:
     requests:
       storage: 10Gi

@@ -30,16 +30,16 @@ spec:
           value: /var/lib/registry
         - name: REGISTRY_HEALTH_STORAGEDRIVER_ENABLED
           value: "true"
-        # HTTPS Configuration
+        # HTTP Configuration (primary)
+        - name: REGISTRY_HTTP_ADDR
+          value: ":5000"
+        # HTTPS Configuration (secondary)
         - name: REGISTRY_HTTP_TLS_CERTIFICATE
           value: /etc/ssl/certs/tls.crt
         - name: REGISTRY_HTTP_TLS_KEY
           value: /etc/ssl/certs/tls.key
-        - name: REGISTRY_HTTP_ADDR
-          value: ":5443"
-        # Also listen on HTTP for compatibility
-        - name: REGISTRY_HTTP_HTTP2_DISABLED
-          value: "false"
+        - name: REGISTRY_HTTP_SECRET
+          value: "registryhtpasswd"
         resources:
           requests:
             memory: "128Mi"
@@ -56,15 +56,15 @@ spec:
         livenessProbe:
           httpGet:
             path: /v2/
-            port: 5443
-            scheme: HTTPS
+            port: 5000
+            scheme: HTTP
           initialDelaySeconds: 30
           periodSeconds: 10
         readinessProbe:
           httpGet:
             path: /v2/
-            port: 5443
-            scheme: HTTPS
+            port: 5000
+            scheme: HTTP
           initialDelaySeconds: 5
           periodSeconds: 5
       volumes:
