@@ -24,6 +24,7 @@
 - **Ingress**: NGINX or Traefik
 - **Languages**: Bash, Go, YAML
 - **Validation**: yamllint, shellcheck
+- **Script Guidelines**: When working on `infra/scripts/`, read `infra/scripts/README.md` for best practices
 
 ## SubAgent Delegation Strategy
 

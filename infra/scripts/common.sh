@@ -298,5 +298,95 @@ check_service_health() {
     return 0
 }
 
+# Cross-platform sed operations
+# Usage: cross_platform_sed_inplace "s/old/new/g" "filepath"
+# Returns: 0 on success, 1 on failure
+cross_platform_sed_inplace() {
+    local pattern="$1"
+    local file="$2"
+
+    # Validate inputs
+    if [[ -z "$pattern" || -z "$file" ]]; then
+        log_error "cross_platform_sed_inplace: pattern and file are required"
+        return 1
+    fi
+
+    # Check if file exists and is writable
+    if [[ ! -f "$file" ]]; then
+        log_error "cross_platform_sed_inplace: file does not exist: $file"
+        return 1
+    fi
+
+    if [[ ! -w "$file" ]]; then
+        log_error "cross_platform_sed_inplace: file is not writable: $file"
+        return 1
+    fi
+
+    # Perform sed operation with error checking
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS sed syntax (requires empty string after -i)
+        if ! sed -i '' "$pattern" "$file" 2>/dev/null; then
+            log_error "cross_platform_sed_inplace: sed operation failed on $file"
+            return 1
+        fi
+    else
+        # Linux sed syntax
+        if ! sed -i "$pattern" "$file" 2>/dev/null; then
+            log_error "cross_platform_sed_inplace: sed operation failed on $file"
+            return 1
+        fi
+    fi
+
+    return 0
+}
+
+# Update environment file with worktree-specific values
+# Usage: update_env_file "/path/to/.env" "cluster_name" "git_user" "worktree_name"
+# Returns: 0 on success, 1 on failure
+update_env_file() {
+    local env_file="$1"
+    local cluster_name="$2"
+    local git_user="$3"
+    local worktree_name="$4"
+
+    # Validate inputs
+    if [[ -z "$env_file" || -z "$cluster_name" || -z "$git_user" || -z "$worktree_name" ]]; then
+        log_error "update_env_file: all parameters are required"
+        return 1
+    fi
+
+    # Validate file exists
+    if [[ ! -f "$env_file" ]]; then
+        log_error "update_env_file: environment file does not exist: $env_file"
+        return 1
+    fi
+
+    log_debug "Updating environment file: ${env_file}"
+
+    # Update CLUSTER_NAME (handle both commented and uncommented lines)
+    cross_platform_sed_inplace "s/^# *CLUSTER_NAME=.*/CLUSTER_NAME=${cluster_name}/" "$env_file" || return 1
+    cross_platform_sed_inplace "s/^CLUSTER_NAME=.*/CLUSTER_NAME=${cluster_name}/" "$env_file" || return 1
+
+    # Update GITOPS_BRANCH
+    cross_platform_sed_inplace "s/^# *GITOPS_BRANCH=.*/GITOPS_BRANCH=user\/${git_user}\/${worktree_name}/" "$env_file" || return 1
+    cross_platform_sed_inplace "s/^GITOPS_BRANCH=.*/GITOPS_BRANCH=user\/${git_user}\/${worktree_name}/" "$env_file" || return 1
+
+    # Enable Flux
+    cross_platform_sed_inplace "s/^# *FLUX_ENABLED=.*/FLUX_ENABLED=true/" "$env_file" || return 1
+    cross_platform_sed_inplace "s/^FLUX_ENABLED=.*/FLUX_ENABLED=true/" "$env_file" || return 1
+
+    # Add KIND_CONFIG (avoid duplicates)
+    local kind_config_line="KIND_CONFIG=extension/${worktree_name}"
+    if ! grep -q "^KIND_CONFIG=extension/${worktree_name}$" "$env_file" 2>/dev/null; then
+        if ! echo "$kind_config_line" >> "$env_file"; then
+            log_error "update_env_file: failed to append KIND_CONFIG to $env_file"
+            return 1
+        fi
+    fi
+
+    log_debug "Environment file updated successfully"
+    return 0
+}
+
 # Initialize common environment when sourced
 load_environment
