@@ -177,3 +177,4 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
+# Test external status reporting
