@@ -23,23 +23,14 @@ spec:
         ports:
         - containerPort: 5000
           name: http
-        - containerPort: 5443
-          name: https
         env:
         - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
           value: /var/lib/registry
         - name: REGISTRY_HEALTH_STORAGEDRIVER_ENABLED
           value: "true"
-        # HTTP Configuration (primary)
+        # HTTP Configuration
         - name: REGISTRY_HTTP_ADDR
           value: ":5000"
-        # HTTPS Configuration (secondary)
-        - name: REGISTRY_HTTP_TLS_CERTIFICATE
-          value: /etc/ssl/certs/tls.crt
-        - name: REGISTRY_HTTP_TLS_KEY
-          value: /etc/ssl/certs/tls.key
-        - name: REGISTRY_HTTP_SECRET
-          value: "registryhtpasswd"
         resources:
           requests:
             memory: "128Mi"
@@ -50,9 +41,6 @@ spec:
         volumeMounts:
         - name: registry-data
           mountPath: /var/lib/registry
-        - name: tls-certs
-          mountPath: /etc/ssl/certs
-          readOnly: true
         livenessProbe:
           httpGet:
             path: /v2/
@@ -71,6 +59,3 @@ spec:
       - name: registry-data
         persistentVolumeClaim:
           claimName: registry-data
-      - name: tls-certs
-        secret:
-          secretName: registry-tls-secret

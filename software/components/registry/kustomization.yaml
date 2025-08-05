@@ -7,7 +7,6 @@ resources:
   - pvc.yaml
   - deployment.yaml
   - service.yaml
-  - certificate.yaml
 
 commonLabels:
   hostk8s.component: registry
