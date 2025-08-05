@@ -7,42 +7,66 @@ Learn HostK8s through a progressive tutorial series that builds from individual 
 ### 📚 **Level 100: [Deploying Apps](apps.md)**
 *30-45 minutes | Beginner*
 
-Learn to deploy individual applications like the Docker Voting App. Master basic HostK8s application patterns, multi-service deployment, and Kubernetes fundamentals.
+Learn to deploy individual applications like the Docker Voting App. Master basic HostK8s application patterns and understand the building blocks philosophy.
 
 **You'll Build:** Complete voting application with 5 interconnected services
-**You'll Learn:** Application structure, service communication, NodePort access
-**Foundation For:** Understanding individual applications before learning shared services
+**You'll Learn:** HostK8s patterns, service communication, why individual apps don't scale
+**Foundation For:** Understanding building blocks before learning to share them
 
-### 🔧 **Level 200: [Shared Components](components.md)**
-*45-60 minutes | Intermediate*
+### 🔧 **Level 150: [Using Shared Components](shared-components.md)**
+*20-30 minutes | Beginner-Intermediate*
 
-Build reusable infrastructure services that multiple applications can share. Create a Redis infrastructure component with management UI and integrate it with existing applications.
+Learn to use pre-built HostK8s components and connect applications to shared infrastructure services. Focus on consumption patterns, not creation.
 
-**You'll Build:** Redis Infrastructure Component (server + Commander UI + persistence)
-**You'll Learn:** Component architecture, shared service patterns, resource efficiency
-**Foundation For:** Understanding infrastructure building blocks for complete stacks
+**You'll Build:** Voting app connected to shared Redis component
+**You'll Learn:** Component consumption, service discovery, resource efficiency
+**Foundation For:** Understanding how components work before building them
 
-### 🏗️ **Level 300: [Software Stacks](stacks.md)**
-*60+ minutes | Advanced*
+### 🏗️ **Level 200: [Building Components](components.md)**
+*30-40 minutes | Intermediate*
 
-Orchestrate complete development environments combining multiple components and applications using GitOps automation with Flux.
+Understand HostK8s component design patterns and learn to customize reusable infrastructure services. Focus on patterns, not manual YAML creation.
 
-**You'll Build:** Complete development environment with shared components and multiple apps
-**You'll Learn:** GitOps workflows, stack composition, environment management
+**You'll Build:** Understanding of Redis Infrastructure Component architecture
+**You'll Learn:** Component patterns, customization, when to build vs use existing
+**Foundation For:** Creating building blocks for software stacks
+
+### ⚡ **Level 250: [GitOps Fundamentals](gitops-fundamentals.md)**
+*25-35 minutes | Intermediate-Advanced*
+
+Learn GitOps automation patterns and understand how HostK8s orchestrates components automatically.
+
+**You'll Build:** Simple 2-3 component automated stack
+**You'll Learn:** GitOps concepts, dependency management, automation benefits
+**Foundation For:** Complex software stack orchestration
+
+### 🚀 **Level 300: [Software Stacks](stacks.md)**
+*40-50 minutes | Advanced*
+
+Compose complete development environments combining multiple components and applications with full GitOps automation.
+
+**You'll Build:** Complete development environment with registry and custom apps
+**You'll Learn:** Stack composition, build workflows, environment management
 **Foundation For:** Production-like development environments
 
 ## Tutorial Progression
 
 ```
-Individual Apps  →  Shared Components  →  Complete Stacks
-     ↓                    ↓                    ↓
-Vote, Result,      Redis Component      GitOps-managed
-Worker, DB         (shared by apps)     Environment
-Redis (per app)         +                    +
-                 Commander UI          Multiple Apps
-                      +                      +
-                 Persistence           Automated Deploy
+Individual Apps → Use Components → Build Components → GitOps → Complete Stacks
+   (Level 100)     (Level 150)      (Level 200)    (Level 250)  (Level 300)
+       ↓               ↓                ↓              ↓            ↓
+   All services    Connect to       Understand     Automated    Complete
+   per app        shared Redis     component      component    development
+                                   patterns       deployment   environments
 ```
+
+### The Building Blocks Journey
+
+**Level 100**: See all the pieces - understand what you're abstracting
+**Level 150**: Use shared pieces - consume pre-built components
+**Level 200**: Understand the patterns - how components are designed
+**Level 250**: Automate deployment - GitOps orchestration
+**Level 300**: Complete environments - everything working together
 
 ## Prerequisites
 

@@ -1,0 +1,29 @@
+{
+  "name": "voting-result",
+  "version": "1.0.0",
+  "description": "HostK8s Voting App - Result Service",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch server.js",
+    "start": "bun server.js",
+    "test": "bun test",
+    "lint": "bun run eslint .",
+    "format": "bun run prettier --write ."
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2",
+    "pg": "^8.11.0",
+    "cookie-parser": "^1.4.6"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^4.17.21",
+    "@types/pg": "^8.10.7",
+    "eslint": "^8.57.0",
+    "prettier": "^3.1.0"
+  },
+  "author": "HostK8s",
+  "license": "MIT"
+}

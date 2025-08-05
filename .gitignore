@@ -20,6 +20,7 @@ test-data/*
 # Source Directory code
 src/*
 !src/registry-demo
+!src/sample-app
 
 # Logs
 *.log

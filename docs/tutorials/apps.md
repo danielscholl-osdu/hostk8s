@@ -43,13 +43,14 @@ In this tutorial, you'll create and deploy the classic **Docker Voting App** - a
 
 ## Contents
 
-1. [Understanding HostK8s Applications](#part-1-understanding-hostk8s-applications)
-2. [Creating the Voting Application](#part-2-creating-the-voting-application)
-3. [Deploying Your Application](#part-3-deploying-your-application)
-4. [Testing Your Application](#part-4-testing-your-application)
-5. [Understanding What You Built](#part-5-understanding-what-you-built)
-6. [Troubleshooting Common Issues](#part-6-troubleshooting-common-issues)
-7. [Next Steps and Advanced Patterns](#part-7-next-steps-and-advanced-patterns)
+1. [Understanding HostK8s Building Blocks](#understanding-hostk8s-building-blocks)
+2. [Understanding HostK8s Applications](#part-1-understanding-hostk8s-applications)
+3. [Creating the Voting Application](#part-2-creating-the-voting-application)
+4. [Deploying Your Application](#part-3-deploying-your-application)
+5. [Testing Your Application](#part-4-testing-your-application)
+6. [Understanding What You Built](#part-5-understanding-what-you-built)
+7. [Troubleshooting Common Issues](#part-6-troubleshooting-common-issues)
+8. [Next Steps and Advanced Patterns](#part-7-next-steps-and-advanced-patterns)
 
 ### Application Architecture
 
@@ -73,6 +74,60 @@ In this tutorial, you'll create and deploy the classic **Docker Voting App** - a
 3. **Process** → Worker (.NET) processes vote from queue
 4. **Store** → Worker saves vote to PostgreSQL database
 5. **Display** → Results page (Node.js) shows live results from database
+
+---
+
+## Understanding HostK8s Building Blocks
+
+Before diving into your first application, let's understand where this tutorial fits in your HostK8s learning journey.
+
+### The Building Blocks Philosophy
+
+Think of HostK8s like **Lego blocks** - you start with individual pieces and progressively learn to build more sophisticated systems:
+
+```
+Individual Apps  →  Shared Components  →  Software Stacks
+   (Level 100)         (Level 150-200)      (Level 300+)
+       │                     │                   │
+   This Tutorial      Reusable Services    Complete Environments
+```
+
+### Your Learning Journey
+
+**🎯 Level 100 (This Tutorial): Individual Apps**
+- See all the building blocks working together
+- Understand how services communicate
+- Learn HostK8s application patterns
+- **Trade-off**: Full visibility but resource duplication
+
+**🔧 Level 150+ (Next Tutorials): Shared Components**
+- Reuse infrastructure services across applications
+- Resource efficiency through sharing
+- **Trade-off**: Less control but much more efficient
+
+**🏗️ Level 300+ (Advanced): Software Stacks**
+- Complete development environments
+- GitOps automation and orchestration
+- **Trade-off**: High abstraction but powerful automation
+
+### Why Start with Individual Apps?
+
+In this tutorial, you'll create a voting application where **each app has its own Redis and database**. This seems wasteful (and it is!), but it's the best way to:
+
+✅ **Understand all the pieces** - See every service and how they connect
+✅ **Learn HostK8s patterns** - Application structure, labeling, networking
+✅ **Build foundation knowledge** - Concepts you'll use in advanced tutorials
+✅ **Recognize the problems** - Understand why shared components and stacks matter
+
+### The Voting App as Your Learning Vehicle
+
+The **Docker Voting App** will be your consistent companion throughout multiple tutorials:
+- **Level 100**: Deploy with individual services (this tutorial)
+- **Level 150**: Connect to shared Redis component
+- **Level 200**: Understand component architecture
+- **Level 300**: Deploy via automated stacks
+
+Same app, increasingly sophisticated HostK8s patterns. This consistency lets you focus on learning HostK8s concepts without learning new applications each time.
 
 ---
 
@@ -640,32 +695,35 @@ Let's trace how a vote flows through your application:
 6. Result Service → Displays updated results to user
 ```
 
-### Kubernetes Concepts Demonstrated
+### HostK8s Patterns Demonstrated
 
-Your voting app demonstrates key Kubernetes concepts:
+Your voting app demonstrates key HostK8s patterns you'll use throughout your learning journey:
 
-**Deployments:**
-- Manage pod replicas and rolling updates
-- Each service (vote, redis, db, worker, result) has its own deployment
-- Pods automatically restart if they crash
+**HostK8s Application Pattern:**
+- All resources labeled with `hostk8s.app: voting-app` for unified management
+- Single `app.yaml` file contains complete application definition
+- Consistent naming: services named by function (vote, redis, db, worker, result)
 
-**Services:**
-- Enable pod-to-pod communication via DNS
-- `vote` pod can reach `redis` using hostname "redis"
-- `worker` can reach both `redis` and `db` by name
+**HostK8s Service Discovery Pattern:**
+- Services find each other using standard DNS names
+- `vote` connects to `redis` using hostname "redis"
+- `worker` connects to both `redis` and `db` by service name
+- No complex service mesh or discovery tools needed
 
-**NodePort Services:**
-- Expose applications outside the cluster
-- vote:30080 and result:30081 are accessible from your host
+**HostK8s Resource Pattern:**
+- Development-appropriate CPU and memory limits
+- Resource requests ensure reliable scheduling
+- Balanced for local development environments
 
-**Resource Management:**
-- CPU and memory requests ensure scheduling
-- CPU and memory limits prevent resource exhaustion
+**HostK8s Access Patterns:**
+- **Internal services** (redis, db): ClusterIP for service-to-service communication
+- **External services** (vote, result): NodePort for direct host access
+- **Optional ingress**: Path-based routing when ingress controller available
 
-**Labels and Selectors:**
-- `hostk8s.app: voting-app` groups all resources
-- Deployments use labels to manage their pods
-- Services use selectors to find their target pods
+**HostK8s Extension Pattern:**
+- Application lives in `software/apps/extension/` directory
+- Follows HostK8s directory structure and naming conventions
+- Ready for `make deploy extension/voting-app` command
 
 ### Application Architecture Benefits
 
@@ -702,7 +760,71 @@ As you examine the voting app architecture, notice that it contains two types of
 **Key Insight for Next Steps:**
 The infrastructure services (Redis, PostgreSQL) could potentially be **shared** between multiple applications. Instead of each application having its own Redis instance, multiple applications could use a single, well-managed Redis **component**.
 
-This realization leads to the next level of HostK8s: **[Shared Components](components.md)** - reusable infrastructure services that eliminate duplication and provide consistent, centralized management.
+### Why This Approach Doesn't Scale
+
+Your voting app works perfectly, but imagine building a real development environment:
+
+**The Problem at Scale:**
+```
+10 Different Applications × 5 Services Each = 50 Total Services
+
+App 1: vote + redis + worker + db + result
+App 2: chat + redis + processor + db + ui
+App 3: api + redis + handler + db + admin
+... (7 more apps)
+```
+
+**Real Resource Impact:**
+- **10 Redis instances** using ~640MB total (64MB each)
+- **10 PostgreSQL instances** using ~2.5GB total (256MB each)
+- **50 total pods** to manage and monitor
+- **10 different Redis configurations** to maintain
+- **No data sharing** between applications when beneficial
+
+**Management Nightmare:**
+- Update Redis version? Do it 10 times
+- Change database configuration? 10 different files
+- Debug Redis issues? Check 10 different instances
+- Resource monitoring? 50 services across 10 namespaces
+
+**The HostK8s Solution Preview:**
+```
+10 Applications + Shared Components = Efficiency
+
+Shared Components:
+├── 1 Redis Infrastructure Component (serves all apps)
+├── 1 Database Component (serves all apps)
+└── 1 Monitoring Component (watches everything)
+
+Applications:
+├── 10 business logic services
+└── Connect to shared infrastructure automatically
+```
+
+**Benefits You'll Learn:**
+✅ **Resource Efficiency**: One Redis serves 10 apps (~64MB vs 640MB)
+✅ **Consistent Configuration**: One Redis config, centrally managed
+✅ **Shared Data**: Apps can share cache data when beneficial
+✅ **Easy Updates**: Update Redis once, all apps benefit
+✅ **Centralized Monitoring**: One Redis Commander manages all data
+
+### Honest Trade-offs
+
+**✅ Pros of Individual Apps (This Tutorial)**:
+- Complete visibility into every service
+- Full control and customization
+- Easy to understand and debug
+- No dependencies between applications
+- Perfect for learning how everything works
+
+**❌ Cons of Individual Apps**:
+- Resource waste through duplication
+- Management complexity at scale
+- Configuration inconsistency
+- No data sharing opportunities
+- Doesn't prepare you for real environments
+
+**🔮 Next Steps**: Learn HostK8s shared components - reusable infrastructure services that solve these scaling problems while maintaining the development patterns you just learned.
 
 ---
 

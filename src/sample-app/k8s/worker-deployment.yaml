@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostk8s-worker
+  namespace: sample-voting
+  labels:
+    hostk8s.app: hostk8s-worker
+    hostk8s.component: voting-system
+    hostk8s.tutorial: level-100
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hostk8s-worker
+  template:
+    metadata:
+      labels:
+        app: hostk8s-worker
+        hostk8s.app: hostk8s-worker
+    spec:
+      containers:
+      - name: worker
+        image: localhost:5000/hostk8s-worker:latest
+        env:
+        - name: REDIS_HOST
+          value: "redis-infrastructure.redis-infrastructure.svc.cluster.local"
+        - name: POSTGRES_HOST
+          value: "postgres-infrastructure.postgres-infrastructure.svc.cluster.local"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "votes"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        # Worker doesn't need health checks as it's a background process
+        # but we can check if it's processing votes via logs
