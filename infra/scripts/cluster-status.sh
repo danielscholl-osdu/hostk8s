@@ -396,13 +396,13 @@ show_addon_status() {
 main() {
     # Check if cluster exists (but allow status to show when not running)
     if [ ! -f "$KUBECONFIG_PATH" ]; then
-        log_warn "No cluster found. Run 'make up' to start a cluster."
+        log_warn "No cluster found. Run 'make start' to start a cluster."
         exit 0
     fi
 
     # Check if cluster is running
     if ! kubectl cluster-info >/dev/null 2>&1; then
-        log_warn "Cluster not running. Run 'make up' to start the cluster."
+        log_warn "Cluster not running. Run 'make start' to start the cluster."
         exit 0
     fi
 

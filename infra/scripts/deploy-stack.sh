@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-# Deploy GitOps software stack to existing HostK8s cluster
+# Deploy or remove GitOps software stack to/from existing HostK8s cluster
 
 # Source shared utilities
 source "$(dirname "$0")/common.sh"
@@ -9,20 +9,102 @@ source "$(dirname "$0")/common.sh"
 # Load environment configuration
 load_environment
 
+show_usage() {
+    echo "Usage: $0 [down] [STACK_NAME]"
+    echo ""
+    echo "Deploy or remove a software stack to/from the cluster."
+    echo ""
+    echo "Arguments:"
+    echo "  down        Remove mode - removes the stack"
+    echo "  STACK_NAME  Stack to deploy/remove"
+    echo ""
+    echo "Environment Variables:"
+    echo "  SOFTWARE_STACK  Stack name (alternative to STACK_NAME argument)"
+    echo ""
+    echo "Examples:"
+    echo "  SOFTWARE_STACK=sample $0        # Deploy sample stack"
+    echo "  $0 down sample                  # Remove sample stack"
+    echo "  $0 down extension/my-stack      # Remove extension stack"
+}
+
+# Handle command line arguments
+OPERATION="$1"
+if [ "$OPERATION" = "down" ]; then
+    SOFTWARE_STACK="${2:-${SOFTWARE_STACK:-}}"
+    if [ -z "$SOFTWARE_STACK" ]; then
+        log_error "Stack name must be specified for down operation"
+        show_usage
+        exit 1
+    fi
+else
+    # Legacy mode - first argument is the stack name
+    SOFTWARE_STACK="${OPERATION:-${SOFTWARE_STACK:-}}"
+    OPERATION="deploy"
+fi
+
 # Validate required parameters
 if [ -z "${SOFTWARE_STACK:-}" ]; then
     log_error "SOFTWARE_STACK must be specified"
-    log_error "Usage: SOFTWARE_STACK=sample $0"
-    log_error "   or: make deploy-stack sample"
+    show_usage
     exit 1
 fi
 
-log_start "Deploying software stack '${SOFTWARE_STACK}'..."
+# Function to remove a software stack
+remove_stack() {
+    # Check if cluster exists
+    if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
+        log_error "Cluster '${CLUSTER_NAME}' does not exist"
+        exit 1
+    fi
+
+    # Set up kubeconfig if needed
+    if [ ! -f "${KUBECONFIG_PATH}" ]; then
+        log_info "Setting up kubeconfig..."
+        mkdir -p data/kubeconfig
+        kind export kubeconfig --name "${CLUSTER_NAME}" --kubeconfig "${KUBECONFIG_PATH}"
+    fi
+
+    # Check if cluster is ready
+    if ! kubectl --kubeconfig="${KUBECONFIG_PATH}" cluster-info >/dev/null 2>&1; then
+        log_error "Cluster '${CLUSTER_NAME}' is not ready"
+        exit 1
+    fi
+
+    log_info "Removing bootstrap kustomization for stack: $SOFTWARE_STACK"
+
+    # Remove the bootstrap kustomization - Flux will automatically clean up all deployed resources
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" delete kustomization bootstrap-stack -n flux-system 2>/dev/null; then
+        log_success "Bootstrap kustomization deleted - Flux will clean up all stack resources"
+    else
+        log_warn "Bootstrap kustomization not found (stack may already be removed)"
+    fi
+
+    # Optionally clean up the GitRepository (be careful with shared repos)
+    if [[ "$SOFTWARE_STACK" == extension/* ]]; then
+        log_info "Cleaning up extension GitRepository..."
+        kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository extension-stack-system -n flux-system 2>/dev/null || log_debug "Extension GitRepository already cleaned up"
+    else
+        log_info "Keeping main GitRepository (shared with HostK8s)"
+    fi
+
+    log_success "Software stack '$SOFTWARE_STACK' removal initiated"
+    log_info "Flux will complete the cleanup automatically (may take 1-2 minutes)"
+    log_info "Monitor with: kubectl get all --all-namespaces | grep -v flux-system"
+}
+
+# Execute the requested operation
+if [ "$OPERATION" = "down" ]; then
+    log_start "Removing software stack '${SOFTWARE_STACK}'..."
+    remove_stack
+    exit 0
+else
+    log_start "Deploying software stack '${SOFTWARE_STACK}'..."
+fi
 
 # Check if cluster exists
 if ! kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
     log_error "Cluster '${CLUSTER_NAME}' does not exist"
-    log_error "Create cluster first: make up"
+    log_error "Create cluster first: make start"
     exit 1
 fi
 

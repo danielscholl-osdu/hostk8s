@@ -104,7 +104,7 @@ main() {
     # Check if Flux is installed
     if ! has_flux; then
         log_error "Flux is not installed in this cluster"
-        log_info "Enable Flux with: export FLUX_ENABLED=true && make up sample"
+        log_info "Enable Flux with: make up sample"
         exit 1
     fi
 

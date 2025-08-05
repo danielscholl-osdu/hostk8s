@@ -1,14 +1,20 @@
-# Creating Software Stacks
+# Software Stacks
 
 *Learn to compose existing HostK8s components into custom development environments*
 
-**Time Required:** ~60 minutes
+| **Time** | **Level** | **Prerequisites** |
+|----------|-----------|-------------------|
+| ~60 minutes | 300 (Advanced) | Apps tutorial, Components tutorial, GitOps concepts |
 
 ## Overview
 
-Think of HostK8s components like **Lego blocks** - each one does something useful (registry, database, certificates), but by themselves they're just individual pieces. A **software stack** is like the instruction booklet that tells you which blocks to use and how to snap them together to build something amazing - a complex microservice platform.
+In the [Apps tutorial](apps.md), you learned to deploy individual applications. In the [Components tutorial](components.md), you learned to build shared infrastructure services like Redis that multiple applications can use.
 
-In this tutorial, you'll create a custom **software stack** that combines existing components into a development environment supporting the complete custom application workflow: build → push → deploy.
+**Software Stacks** are the final level - complete development environments that combine multiple components and applications into cohesive, production-like systems managed through GitOps automation.
+
+Think of components like **Lego blocks** - each one does something useful (Redis, database, certificates), but by themselves they're just individual pieces. A **software stack** is like the instruction booklet that tells you which blocks to use and how to snap them together to build something amazing - a complete microservice platform.
+
+In this tutorial, you'll create a custom **software stack** that demonstrates how the Redis component you built in the Components tutorial can be combined with applications and other infrastructure into a complete development environment.
 
 **What You'll Build:**
 - Custom software stack using existing HostK8s components
@@ -16,9 +22,10 @@ In this tutorial, you'll create a custom **software stack** that combines existi
 - Custom application deployment through your stack
 
 **Prerequisites:**
-- Basic Kubernetes knowledge
-- Understanding of Docker containers
-- Familiarity with HostK8s basics (see [README](../../README.md))
+- **Completed [Apps tutorial](apps.md)** - Understanding of HostK8s applications
+- **Completed [Components tutorial](components.md)** - Experience with shared infrastructure services
+- **Basic GitOps concepts** - Understanding of declarative deployments
+- **Familiarity with Flux** (covered in this tutorial)
 
 
 
@@ -42,14 +49,46 @@ In this tutorial, you'll create a custom **software stack** that combines existi
 
 ## Part 1: Understanding Software Stacks
 
+### The Learning Progression
+
+You've now completed a full learning journey through HostK8s:
+
+**Level 100 - Apps:** Built individual applications (voting app with 5 services)
+**Level 200 - Components:** Created shared infrastructure (Redis component with Commander UI)
+**Level 300 - Stacks:** Combine components + applications into complete environments
+
+```
+Apps Tutorial          →  Components Tutorial     →  Stacks Tutorial
+
+┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
+│   Voting App    │       │     Redis       │       │   Complete      │
+│                 │       │   Component     │       │  Development    │
+│ • Vote Service  │   +   │                 │   =   │  Environment    │
+│ • Redis (own)   │       │ • Redis Server  │       │                 │
+│ • Worker        │       │ • Commander UI  │       │ GitOps-managed  │
+│ • Database      │       │ • Persistence   │       │ Multi-app stack │
+│ • Results       │       └─────────────────┘       └─────────────────┘
+└─────────────────┘                                           │
+                                                              │
+                                                    ┌─────────▼─────────┐
+                                                    │   Stack Benefits   │
+                                                    │                   │
+                                                    │ • Shared Redis    │
+                                                    │ • Multiple Apps   │
+                                                    │ • GitOps Auto     │
+                                                    │ • Environment     │
+                                                    │   Consistency     │
+                                                    └───────────────────┘
+```
+
 ### The Lego Block Concept
 
 Just like Lego blocks, HostK8s has:
 
 | Lego World | HostK8s World |
 |------------|---------------|
-| **Foundation blocks** | **Components** (cert-manager, Istio, PostgreSQL, Redis) |
-| **Feature blocks** | **Applications** (web services, APIs, microservices) |
+| **Foundation blocks** | **Components** (Redis Infrastructure, cert-manager, databases) |
+| **Feature blocks** | **Applications** (voting app, web services, APIs) |
 | **Instruction booklet** | **Software Stack** (tells you which blocks to use and how to connect them) |
 | **Finished model** | **Running development environment** |
 | **Following instructions** | **GitOps/Flux** (automatically assembles everything) |
@@ -63,8 +102,9 @@ Components     Applications
 (Infrastructure/Middleware)  (Business Logic/Services)
 ```
 
-**Components** - Infrastructure and middleware "blocks" (installed via Helm charts):
-- **Foundational**: cert-manager, Istio, metrics-server
+**Components** - Infrastructure and middleware "blocks" you've learned to build:
+- **From Components Tutorial**: Redis Infrastructure (Redis + Commander UI)
+- **Built-in HostK8s**: cert-manager, Istio, metrics-server, databases
 - **Data Layer**: PostgreSQL, Redis, Elasticsearch
 - **Platform Services**: Airflow, observability, service mesh
 - **Security**: Certificate management, RBAC systems
@@ -83,16 +123,16 @@ Components     Applications
 ### Why Stacks Matter
 
 Without a stack, you have:
-- ❌ Loose components that don't work together
-- ❌ Manual setup every time
-- ❌ Inconsistent environments
-- ❌ Deployment chaos
+- Loose components that don't work together
+- Manual setup every time
+- Inconsistent environments
+- Deployment chaos
 
 With a stack, you get:
-- ✅ Components that snap together perfectly
-- ✅ One command deployment (`make up my-stack`)
-- ✅ Consistent, reproducible environments
-- ✅ GitOps automation
+- Components that snap together perfectly
+- One command deployment (`make up my-stack`)
+- Consistent, reproducible environments
+- GitOps automation
 
 ---
 
@@ -430,11 +470,11 @@ make status
 ```
 
 You'll see components deploy in order:
-- ✅ flux-resources (first)
-- ✅ metrics-server, certs (parallel)
-- ✅ certs-ca (after certs)
-- ✅ certs-issuer (after certs-ca)
-- ✅ registry (after certs-issuer)
+- flux-resources (first)
+- metrics-server, certs (parallel)
+- certs-ca (after certs)
+- certs-issuer (after certs-ca)
+- registry (after certs-issuer)
 
 ---
 
@@ -501,11 +541,11 @@ kubectl logs -l app=registry-demo
 
 Your tutorial stack is working when:
 
-✅ **Registry API responds**: `curl http://localhost:30500/v2/` returns `{}`
-✅ **Custom image builds**: `make build src/registry-demo` succeeds
-✅ **Image in registry**: `curl http://localhost:30500/v2/_catalog` shows `{"repositories":["registry-demo"]}`
-✅ **App deploys**: `kubectl get pods -l app=registry-demo` shows running pods
-✅ **App accessible**: `curl http://localhost:30510` returns HTML
+- **Registry API responds**: `curl http://localhost:30500/v2/` returns `{}`
+- **Custom image builds**: `make build src/registry-demo` succeeds
+- **Image in registry**: `curl http://localhost:30500/v2/_catalog` shows `{"repositories":["registry-demo"]}`
+- **App deploys**: `kubectl get pods -l app=registry-demo` shows running pods
+- **App accessible**: `curl http://localhost:30510` returns HTML
 
 ### Troubleshooting
 
@@ -574,20 +614,20 @@ This approach leverages stack-provided infrastructure while maintaining developm
 
 Congratulations! You've successfully created your first custom HostK8s software stack and tested the complete development workflow:
 
-**🎯 Core Concepts Mastered:**
-- ✅ **Lego Block Analogy** - Components as building blocks, stacks as instructions
-- ✅ **Component Dependencies** - Understanding build order and health checks
-- ✅ **GitOps Automation** - How Flux orchestrates deployments
-- ✅ **Extension Pattern** - Creating reusable, shareable stacks
+**Core Concepts Mastered:**
+- **Lego Block Analogy** - Components as building blocks, stacks as instructions
+- **Component Dependencies** - Understanding build order and health checks
+- **GitOps Automation** - How Flux orchestrates deployments
+- **Extension Pattern** - Creating reusable, shareable stacks
 
-**🛠️ Technical Skills Gained:**
-- ✅ **Stack Creation** - Built complete `tutorial-stack` with 5 components
-- ✅ **Git Integration** - Version-controlled your stack design
-- ✅ **Local Extension Workflow** - `make up extension/tutorial-stack`
-- ✅ **Custom Application Pipeline** - Build → Push → Deploy cycle
-- ✅ **Infrastructure Validation** - Verified all components working together
+**Technical Skills Gained:**
+- **Stack Creation** - Built complete `tutorial-stack` with 5 components
+- **Git Integration** - Version-controlled your stack design
+- **Local Extension Workflow** - `make up extension/tutorial-stack`
+- **Custom Application Pipeline** - Build → Push → Deploy cycle
+- **Infrastructure Validation** - Verified all components working together
 
-**🏗️ Infrastructure You Built:**
+**Infrastructure You Built:**
 - **Private Docker Registry** - For storing your custom images
 - **Certificate Management** - Automated TLS certificates via cert-manager
 - **Cluster Monitoring** - Metrics collection with metrics-server
@@ -664,4 +704,4 @@ kubectl describe pods -l app=<app-name>
 
 ---
 
-**🎉 Congratulations!** You've mastered HostK8s software stack creation. You now have the foundation to build any development environment you need, from simple applications to complex distributed systems. The same patterns and principles apply whether you're building a personal project or enterprise infrastructure.
+**Congratulations!** You've mastered HostK8s software stack creation. You now have the foundation to build any development environment you need, from simple applications to complex distributed systems. The same patterns and principles apply whether you're building a personal project or enterprise infrastructure.

@@ -100,7 +100,7 @@ docker      # Container runtime (Docker Desktop)
 
 ### Cluster Lifecycle
 ```bash
-make up     # < 2 minutes cluster creation
+make start  # < 2 minutes cluster creation
 make status # Health validation
 make restart # < 1 minute reset for development
 make clean  # Complete cleanup

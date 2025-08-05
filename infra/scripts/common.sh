@@ -99,7 +99,7 @@ load_environment() {
 # Validation functions
 check_cluster() {
     if [ ! -f "$KUBECONFIG_PATH" ]; then
-        log_error "Cluster not found. Run 'make up' first."
+        log_error "Cluster not found. Run 'make start' first."
         exit 1
     fi
 }
@@ -107,7 +107,7 @@ check_cluster() {
 check_cluster_running() {
     check_cluster
     if ! kubectl cluster-info >/dev/null 2>&1; then
-        log_error "Cluster not running. Run 'make up' to start the cluster."
+        log_error "Cluster not running. Run 'make start' to start the cluster."
         exit 1
     fi
 }

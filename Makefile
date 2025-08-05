@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install clean up down restart prepare status deploy logs build
+.PHONY: help install start stop up down restart clean status deploy remove sync logs build
 
 # Environment setup
 KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
@@ -23,48 +23,72 @@ help: ## Show this help message
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
-install: ## Install required dependencies (kind, kubectl, helm, flux, flux-operator-mcp)
-	@QUIET=true ./infra/scripts/install.sh
+install: ## Install dependencies and setup environment (Usage: make install [dev])
+	@ARG="$(word 2,$(MAKECMDGOALS))"; \
+	if [ "$$ARG" = "dev" ]; then \
+		echo "Setting up development environment..."; \
+		./infra/scripts/prepare.sh; \
+	else \
+		echo "Installing local dependencies..."; \
+		QUIET=true ./infra/scripts/install.sh; \
+	fi
 
-prepare: ## Setup development environment (pre-commit, yamllint, hooks)
-	@./infra/scripts/prepare.sh
+# Handle dev argument as target to avoid "No rule to make target" errors
+dev:
+	@:
 
-##@ Cluster Operations
+##@ Infrastructure
 
-up: ## Start cluster with dependencies check (Usage: make up [minimal|simple|default|sample|extension])
+start: ## Start cluster (Usage: make start [minimal|simple|default])
 	@# Only check dependencies if no cluster config exists (fresh setup)
 	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then $(MAKE) install; fi
-	@# Determine if argument is a Kind config or software stack
+	@# Start cluster with optional Kind config
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "sample" ]; then \
-		echo "Detected local software stack: $$ARG"; \
-		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
-			echo "Cluster exists - deploying software stack to existing cluster..."; \
-			SOFTWARE_STACK="$$ARG" ./infra/scripts/deploy-stack.sh; \
-		else \
-			echo "Creating new cluster with software stack..."; \
-			FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-up.sh; \
-		fi; \
-	elif [ "$$ARG" = "extension" ]; then \
-		echo "Detected extension software stack"; \
-		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
-			echo "Cluster exists - deploying extension stack to existing cluster..."; \
-			echo "Available extension stacks:"; \
-			find software/stack/extension -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' 2>/dev/null || true; \
-			echo "Use: make deploy-stack extension/stack-name"; \
-		else \
-			echo "Creating new cluster with extension capability..."; \
-			FLUX_ENABLED=true ./infra/scripts/cluster-up.sh; \
-		fi; \
-	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
-		echo "Detected Kind config: $$ARG"; \
+	if [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
+		echo "Starting cluster with Kind config: $$ARG"; \
 		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
 	elif [ -n "$$ARG" ]; then \
-		echo "Unknown argument: $$ARG"; \
-		echo "Valid options: minimal, simple, default (Kind configs) | sample (local stack) | extension (external stack)"; \
+		echo "Unknown Kind config: $$ARG"; \
+		echo "Valid options: minimal, simple, default"; \
 		exit 1; \
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
+	fi
+
+stop: ## Stop cluster
+	@./infra/scripts/cluster-down.sh
+
+up: ## Deploy software stack (Usage: make up <stack-name>)
+	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$STACK_NAME" ]; then \
+		echo "Stack name required. Usage: make up <stack-name>"; \
+		echo "Available stacks:"; \
+		find software/stack -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' || true; \
+		exit 1; \
+	fi; \
+	if [ "$$STACK_NAME" = "sample" ]; then \
+		echo "Deploying local software stack: $$STACK_NAME"; \
+		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
+			echo "Cluster exists - deploying software stack to existing cluster..."; \
+			SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/deploy-stack.sh; \
+		else \
+			echo "Creating new cluster with software stack..."; \
+			FLUX_ENABLED=true SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/cluster-up.sh; \
+		fi; \
+	elif [[ "$$STACK_NAME" == extension/* ]]; then \
+		echo "Deploying extension software stack: $$STACK_NAME"; \
+		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
+			echo "Cluster exists - deploying extension stack to existing cluster..."; \
+			SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/deploy-stack.sh; \
+		else \
+			echo "Creating new cluster with extension stack..."; \
+			FLUX_ENABLED=true SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/cluster-up.sh; \
+		fi; \
+	else \
+		echo "Unknown stack: $$STACK_NAME"; \
+		echo "Available stacks:"; \
+		find software/stack -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' || true; \
+		exit 1; \
 	fi
 
 # Handle arguments as targets to avoid "No rule to make target" errors
@@ -75,20 +99,22 @@ minimal simple default sample extension multi-tier %:
 extension/%:
 	@:
 
-down: ## Stop the Kind cluster (preserves data)
-	@./infra/scripts/cluster-down.sh
+down: ## Remove software stack (Usage: make down <stack-name>)
+	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$STACK_NAME" ]; then \
+		echo "Stack name required. Usage: make down <stack-name>"; \
+		exit 1; \
+	fi; \
+	echo "Removing stack: $$STACK_NAME"; \
+	./infra/scripts/deploy-stack.sh down "$$STACK_NAME"
 
-restart: ## Quick cluster reset for development iteration (Usage: make restart [sample])
+restart: ## Quick cluster reset for development iteration (Usage: make restart [stack-name])
 	@echo "🔄 Restarting cluster..."
 	@# Determine if argument is a software stack
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "sample" ]; then \
+	if [ -n "$$ARG" ]; then \
 		echo "🎯 Restarting with software stack: $$ARG"; \
 		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-restart.sh; \
-	elif [ -n "$$ARG" ]; then \
-		echo "❌ Unknown stack: $$ARG"; \
-		echo "Valid stacks: sample"; \
-		exit 1; \
 	else \
 		./infra/scripts/cluster-restart.sh; \
 	fi
@@ -111,11 +137,25 @@ sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=
 		./infra/scripts/flux-sync.sh; \
 	fi
 
-##@ Tools
+##@ Applications
 
-deploy: ## Deploy application (Usage: make deploy [simple])
+deploy: ## Deploy application (Usage: make deploy <app-name>)
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$APP_NAME" ]; then \
+		echo "Application name required. Usage: make deploy <app-name>"; \
+		echo "Available applications:"; \
+		find software/apps -mindepth 1 -maxdepth 1 -type d | sed 's|software/apps/||' || true; \
+		exit 1; \
+	fi; \
 	./infra/scripts/deploy-app.sh "$$APP_NAME"
+
+remove: ## Remove application (Usage: make remove <app-name>)
+	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	if [ -z "$$APP_NAME" ]; then \
+		echo "Application name required. Usage: make remove <app-name>"; \
+		exit 1; \
+	fi; \
+	./infra/scripts/deploy-app.sh remove "$$APP_NAME"
 
 # Handle app arguments as targets to avoid "No rule to make target" errors
 extension/sample registry-demo:
@@ -125,6 +165,7 @@ extension/sample registry-demo:
 src/%:
 	@:
 
+##@ Development Tools
 
 logs: ## View recent cluster events and logs
 	$(call check_cluster)

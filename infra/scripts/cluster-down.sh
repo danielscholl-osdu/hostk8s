@@ -19,6 +19,6 @@ fi
 log_debug "Deleting Kind cluster '${CYAN}${CLUSTER_NAME}${NC}'..."
 kind delete cluster --name "${CLUSTER_NAME}"
 
-# Note: Preserving kubeconfig for 'make up' (use 'make clean' for complete removal)
+# Note: Preserving kubeconfig for 'make start' (use 'make clean' for complete removal)
 
 log_success "Cluster '${CYAN}${CLUSTER_NAME}${NC}' deleted successfully"

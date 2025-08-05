@@ -17,8 +17,9 @@ trees/
 test-data/*
 !test-data/.gitkeep
 
-# Docker Compose override files
-docker-compose.override.yml
+# Source Directory code
+src/*
+!src/registry-demo
 
 # Logs
 *.log

@@ -10,41 +10,33 @@ model: claude-sonnet-4-20250514
 Optimize cluster resource usage through analysis and GitOps-managed configuration updates.
 
 
-allowed-tools: Task, mcp__kubernetes__kubectl_get, mcp__kubernetes__kubectl_describe, mcp__flux-operator-mcp__get_kubernetes_resources, mcp__flux-operator-mcp__get_kubernetes_metrics
-argument-hint: [component] [context] | Examples: cert-manager | ingress-nginx for heavy load | app/my-spring-app for production
-description: Optimize cluster resource usage through GitOps
-Cluster Resource Optimization
 Optimize cluster resource usage through analysis and GitOps-managed configuration updates.
-Required context - CRITICAL FIRST STEP
+## Required Context - CRITICAL FIRST STEP
+
 BEFORE PROCEEDING WITH ANY ANALYSIS:
 
-Check if the file data/health.md exists
-If the file does NOT exist:
+1. **Check if the file data/health.md exists**
+2. **If the file does NOT exist:**
+   - STOP immediately
+   - Display this exact message: "❌ Health report not found. Please run /health first to generate a baseline health report before optimizing resources."
+   - Do NOT proceed with any optimization analysis
 
-STOP immediately
-Display this exact message: "❌ Health report not found. Please run /health first to generate a baseline health report before optimizing resources."
-Do NOT proceed with any optimization analysis
+3. **If the file exists:**
+   - Read the complete contents of data/health.md
+   - Parse the health analysis data for current resource usage patterns
+   - Use this data as the foundation for optimization decisions
 
-
-If the file exists:
-
-Read the complete contents of data/health.md
-Parse the health analysis data for current resource usage patterns
-Use this data as the foundation for optimization decisions
-
-
-
-File Check Implementation:
+**File Check Implementation:**
 ```bash
 # Check if health report exists
 if [ ! -f "data/health.md" ]; then
     echo "❌ Health report not found. Please run \`/health\` first to generate a baseline health report before optimizing resources."
     exit 1
 fi
-```
 
 # Read health report
 HEALTH_DATA=$(cat data/health.md)
+```
 
 ## Optimization Modes
 

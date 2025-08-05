@@ -28,7 +28,7 @@ software/
 make deploy app1
 
 # Deploy advanced app (requires MetalLB + Ingress)
-METALLB_ENABLED=true INGRESS_ENABLED=true make up
+METALLB_ENABLED=true INGRESS_ENABLED=true make start
 make deploy app2
 
 # Access via browser
@@ -43,7 +43,7 @@ make deploy app3
 
 # Check services
 kubectl get pods,svc -l tier=frontend
-kubectl get pods,svc -l tier=api  
+kubectl get pods,svc -l tier=api
 kubectl get pods,svc -l tier=database
 ```
 
@@ -51,7 +51,7 @@ kubectl get pods,svc -l tier=database
 
 ```bash
 # Enable Flux
-FLUX_ENABLED=true make up
+FLUX_ENABLED=true make start
 
 # Check Flux status
 export KUBECONFIG=$(pwd)/data/kubeconfig/config
@@ -82,7 +82,7 @@ curl -H "Host: myapp.local" http://localhost:8080  # Ingress
 # Test scaling
 kubectl scale deployment sample-app --replicas=5
 
-# Test rolling updates  
+# Test rolling updates
 kubectl set image deployment/sample-app nginx=mcr.microsoft.com/azurelinux/base/nginx
 
 # Test resource usage
@@ -128,13 +128,13 @@ Use different Kind configurations for different environments:
 
 ```bash
 # Development cluster
-KIND_CONFIG=minimal make up
+KIND_CONFIG=minimal make start
 
-# Staging-like cluster  
-KIND_CONFIG=default METALLB_ENABLED=true INGRESS_ENABLED=true make up
+# Staging-like cluster
+KIND_CONFIG=default METALLB_ENABLED=true INGRESS_ENABLED=true make start
 
 # Full-featured cluster
-KIND_CONFIG=default METALLB_ENABLED=true INGRESS_ENABLED=true FLUX_ENABLED=true make up
+KIND_CONFIG=default METALLB_ENABLED=true INGRESS_ENABLED=true FLUX_ENABLED=true make start
 ```
 
 ## Troubleshooting
@@ -163,13 +163,13 @@ kubectl delete -f software/apps/app1/app.yaml
 kubectl delete all --all -n default
 
 # Full cluster reset
-make clean && make up
+make clean && make start
 ```
 
 ## Best Practices
 
 1. **Use resource requests/limits** - Prevent resource starvation
-2. **Add health checks** - Implement readiness/liveness probes  
+2. **Add health checks** - Implement readiness/liveness probes
 3. **Label everything** - Use consistent labeling strategy
 4. **Test all access methods** - NodePort, LoadBalancer, Ingress
 5. **Use namespaces** - Isolate different applications

@@ -272,7 +272,7 @@ create_worktree() {
 
     # Start cluster
     log_info "Starting cluster: ${CYAN}${name}${NC}"
-    make up
+    make start
 
     cd "$PROJECT_ROOT"
 

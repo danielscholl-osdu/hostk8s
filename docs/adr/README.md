@@ -43,7 +43,7 @@ date: 2025-01-15
 decision: Implement standardized Make interface wrapping all operational scripts with consistent conventions.
 why: |
 • Universal familiarity: Make available on all platforms
-• Standard conventions: make up/test/clean patterns developers expect
+• Standard conventions: make start/test/clean patterns developers expect
 • Environment management: automatic KUBECONFIG handling
 • Discoverability: self-documenting help system
 tradeoffs:

@@ -31,19 +31,28 @@ HostK8s provides GitOps-based Kubernetes development environments using host-mod
 ## Essential Commands
 
 ```bash
-# Lifecycle
+# Setup
 make install       # Install dependencies
-make up [sample]   # Start cluster [with GitOps stack]
-make clean         # Tear down cluster
+make install dev   # Setup dev environment
+
+# Infrastructure
+make start         # Start cluster
+make stop          # Stop cluster
+make up <stack>    # Deploy software stack
+make down <stack>  # Remove software stack
+make clean         # Complete cleanup
+
+# Applications
+make deploy <app>  # Deploy application
+make remove <app>  # Remove application
 
 # Operations
 make status        # Check health
 make sync          # Force GitOps sync
-make deploy <app>  # Deploy application
 
 # Extensions
-make deploy extension/<name>     # Filesystem extension
-GITOPS_REPO=<url> make up extension  # Git-based stack
+make deploy extension/<name>     # Deploy extension app
+make up extension/<stack>        # Deploy extension stack
 ```
 
 ## Architecture Overview

@@ -23,11 +23,11 @@ Control which stack is deployed via environment variables:
 ```bash
 # Use sample stack (default)
 export SOFTWARE_STACK=sample
-make up
+make up sample
 
 # Use sample-stack (when available)
-export SOFTWARE_STACK=sample-stack  
-make up
+export SOFTWARE_STACK=sample-stack
+make up sample-stack
 
 # Or set in .env file
 SOFTWARE_STACK=sample
@@ -53,7 +53,7 @@ FLUX_ENABLED=true
 
 Or start cluster with Flux:
 ```bash
-FLUX_ENABLED=true make up
+FLUX_ENABLED=true make start
 ```
 
 ### 2. Verify Installation

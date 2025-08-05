@@ -11,7 +11,7 @@ Implement a **Make interface as thin orchestration layer** that provides consist
 
 ## Rationale
 1. **Separation of Concerns**: Make excels at interface/orchestration; bash excels at complex operations
-2. **Universal Familiarity**: Standard `make up`, `make test`, `make clean` patterns developers expect
+2. **Universal Familiarity**: Standard `make start`, `make test`, `make clean` patterns developers expect
 3. **Maintainability**: Complex logic in dedicated scripts is easier to test, debug, and modify
 4. **Discoverability**: `make help` provides consistent interface while scripts offer detailed help
 5. **Platform Consistency**: Same Make interface across all platforms, regardless of script complexity
@@ -113,7 +113,7 @@ deploy:
 ### Argument Handling
 ```makefile
 # Flexible argument support
-up: ## Start cluster (Usage: make up [minimal|simple|default|sample])
+start: ## Start cluster (Usage: make start [minimal|simple|default])
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
 	if [ "$$ARG" = "sample" ]; then \
 		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-up.sh; \

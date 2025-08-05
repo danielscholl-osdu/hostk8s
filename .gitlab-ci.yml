@@ -15,7 +15,7 @@ make:
   script:
     - echo "Validating Makefile syntax and targets..."
     - make help
-    - make -n up
+    - make -n up sample
     - echo "✅ Makefile syntax validated"
 
 yaml:

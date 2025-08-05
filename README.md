@@ -96,7 +96,7 @@ Direct cluster management with manual application deployments. Ideal for **itera
 **Basic Development:**
 ```bash
 export INGRESS_ENABLED=true
-make up                 # Start basic cluster
+make start              # Start basic cluster
 make deploy simple      # Deploy default app (simple)
 make status             # Check cluster and app status
 make clean              # Complete cleanup
@@ -105,11 +105,11 @@ make clean              # Complete cleanup
 **Advanced Development:**
 ```bash
 export INGRESS_ENABLED=true
-make up                 # Start cluster with LoadBalancer and Ingress
+make start              # Start cluster with LoadBalancer and Ingress
 make deploy multi-tier  # Deploy apps requiring advanced networking
 make status             # Monitor cluster health
 make restart            # Quick reset for development iteration
-make down               # Destroy cluster preserve data
+make stop               # Stop cluster (preserve data)
 ```
 
 ### 2. Automated Operations
@@ -132,7 +132,7 @@ Custom applications and cluster configurations for specialized requirements. Ena
 ```bash
 # Add configs to infra/kubernetes/extension/kind-your-name.yaml
 export KIND_CONFIG=extension/sample
-make up                           # Start with custom cluster config
+make start                        # Start with custom cluster config
 make deploy simple                # Deploy application
 make status                       # Check customized environment
 ```
@@ -142,7 +142,7 @@ make status                       # Check customized environment
 # Add apps to software/apps/extension/your-app-name/
 export METALLB_ENABLED=true
 export INGRESS_ENABLED=true
-make up                      # Start with required infrastructure
+make start                   # Start with required infrastructure
 make deploy extension/sample # Deploy custom application
 make status                  # Verify deployment
 ```
@@ -150,9 +150,8 @@ make status                  # Verify deployment
 **Custom Software Stacks:**
 ```bash
 # Create complete stacks in software/stack/extension/
-export FLUX_ENABLED=true
 export GITOPS_REPO=https://github.com/yourorg/custom-stack
-make up extension                 # Deploy complete custom environment
+make up extension/my-stack        # Deploy complete custom environment
 make status                       # Monitor custom stack deployment
 ```
 

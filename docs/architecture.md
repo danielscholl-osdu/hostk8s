@@ -98,7 +98,7 @@ The platform simplifies complex Kubernetes operations through a three-layer abst
 2. **Script Orchestration Layer** - Single-responsibility scripts managing specific operations
 3. **Common Utilities Layer** - Shared functions ensuring consistent behavior (logging, error handling, environment management)
 
-For example, when you run `make up`, the Make interface validates dependencies, the orchestration layer selects the appropriate Kind configuration, and the utilities layer handles KUBECONFIG setup and provides consistent logging—all transparently.
+For example, when you run `make start`, the Make interface validates dependencies, the orchestration layer selects the appropriate Kind configuration, and the utilities layer handles KUBECONFIG setup and provides consistent logging—all transparently.
 
 This strategy delivers complexity abstraction, automatic environment management, and clean separation of concerns. (Design decision rationale in [ADR-002](adr/002-make-interface-standardization.md))
 
@@ -157,7 +157,7 @@ Stacks use GitOps patterns with Flux for continuous deployment, enabling complet
 Default scenarios provide immediate value but quickly become restrictive barriers to innovation. As systems grow in complexity, the operational overhead increases exponentially—managing dependencies, coordinating deployments, and debugging interactions becomes increasingly difficult. While comprehensive software stacks offer deep capabilities, developers need flexibility to integrate, modify, experiment, and build upon existing foundations without being constrained by rigid implementations.
 
 **Abstraction Framework Solution:**
-The platform's common abstraction framework ensures that operational complexity remains constant regardless of stack sophistication or application complexity. Whether deploying a simple web app or a complex distributed system with multiple databases, message queues, and microservices, the developer experience remains `make build`, `make deploy`, `make up` the framework handles the underlying orchestration complexity transparently.
+The platform's common abstraction framework ensures that operational complexity remains constant regardless of stack sophistication or application complexity. Whether deploying a simple web app or a complex distributed system with multiple databases, message queues, and microservices, the developer experience remains `make build`, `make deploy`, `make up <stack>` the framework handles the underlying orchestration complexity transparently.
 
 **Extension Points as Interfaces:**
 The platform treats extensibility as a **contract-based architecture**. Extension points function as defined interfaces, the platform provides orchestration capabilities while users provide implementations that adhere to established contracts.
@@ -268,7 +268,7 @@ HostK8s provides architectural primitives that enable sophisticated CI/CD patter
 The platform's lightweight architecture enables CI/CD systems to implement **disposable test environments**:
 ```bash
 # CI/CD systems can leverage these patterns
-make up minimal          # Create lightweight validation cluster
+make start minimal       # Create lightweight validation cluster
 make test                # Validate functionality
 make clean               # Destroy environment
 ```

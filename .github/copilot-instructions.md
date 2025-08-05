@@ -15,11 +15,11 @@ HostK8s is a **host-mode Kubernetes development platform** built on Kind that re
 
 ```bash
 make help          # Show available commands
-make up            # Start basic cluster
+make start         # Start basic cluster
 make up sample     # Cluster + GitOps stack
 make deploy simple # Deploy single app
 make status        # Cluster health and service status
-make down        # Stop cluster
+make stop          # Stop cluster
 make clean         # Tear down cluster
 ```
 
