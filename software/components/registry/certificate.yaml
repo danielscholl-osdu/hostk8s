@@ -10,7 +10,7 @@ metadata:
 spec:
   secretName: registry-tls-secret
   issuerRef:
-    name: ca-issuer
+    name: root-ca-cluster-issuer
     kind: ClusterIssuer
     group: cert-manager.io
   commonName: registry.registry.svc.cluster.local
