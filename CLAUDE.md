@@ -13,6 +13,7 @@ HostK8s provides GitOps-based Kubernetes development environments using host-mod
 2. **GitOps changes require commits** - Modifications in `software/` need Git commits to deploy
 3. **Check `.env` state** - Configuration affects available operations
 4. **Data persistence** - `data/` directory survives cluster operations
+5. **Commit Messages** - Never make commit statments referencing `🤖 Generated with Claude Code` or `Co-Authored-By: Claude`
 
 ## SubAgent Delegation
 
@@ -23,6 +24,7 @@ HostK8s provides GitOps-based Kubernetes development environments using host-mod
 | `cluster-agent` | Infrastructure issues (Kind, networking, resources, RBAC) |
 | `software-agent` | GitOps/Flux issues (reconciliation, repository structure) |
 | `gitops-committer` | ANY changes requiring Git commits (software/ modifications) |
+| `developer-agent` | Delegating SWE activities to a worktree autonomous flow |
 
 **Key Pattern**: If changes need Git commits to take effect → use `gitops-committer` immediately
 
