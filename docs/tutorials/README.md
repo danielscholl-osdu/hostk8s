@@ -2,9 +2,7 @@
 
 Learn HostK8s through a progressive tutorial series that builds from individual applications to complete software stacks.
 
-## Learning Path
-
-### Applications
+### Software Applications
 
 #### [Deploying Apps](apps.md)
 *Beginner | 30-45 minutes*
@@ -19,9 +17,9 @@ Deploy individual applications using HostK8s patterns. This tutorial uses the Do
 
 ---
 
-### Components
+### Software Components
 
-#### [Using Shared Components](shared-components.md)
+#### [Using Components](shared-components.md)
 *Beginner | 20-30 minutes*
 
 Connect applications to pre-built infrastructure components. Learn consumption patterns and service discovery by connecting the voting application to a shared Redis instance.
@@ -45,9 +43,9 @@ Design and customize reusable infrastructure services. Explore the Redis Infrast
 
 ---
 
-### Stacks
+### Software Stacks
 
-#### [GitOps Fundamentals](gitops-fundamentals.md)
+#### [Stack Fundamentals](gitops-fundamentals.md)
 *Intermediate | 25-35 minutes*
 
 Implement GitOps automation patterns for component orchestration. Build a simple multi-component stack with automated dependency management.
@@ -58,7 +56,7 @@ Implement GitOps automation patterns for component orchestration. Build a simple
 - Automated deployment workflows
 - Configuration as code
 
-#### [Software Stacks](stacks.md)
+#### [Advanced Stacks](stacks.md)
 *Advanced | 40-50 minutes*
 
 Compose complete development environments with multiple components and applications. Create a full development stack including container registry and custom applications.
