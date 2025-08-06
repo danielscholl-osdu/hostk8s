@@ -6,7 +6,7 @@ Learn HostK8s through a progressive tutorial series that builds from individual 
 
 ### Applications
 
-#### [Deploying Apps](apps.md) 🟢
+#### [Deploying Apps](apps.md)
 *Beginner | 30-45 minutes*
 
 Deploy individual applications using HostK8s patterns. This tutorial uses the Docker Voting App as an example to demonstrate fundamental deployment concepts and why individual application deployments don't scale effectively.
@@ -21,7 +21,7 @@ Deploy individual applications using HostK8s patterns. This tutorial uses the Do
 
 ### Components
 
-#### [Using Shared Components](shared-components.md) 🟢
+#### [Using Shared Components](shared-components.md)
 *Beginner | 20-30 minutes*
 
 Connect applications to pre-built infrastructure components. Learn consumption patterns and service discovery by connecting the voting application to a shared Redis instance.
@@ -32,7 +32,7 @@ Connect applications to pre-built infrastructure components. Learn consumption p
 - Resource efficiency through sharing
 - When to use vs. build components
 
-#### [Building Components](components.md) 🔵
+#### [Building Components](components.md)
 *Intermediate | 30-40 minutes*
 
 Design and customize reusable infrastructure services. Explore the Redis Infrastructure Component architecture to understand component patterns and customization options.
@@ -47,7 +47,7 @@ Design and customize reusable infrastructure services. Explore the Redis Infrast
 
 ### Stacks
 
-#### [GitOps Fundamentals](gitops-fundamentals.md) 🔵
+#### [GitOps Fundamentals](gitops-fundamentals.md)
 *Intermediate | 25-35 minutes*
 
 Implement GitOps automation patterns for component orchestration. Build a simple multi-component stack with automated dependency management.
@@ -58,7 +58,7 @@ Implement GitOps automation patterns for component orchestration. Build a simple
 - Automated deployment workflows
 - Configuration as code
 
-#### [Software Stacks](stacks.md) 🟠
+#### [Software Stacks](stacks.md)
 *Advanced | 40-50 minutes*
 
 Compose complete development environments with multiple components and applications. Create a full development stack including container registry and custom applications.
@@ -68,66 +68,3 @@ Compose complete development environments with multiple components and applicati
 - Build and deployment workflows
 - Environment management
 - Production-like development setups
-
-## Tutorial Progression
-
-```
-🟢 Apps → 🟢 Use Components → 🔵 Build Components → 🔵 GitOps → 🟠 Complete Stacks
-```
-
-### The Building Blocks Journey
-
-**Applications**: See all the pieces - understand what you're abstracting
-**Components**: Use shared pieces → Understand the patterns
-**Stacks**: Automate deployment → Complete environments
-
-## Tutorial Features
-
-### 🔗 **Connected Learning**
-Each tutorial builds on concepts from previous tutorials:
-- Apps tutorial sets up individual application patterns
-- Components tutorial shows how to share infrastructure between apps
-- Stacks tutorial combines components and apps into complete environments
-
-### 🛠️ **Hands-On Practice**
-- Build real applications and infrastructure
-- Deploy to actual Kubernetes clusters
-- Verify functionality through web interfaces and command line
-
-### 📋 **Progressive Complexity**
-- Start with simple, single-purpose deployments
-- Add shared infrastructure and resource optimization
-- Complete with production-like GitOps automation
-
-### 🎯 **Practical Focus**
-- Use realistic examples (voting app, Redis infrastructure)
-- Demonstrate real-world patterns and best practices
-- Show immediate, tangible results through web UIs
-
-## Quick Start
-
-**Get started with any tutorial:**
-
-```bash
-# Clone and setup HostK8s
-git clone https://community.opengroup.org/danielscholl/hostk8s.git
-cd hostk8s
-make install
-
-# Start basic cluster
-make start
-
-# Start with Applications tutorial
-# Then progress through Components and Stacks
-```
-
-## Tutorial Support
-
-- **Architecture context**: [Architecture Guide](../architecture.md)
-- **AI assistance**: [AI Guide](../ai-guide.md)
-- **Troubleshooting**: Each tutorial includes troubleshooting sections
-- **Commands reference**: All tutorials use standard HostK8s `make` commands
-
----
-
-**Ready to start?** Begin with [🟢 Deploying Apps](apps.md)
