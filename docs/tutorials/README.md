@@ -2,8 +2,6 @@
 
 Learn HostK8s through a progressive tutorial series that builds from individual applications to complete software stacks.
 
-### Software Applications
-
 #### [Deploying Apps](apps.md)
 *Beginner | 30-45 minutes*
 
@@ -16,8 +14,6 @@ Deploy individual applications using HostK8s patterns. This tutorial uses the Do
 - Limitations of single-app deployments
 
 ---
-
-### Software Components
 
 #### [Using Components](shared-components.md)
 *Beginner | 20-30 minutes*
@@ -42,8 +38,6 @@ Design and customize reusable infrastructure services. Explore the Redis Infrast
 - Best practices for reusability
 
 ---
-
-### Software Stacks
 
 #### [Stack Fundamentals](gitops-fundamentals.md)
 *Intermediate | 25-35 minutes*
