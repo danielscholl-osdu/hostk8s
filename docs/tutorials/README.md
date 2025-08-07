@@ -2,17 +2,17 @@
 
 Learn HostK8s through a progressive tutorial series that builds from cluster configuration to complete software stacks.
 
-#### [Cluster Configuration](cluster.md)
-*Beginner | 35-45 minutes*
+#### [Kind Configuration](cluster.md)
+*Beginner | 20-30 minutes*
 
-Master Kubernetes cluster configuration using Kind. Progress from single-node development clusters to sophisticated multi-node environments with agent pools and custom networking.
+Learn when and why to customize Kind cluster configurations. Master the key decisions between single-node and multi-node development clusters through practical examples.
 
 **Key Topics:**
-- 3-tier configuration system (default, custom, override)
-- Single-node vs multi-node cluster design
-- Agent pools and node labeling patterns
-- Custom CNI and networking configuration
-- Real-world enterprise simulation (AKS-like)
+- Single-node vs multi-node configuration decisions
+- Node roles and workload scheduling
+- Storage mounts for persistent data
+- Local registry configuration for development
+- 3-tier configuration system (temporary, personal, default)
 
 ---
 
