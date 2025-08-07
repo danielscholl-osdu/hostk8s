@@ -9,11 +9,17 @@ You're testing a microservice that connects to a database. Simple enough, but wh
 Once you've decided you need local Kubernetes for fast iteration, the next question becomes: should your application run mixed with Kubernetes system components on a single node, or isolated on a dedicated worker? This choice affects everything from debugging capabilities to resource usage patterns.
 
 **The development spectrum dilemma:**
+
+*Speed vs Realism:*
 - **Too simple** - Docker Compose works for basic scenarios but can't test Kubernetes features
-- **Cloud overhead** - AKS, EKS, GKE provide real Kubernetes but with cost, startup time, and shared resource constraints
 - **Too complex** - Full production clusters are slow and resource-heavy for development
 - **Resource competition** - Single-node Kubernetes mixes your app with system components
 - **Production mismatch** - Need to test real scheduling but want fast iteration
+
+*Cost vs Access:*
+- **Cloud overhead** - AKS, EKS, GKE provide real Kubernetes but with cost, startup time, and shared resource constraints
+
+*Debuggability:*
 - **Context switching** - Moving between different development environments breaks flow
 
 **The Configuration Challenge:**
@@ -27,7 +33,7 @@ HostK8s solves this through **configurable cluster architectures** that let you 
 - **Single-Node** (`kind-custom.yaml`) - Optimizes for speed and simplicity
 - **Multi-Node** (`kind-worker.yaml`) - Provides production-like workload isolation
 
-**The Real Power: Custom Configurations**
+**Beyond Defaults: Tailoring Your Cluster**
 But these are just starting points. You can create configurations optimized for your specific needs:
 - **High-scale testing** - Multi-node clusters with more workers to test distributed applications
 - **Resource-constrained development** - Minimal single-node for CI environments or laptops
@@ -61,7 +67,7 @@ make status
 
 You'll see:
 ```
-⚙️  Control Plane: Ready
+Control Plane: Ready
    Status: Kubernetes v1.33.2 (up 30s)
 ```
 
@@ -84,13 +90,21 @@ kubectl get pods -o wide
 # All pods running on hostk8s-control-plane
 ```
 
+**Architecture:**
+```
+┌─────────────────────────────────────┐
+│        hostk8s-control-plane       │
+│  ┌─────────────┐ ┌─────────────────┐│
+│  │System       │ │Your             ││
+│  │Components   │ │Applications     ││
+│  │• API Server │ │• simple-app     ││
+│  │• etcd       │ │• voting-app     ││
+│  │• scheduler  │ │                 ││
+│  └─────────────┘ └─────────────────┘│
+└─────────────────────────────────────┘
+```
+
 **Key Insight:** Your application shares resources directly with Kubernetes system components (API server, etcd, scheduler).
-
-### When Single-Node Works Best
-
-Single-node configuration becomes the obvious choice during the early phases of development. When you're rapidly iterating on an idea, the 30-second cluster startup time can be the difference between maintaining flow state and losing your train of thought. If you're working on a laptop with limited resources, running everything in a single container means you can still run a full Kubernetes environment without overwhelming your system.
-
-This approach also shines when you're building simpler applications or learning Kubernetes fundamentals. The mental model is straightforward: one cluster, one place where everything runs, no complexity about where workloads land. You can focus on your application logic without worrying about the nuances of distributed systems.
 
 ## Experience 2: Multi-Node Development
 
@@ -106,10 +120,10 @@ make status
 
 You'll see:
 ```
-⚙️  Control Plane: Ready
+Control Plane: Ready
    Status: Kubernetes v1.33.2 (up 45s)
    Node: hostk8s-control-plane
-👷 Worker: Ready
+Worker: Ready
    Status: Kubernetes v1.33.2 (up 31s)
    Node: hostk8s-worker
 ```
@@ -127,9 +141,26 @@ kubectl get pods -o wide
 # Pod now running on hostk8s-worker (not control plane)
 ```
 
+**Architecture:**
+```
+┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐
+│     hostk8s-control-plane          │ │        hostk8s-worker              │
+│  ┌─────────────────────────────────┐│ │  ┌─────────────────────────────────┐│
+│  │System Components                ││ │  │Your Applications                ││
+│  │• API Server                     ││ │  │• simple-app                     ││
+│  │• etcd                           ││ │  │• voting-app                     ││
+│  │• scheduler                      ││ │  │• custom services                ││
+│  │                                 ││ │  │                                 ││
+│  │(Tainted: NoSchedule)            ││ │  │(Clean: Accepts workloads)       ││
+│  └─────────────────────────────────┘│ │  └─────────────────────────────────┘│
+└─────────────────────────────────────┘ └─────────────────────────────────────┘
+```
+
 **Key Insight:** Kubernetes automatically isolates your workloads from system components using node taints.
 
 ### Understanding Workload Scheduling
+
+Ever wonder how Kubernetes decides where your app runs? Here's the key mechanism:
 
 Check why applications avoid the control plane:
 
@@ -140,14 +171,6 @@ kubectl describe nodes | grep Taints
 ```
 
 This **taint** prevents user applications from competing with critical system components for resources.
-
-### When Multi-Node Works Best
-
-Multi-node configuration becomes essential as your applications grow in complexity. When you're building distributed systems or preparing for production deployment, you need to understand how Kubernetes actually schedules workloads across different nodes. This configuration gives you that reality without the overhead of a full production cluster.
-
-The isolation benefits become particularly valuable during debugging sessions. When something goes wrong in a single-node setup, you're often left wondering whether the issue is with your application, a resource contention problem with the Kubernetes control plane, or some interaction between them. With workload isolation, you can immediately rule out system component interference and focus on your application's actual behavior.
-
-This setup also prepares you for production scenarios where your applications will run on dedicated worker nodes, helping you catch scheduling, resource, and networking issues early in your development cycle.
 
 ## Core Configuration Concepts
 
@@ -189,45 +212,42 @@ kubectl create deployment myapp --image=localhost:5000/myapp
 
 ## Configuration Management
 
-One of the most practical aspects of HostK8s is how it handles configuration management. The platform recognizes that developers need flexibility. Sometimes you want to experiment with different cluster types, sometimes you want to set a personal preference, and sometimes you just want things to work without thinking about it.
+HostK8s uses a 3-tier configuration system that balances flexibility with simplicity:
 
-The 3-tier system addresses all these needs elegantly:
-
-### Testing Configurations
+**Tier 1: Temporary Override**
 ```bash
 KIND_CONFIG=worker make start    # Try multi-node temporarily
 ```
 
-When you want to experiment with a different cluster configuration, just set the KIND_CONFIG environment variable. This is perfect for testing how your applications behave in different environments without changing your default setup.
-
-### Personal Defaults
+**Tier 2: Personal Default**
 ```bash
-# Set your preferred configuration
 cp infra/kubernetes/kind-worker.yaml infra/kubernetes/kind-config.yaml
 make start                       # Always uses your preference
 ```
 
-If you find yourself always using the same configuration (maybe you prefer multi-node for all your development), create a personal `kind-config.yaml` file. HostK8s will automatically detect and use this file, so `make start` always gives you exactly what you want.
-
-### System Defaults
+**Tier 3: System Fallback**
 ```bash
 make start                       # Uses functional defaults (kind-custom.yaml)
 ```
 
-When you don't specify anything and don't have a personal config, HostK8s falls back to the system default. This ensures that tutorials, examples, and new team members always get a working environment without any setup required.
+This progression ensures you can experiment (tier 1), set personal preferences (tier 2), or rely on working defaults (tier 3) without configuration complexity.
 
-## Making the Choice
+## Single-Node vs Multi-Node Comparison
 
 Your cluster configuration choice affects your entire development workflow:
 
-| Development Stage | Single-Node | Multi-Node |
-|------------------|-------------|------------|
-| **Prototyping** | ✅ Fast iteration | ⚠️ Slower startup |
-| **Integration Testing** | ⚠️ Mixed workloads | ✅ Isolated workloads |
-| **Debugging** | ⚠️ Shared resources | ✅ Clear separation |
-| **Production Prep** | ❌ Unrealistic | ✅ Realistic behavior |
+| Aspect | Single-Node | Multi-Node |
+|--------|-------------|------------|
+| **Startup Time** | ~30 seconds | ~45 seconds |
+| **Memory Usage** | ~600MB total | ~600MB total (distributed) |
+| **Architecture** | Everything on control-plane | Workloads isolated on worker |
+| **Best For** | Rapid prototyping, learning | Integration testing, production prep |
+| **Resource Isolation** | Mixed workloads | Clear separation |
+| **Debugging** | Shared resource confusion | Component isolation |
+| **Production Similarity** | Low | High |
+| **Mental Complexity** | Simple (one place) | Realistic (distributed) |
 
-**The Pattern:** Start with single-node for speed, move to multi-node when you need production-like behavior.
+**Recommendation:** Start with single-node for speed and simplicity, move to multi-node when you need production-like behavior and workload isolation.
 
 ## Building Toward Applications
 
@@ -242,11 +262,6 @@ In the [next tutorial](apps.md), you'll deploy increasingly complex applications
 
 ## Summary
 
-Cluster configuration isn't just about resources. It's about matching your development environment to your testing needs:
+Cluster configuration shapes your entire development experience. The [comparison table](#single-node-vs-multi-node-comparison) shows how single-node optimizes for speed while multi-node provides production-like isolation. Both configurations support the same core features (storage, registry, ingress), but excel in different development phases.
 
-- **Single-node** optimizes for development speed and simplicity
-- **Multi-node** provides production-like workload isolation and scheduling
-- **Both support** the same development features (registry, storage, ingress)
-- **Your choice** affects debugging, resource usage, and production similarity
-
-The key insight: different development phases need different cluster configurations. HostK8s makes it easy to switch between them without losing your data or development workflow.
+The key insight: different development stages benefit from different cluster architectures. HostK8s makes it easy to switch between them without losing your data or development workflow.
