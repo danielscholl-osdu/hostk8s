@@ -32,11 +32,11 @@ HostK8s solves this through **configurable cluster architecture patterns** that 
 
 ### Base Configuration
 
-HostK8s provides a single, functional configuration that works out of the box:
+HostK8s provides a custom configuration that works out of the box for the samples in the project:
 
 - **`kind-custom.yaml`** - Single-node configuration with essential features (ingress, registry, persistent storage)
 
-Like the sample applications in this repository, this configuration is a **learning example** - real projects create their own configurations tailored to their specific requirements.
+Like the sample applications in this repository, this configuration is a **learning example** - real projects would typically create their own configurations tailored to their specific requirements.
 
 ### Real-World Configuration Examples
 
@@ -127,60 +127,37 @@ Once you have `kind-config.yaml`, running `make start` will automatically use yo
 
 Let's customize your personal configuration by adding a worker node and custom networking. These are the two most common modifications projects make.
 
-### Step 1: Modify Your Configuration File
-
-Open your personal configuration file:
-
-```bash
-# Edit your personal default configuration
-vi infra/kubernetes/kind-config.yaml
-```
-
-### Step 2: Add a Worker Node
+### Add a Worker Node
 
 Find the `nodes:` section and add a worker:
 
 ```yaml
 nodes:
-- role: control-plane
-  kubeadmConfigPatches:
-  - |
-    kind: InitConfiguration
-    nodeRegistration:
-      kubeletExtraArgs:
-        node-labels: "ingress-ready=true"
-  extraPortMappings:
-    - containerPort: 80
-      hostPort: 8080
-      listenAddress: "127.0.0.1"
-      protocol: TCP
-    - containerPort: 443
-      hostPort: 8443
-      listenAddress: "127.0.0.1"
-      protocol: TCP
-    - containerPort: 6443
-      hostPort: 6443
-- role: worker  # Add this line
+# Add a worker role
+- role: worker
+  image: kindest/node:v1.33.2
+  extraMounts:
+  - hostPath: /tmp/kind-storage
+    containerPath: /mnt/storage
+    readOnly: false
+  - hostPath: ./data/storage
+    containerPath: /mnt/data
+    readOnly: false
+  labels:
+    node-role.kubernetes.io/worker: ""
 ```
 
-### Step 3: Customize Network Subnets
+### Customize Network Subnets
 
-Add custom networking to avoid conflicts with your VPN or corporate network:
+The default configuration uses safe Class B networks (`172.20.0.0/24` and `172.20.1.0/24`) that avoid common home network conflicts. If you need more IP addresses for larger deployments, expand to Class A networks:
 
 ```yaml
-kind: Cluster
-apiVersion: kind.x-k8s.io/v1alpha4
-# Add custom networking
 networking:
-  podSubnet: "10.240.0.0/16"
-  serviceSubnet: "10.0.0.0/16"
-nodes:
-- role: control-plane
-  # ... rest of configuration
-- role: worker
+  podSubnet: "10.244.0.0/16"    # Expands from 254 to 65,534 pod IPs
+  serviceSubnet: "10.96.0.0/12"  # Expands from 254 to 1,048,574 service IPs
 ```
 
-### Step 4: Test Your Custom Configuration
+### Test Your Custom Configuration
 
 Start your cluster with the customized configuration:
 
@@ -200,7 +177,7 @@ Worker: Ready
    Node: hostk8s-worker
 ```
 
-### Step 5: Verify Your Changes
+### Verify Your Changes
 
 Check that your custom pod and service subnets are configured:
 
@@ -211,8 +188,8 @@ kubectl cluster-info dump | grep -E "pod-subnet|service-subnet"
 
 You should see your custom networking values:
 ```
-"--pod-subnet=10.240.0.0/16"
-"--service-subnet=10.0.0.0/16"
+"--pod-subnet=10.244.0.0/16"
+"--service-subnet=10.96.0.0/12"
 ```
 
 Deploy an application to verify worker node scheduling:
@@ -228,17 +205,19 @@ kubectl get pods -o wide
 - **Custom networking** - avoided conflicts with corporate/VPN networks
 - **Personal default configuration** - your project can replicate this setup
 
-### Step 6: Share With Your Project
+## Why Configuration Choices Matter
 
-Since `kind-config.yaml` is personal (gitignored by default), you can create a shared project configuration:
+### Node Roles and Scheduling
 
-```bash
-# Create a project configuration for version control
-cp infra/kubernetes/kind-config.yaml infra/kubernetes/kind-project-multi.yaml
+Understanding how Kubernetes schedules workloads is crucial for everything you'll do in HostK8s. Your configuration choices directly affect where applications run and how they behave.
 
-# Project contributors can use it with:
-# make start project-multi
-```
+In Kubernetes, nodes have specific roles that determine what runs on them. The **control plane** nodes handle the brain functions of the cluster. They run the API server that receives your kubectl commands, etcd that stores cluster state, and the scheduler that decides where your applications should run. **Worker** nodes are where your actual applications live and execute.
+
+**How Taints Enforce Separation:**
+
+The multi-node setup shows you how Kubernetes automatically enforces this separation through taints. When you deploy an application, Kubernetes looks at each node and asks "can this workload run here?" The control plane node says "no, I'm tainted for system components only," so your application lands on the worker node where it belongs.
+
+This **taint** (`node-role.kubernetes.io/control-plane:NoSchedule`) prevents user applications from competing with critical system components for resources. This automatic orchestration is what makes Kubernetes powerful in production environments - your workloads get scheduled appropriately without manual intervention.
 
 ---
 
@@ -257,87 +236,25 @@ make start my-config  # Uses infra/kubernetes/kind-my-config.yaml
 
 This system gives you personal defaults while supporting specialized configurations for different deployment scenarios.
 
-## Core Configuration Concepts
+## What Comes Next
 
-### Node Roles and Scheduling
+You've now experienced the key tradeoffs in Kubernetes cluster configuration: how node roles, resource isolation, and scheduling behavior shape your development workflow.
 
-Understanding how Kubernetes schedules workloads is crucial for everything you'll do in HostK8s. Both cluster configurations teach you these fundamentals, but in different ways.
+These concepts form the foundation for application development. In the next tutorial, you'll:
+- Deploy complex, multi-service applications
+- Experience how configuration choices impact application behavior and performance
+- Work with persistent storage and service discovery patterns
 
-In Kubernetes, nodes have specific roles that determine what runs on them. The **control plane** nodes handle the brain functions of the cluster. They run the API server that receives your kubectl commands, etcd that stores cluster state, and the scheduler that decides where your applications should run. **Worker** nodes are where your actual applications live and execute.
+The cluster architecture decisions you've learned here will directly affect everything you build on top.
 
-**How Taints Enforce Separation:**
-
-The multi-node setup shows you how Kubernetes automatically enforces this separation through taints. When you deploy an application, Kubernetes looks at each node and asks "can this workload run here?" The control plane node says "no, I'm tainted for system components only," so your application lands on the worker node where it belongs.
-
-This **taint** (`node-role.kubernetes.io/control-plane:NoSchedule`) prevents user applications from competing with critical system components for resources. This automatic orchestration is what makes Kubernetes powerful in production environments - your workloads get scheduled appropriately without manual intervention.
-
-### Storage for Development
-
-Both configurations support persistent data in your project:
-
-```yaml
-# Both configs include
-extraMounts:
-- hostPath: ./data/storage    # Your project's persistent data
-  containerPath: /mnt/data    # Available inside containers
-```
-
-**Why this matters:** Your databases and application data survive cluster restarts - essential for development iteration.
-
-### Local Registry Support
-
-Both configurations include local registry for development workflows:
-
-```bash
-# Build and push to local registry
-docker build -t localhost:5000/myapp .
-docker push localhost:5000/myapp
-
-# Deploy from local registry
-kubectl create deployment myapp --image=localhost:5000/myapp
-```
-
-**Why this matters:** Fast development cycles without pushing to external registries.
-
-## Configuration Management
-
-HostK8s uses a 3-tier configuration system that balances flexibility with simplicity:
-
-**Tier 1: Temporary Override**
-```bash
-KIND_CONFIG=worker make start    # Try multi-node temporarily
-```
-
-**Tier 2: Personal Default**
-```bash
-cp infra/kubernetes/kind-worker.yaml infra/kubernetes/kind-config.yaml
-make start                       # Always uses your preference
-```
-
-**Tier 3: System Fallback**
-```bash
-make start                       # Uses functional defaults (kind-custom.yaml)
-```
-
-This progression ensures you can experiment (tier 1), set personal preferences (tier 2), or rely on working defaults (tier 3) without configuration complexity.
-
-## Making the Choice
-
-Your hands-on experience shows the fundamental tradeoff: single-node prioritizes speed, multi-node provides realistic isolation. Most developers start with single-node for rapid iteration, then move to multi-node when they need production-like workload scheduling and debugging clarity.
-
-## Building Toward Applications
-
-The concepts you've learned here become the foundation for application deployment:
-
-- **Node roles** determine where your applications run
-- **Resource isolation** affects how applications interact
-- **Workload scheduling** becomes important for multi-service applications
-- **Storage mounts** enable persistent application data
-
-In the [next tutorial](apps.md), you'll deploy increasingly complex applications and experience how cluster configuration choices affect application behavior, resource usage, and debugging capabilities.
+👉 Continue to: [Application Deployment](apps.md)
 
 ## Summary
 
-Cluster configuration shapes your entire development experience. As you experienced, the architectural choices cascade through networking, storage, debugging, and scheduling behavior. Both configurations support the same core features, but serve different development needs.
+Your development environment is infrastructure.
 
-The key insight: different development stages benefit from different cluster architectures. HostK8s makes it easy to switch between them without losing your data or development workflow.
+Through HostK8s, you've seen how a cluster's configuration directly affects application behavior, debugging workflows, and development speed. Whether you're optimizing for fast iteration or production realism, choosing the right architecture — and version-controlling it — makes all the difference.
+
+HostK8s makes these tradeoffs practical: same tooling, same interface, different outcomes — all under your control.
+
+**Key takeaway**: treat your development environment as deliberately as your application code. HostK8s makes that easy.
