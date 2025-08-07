@@ -4,7 +4,7 @@
 
 ## The Development Workflow Challenge
 
-You're testing a microservice that connects to a database. Simple enough - but where should it run? For basic development, you might just use Docker Compose or even run everything directly in your IDE with local database connections. When you need to test Kubernetes-specific behavior - service discovery, resource limits, ingress routing - you could spin up a cloud cluster (AKS, EKS, GKE), but that brings cost, slow provisioning, and the overhead of managing shared cloud resources for what might be quick development experiments.
+You're testing a microservice that connects to a database. Simple enough, but where should it run? For basic development, you might just use Docker Compose or even run everything directly in your IDE with local database connections. When you need to test Kubernetes-specific behavior like service discovery, resource limits, or ingress routing, you could spin up a cloud cluster (AKS, EKS, GKE), but that brings cost, slow provisioning, and the overhead of managing shared cloud resources for what might be quick development experiments.
 
 Once you've decided you need local Kubernetes for fast iteration, the next question becomes: should your application run mixed with Kubernetes system components on a single node, or isolated on a dedicated worker? This choice affects everything from debugging capabilities to resource usage patterns.
 
@@ -27,7 +27,7 @@ HostK8s solves this through **configurable cluster architectures** that let you 
 - **Single-Node** (`kind-custom.yaml`) - Optimizes for speed and simplicity
 - **Multi-Node** (`kind-worker.yaml`) - Provides production-like workload isolation
 
-**The Real Power - Custom Configurations:**
+**The Real Power: Custom Configurations**
 But these are just starting points. You can create configurations optimized for your specific needs:
 - **High-scale testing** - Multi-node clusters with more workers to test distributed applications
 - **Resource-constrained development** - Minimal single-node for CI environments or laptops
@@ -155,7 +155,7 @@ This setup also prepares you for production scenarios where your applications wi
 
 Understanding how Kubernetes schedules workloads is crucial for everything you'll do in HostK8s. Both cluster configurations teach you these fundamentals, but in different ways.
 
-In Kubernetes, nodes have specific roles that determine what runs on them. The **control plane** nodes handle the brain functions of the cluster - they run the API server that receives your kubectl commands, etcd that stores cluster state, and the scheduler that decides where your applications should run. **Worker** nodes are where your actual applications live and execute.
+In Kubernetes, nodes have specific roles that determine what runs on them. The **control plane** nodes handle the brain functions of the cluster. They run the API server that receives your kubectl commands, etcd that stores cluster state, and the scheduler that decides where your applications should run. **Worker** nodes are where your actual applications live and execute.
 
 The beauty of the multi-node setup is that it shows you how Kubernetes automatically enforces this separation through taints. When you deploy an application, Kubernetes looks at each node and says "can this workload run here?" The control plane node says "no, I'm tainted for system components only," so your application lands on the worker node where it belongs. This automatic orchestration is what makes Kubernetes powerful in production environments.
 
@@ -189,7 +189,7 @@ kubectl create deployment myapp --image=localhost:5000/myapp
 
 ## Configuration Management
 
-One of the most practical aspects of HostK8s is how it handles configuration management. The platform recognizes that developers need flexibility - sometimes you want to experiment with different cluster types, sometimes you want to set a personal preference, and sometimes you just want things to work without thinking about it.
+One of the most practical aspects of HostK8s is how it handles configuration management. The platform recognizes that developers need flexibility. Sometimes you want to experiment with different cluster types, sometimes you want to set a personal preference, and sometimes you just want things to work without thinking about it.
 
 The 3-tier system addresses all these needs elegantly:
 
@@ -242,7 +242,7 @@ In the [next tutorial](apps.md), you'll deploy increasingly complex applications
 
 ## Summary
 
-Cluster configuration isn't just about resources - it's about matching your development environment to your testing needs:
+Cluster configuration isn't just about resources. It's about matching your development environment to your testing needs:
 
 - **Single-node** optimizes for development speed and simplicity
 - **Multi-node** provides production-like workload isolation and scheduling
