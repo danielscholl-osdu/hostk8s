@@ -97,7 +97,7 @@ Direct cluster management with manual application deployments. Ideal for **itera
 ```bash
 export INGRESS_ENABLED=true
 make start              # Start basic cluster
-make deploy simple      # Deploy default app (simple)
+make deploy simple      # Deploy to default namespace
 make status             # Check cluster and app status
 make clean              # Complete cleanup
 ```
@@ -106,7 +106,7 @@ make clean              # Complete cleanup
 ```bash
 export INGRESS_ENABLED=true
 make start              # Start cluster with LoadBalancer and Ingress
-make deploy multi-tier  # Deploy apps requiring advanced networking
+make deploy complex     # Deploy complex multi-service app
 make status             # Monitor cluster health
 make restart            # Quick reset for development iteration
 make stop               # Stop cluster (preserve data)
@@ -130,20 +130,27 @@ Custom applications and cluster configurations for specialized requirements. Ena
 
 **Custom Clusters:**
 ```bash
-# Add configs to infra/kubernetes/extension/kind-your-name.yaml
-export KIND_CONFIG=extension/sample
-make start                        # Start with custom cluster config
-make deploy simple                # Deploy application
+# Option 1: Create kind-config.yaml for persistent custom config
+cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml
+# Edit kind-config.yaml as needed
+make start                        # Uses your kind-config.yaml
+
+# Option 2: Use environment variable for temporary config
+KIND_CONFIG=kind-custom.yaml make start   # Use example config
+KIND_CONFIG=extension/sample make start   # Use extension config
+make deploy simple                # Deploy to default namespace
+make deploy simple testing           # Deploy to testing namespace
+NAMESPACE=apps make deploy simple    # Deploy to apps namespace
 make status                       # Check customized environment
 ```
 
 **Custom Applications:**
 ```bash
-# Add apps to software/apps/extension/your-app-name/
+# Add apps to software/apps/your-app-name/
 export METALLB_ENABLED=true
 export INGRESS_ENABLED=true
 make start                   # Start with required infrastructure
-make deploy extension/sample # Deploy custom application
+make deploy helm-sample       # Deploy Helm chart application
 make status                  # Verify deployment
 ```
 
@@ -168,7 +175,7 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `LOG_LEVEL`       | Logging verbosity (debug, info, warn, error)  | `debug`   |
 | `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
 | `K8S_VERSION`     | Kubernetes version to use                     | `latest`  |
-| `KIND_CONFIG`     | Kind config preset (minimal, simple, default) | `default` |
+| `KIND_CONFIG`     | Kind config file (if not set, uses kind-config.yaml or kind-custom.yaml) | *(none)* |
 | `PACKAGE_MANAGER` | Package manager preference (brew, native)     | `auto`    |
 | `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |
 | `METALLB_ENABLED` | Enable MetalLB for LoadBalancer support       | `false`   |
@@ -176,4 +183,102 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
+| `NAMESPACE`       | Default namespace for app deployments         | `default` |
+
+### Kind Configuration
+
+HostK8s uses a 3-tier fallback system for Kind cluster configuration:
+
+1. **KIND_CONFIG environment variable** - Explicit config override
+2. **kind-config.yaml** - User's persistent custom configuration
+3. **Functional defaults** - Uses kind-custom.yaml for complete functionality
+
+```bash
+# Tier 3: Functional defaults (recommended for beginners)
+make start                    # Uses kind-custom.yaml automatically
+
+# Tier 2: Custom configuration (persistent)
+cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml
+# Edit kind-config.yaml for your needs
+make start
+
+# Tier 1: Environment override (temporary)
+KIND_CONFIG=kind-custom.yaml make start
+KIND_CONFIG=extension/my-config make start
+```
+
+**Available Example Configurations:**
+- `kind-custom.yaml` - Full-featured example with port mappings and registry support
+- `kind-config-minimal.yaml` - Minimal configuration for testing
+- `extension/kind-sample.yaml` - Extended configuration for complex setups
+
+---
+
+## Namespace Management
+
+HostK8s supports deploying applications to custom namespaces using multiple syntax options for flexibility in different workflows.
+
+### Namespace Syntax Options
+
+**Default Deployment (default namespace):**
+```bash
+make deploy simple              # Deploys to 'default' namespace
+```
+
+**Positional Namespace Argument:**
+```bash
+make deploy simple testing      # Deploys to 'testing' namespace
+make deploy complex staging     # Deploys to 'staging' namespace
+make deploy helm-sample prod    # Deploys to 'prod' namespace
+```
+
+**Environment Variable:**
+```bash
+NAMESPACE=apps make deploy simple       # Deploys to 'apps' namespace
+NAMESPACE=development make deploy complex
+```
+
+### Available Applications
+
+| App Name | Type | Description |
+|----------|------|-------------|
+| `simple` | Basic | Single pod application for testing |
+| `complex` | Intermediate | Multi-service app with Kustomization |
+| `helm-sample` | Advanced | Full Helm chart with voting app |
+
+### Namespace Examples
+
+**Development Workflow:**
+```bash
+# Create isolated development environment
+make deploy simple dev-john
+make deploy complex integration-tests
+NAMESPACE=feature-branch make deploy helm-sample
+```
+
+**Team Collaboration:**
+```bash
+# Each team member gets their own namespace
+make deploy simple alice
+make deploy simple bob
+make status  # Shows apps across all namespaces
+```
+
+**Multi-Environment Testing:**
+```bash
+# Test same app in different environments
+make deploy helm-sample dev
+make deploy helm-sample staging
+NAMESPACE=production make deploy helm-sample
+```
+
+### Namespace Management
+
+- **Automatic Creation**: Namespaces are created automatically if they don't exist
+- **Cleanup**: Empty namespaces are automatically removed when the last app is removed
+- **Isolation**: Each namespace provides complete resource isolation
+- **Status Visibility**: `make status` shows apps across all namespaces with namespace labels
+
+---
+
 # Test external status reporting

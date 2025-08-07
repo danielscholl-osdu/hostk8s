@@ -39,18 +39,21 @@ dev:
 
 ##@ Infrastructure
 
-start: ## Start cluster (Usage: make start [minimal|simple|default])
+start: ## Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)
 	@# Only check dependencies if no cluster config exists (fresh setup)
 	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then $(MAKE) install; fi
 	@# Start cluster with optional Kind config
 	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ] || [ "$$ARG" = "default" ]; then \
-		echo "Starting cluster with Kind config: $$ARG"; \
-		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
-	elif [ -n "$$ARG" ]; then \
-		echo "Unknown Kind config: $$ARG"; \
-		echo "Valid options: minimal, simple, default"; \
-		exit 1; \
+	if [ -n "$$ARG" ]; then \
+		if [ -f "infra/kubernetes/kind-$$ARG.yaml" ]; then \
+			echo "Starting cluster with Kind config: $$ARG"; \
+			KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
+		else \
+			echo "Unknown Kind config: $$ARG"; \
+			echo "Available configurations:"; \
+			find infra/kubernetes -name "kind-*.yaml" -exec basename {} .yaml \; | sed 's/kind-/  /' | sort || echo "  No configurations found"; \
+			exit 1; \
+		fi; \
 	else \
 		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
 	fi
@@ -139,26 +142,38 @@ sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=
 
 ##@ Applications
 
-deploy: ## Deploy application (Usage: make deploy <app-name>)
+deploy: ## Deploy application (Usage: make deploy <app-name> [namespace] or NAMESPACE=ns make deploy <app-name>)
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	POSITIONAL_NS="$(word 3,$(MAKECMDGOALS))"; \
+	TARGET_NAMESPACE="$${POSITIONAL_NS:-$${NAMESPACE:-default}}"; \
 	if [ -z "$$APP_NAME" ]; then \
-		echo "Application name required. Usage: make deploy <app-name>"; \
+		echo "Application name required. Usage: make deploy <app-name> [namespace]"; \
+		echo "Examples:"; \
+		echo "  make deploy simple                    # Deploy to default namespace"; \
+		echo "  make deploy simple testing           # Deploy to testing namespace"; \
+		echo "  NAMESPACE=apps make deploy simple    # Deploy to apps namespace"; \
 		echo "Available applications:"; \
 		find software/apps -mindepth 1 -maxdepth 1 -type d | sed 's|software/apps/||' || true; \
 		exit 1; \
 	fi; \
-	./infra/scripts/deploy-app.sh "$$APP_NAME"
+	./infra/scripts/deploy-app.sh "$$APP_NAME" "$$TARGET_NAMESPACE"
 
-remove: ## Remove application (Usage: make remove <app-name>)
+remove: ## Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	POSITIONAL_NS="$(word 3,$(MAKECMDGOALS))"; \
+	TARGET_NAMESPACE="$${POSITIONAL_NS:-$${NAMESPACE:-default}}"; \
 	if [ -z "$$APP_NAME" ]; then \
-		echo "Application name required. Usage: make remove <app-name>"; \
+		echo "Application name required. Usage: make remove <app-name> [namespace]"; \
+		echo "Examples:"; \
+		echo "  make remove simple                    # Remove from default namespace"; \
+		echo "  make remove simple testing           # Remove from testing namespace"; \
+		echo "  NAMESPACE=apps make remove simple    # Remove from apps namespace"; \
 		exit 1; \
 	fi; \
-	./infra/scripts/deploy-app.sh remove "$$APP_NAME"
+	./infra/scripts/deploy-app.sh remove "$$APP_NAME" "$$TARGET_NAMESPACE"
 
-# Handle app arguments as targets to avoid "No rule to make target" errors
-extension/sample registry-demo:
+# Handle app and namespace arguments as targets to avoid "No rule to make target" errors
+%:
 	@:
 
 # Handle src/* arguments as targets to avoid "No rule to make target" errors

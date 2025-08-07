@@ -7,7 +7,7 @@
 HostK8s needed a way to support complete customization for different use cases and organizations without requiring code changes to the core platform. Users require the ability to add custom cluster configurations, deploy specialized applications, and create domain-specific software stacks while leveraging the HostK8s framework. The solution must be intuitive, support external repositories, and enable dynamic configuration based on environment variables.
 
 ## Decision
-Implement a **comprehensive extension system** using dedicated `extension/` directories across all platform layers (infrastructure, applications, software stacks) with template processing for dynamic configuration. Extensions operate as first-class citizens alongside built-in components with no code modifications required.
+Implement a **comprehensive extension system** using .gitignore-based isolation for applications and dedicated `extension/` directories for infrastructure layers. Application extensions use simplified direct paths while infrastructure extensions maintain folder-based organization. Extensions operate as first-class citizens alongside built-in components with no code modifications required.
 
 ## Rationale
 1. **Zero Code Modification**: Complete customization without touching HostK8s core code
@@ -20,16 +20,12 @@ Implement a **comprehensive extension system** using dedicated `extension/` dire
 ## Architecture Design
 
 ### Extension Directory Structure
+
+**Infrastructure Extensions (folder-based):**
 ```
 infra/kubernetes/extension/
 ├── kind-my-config.yaml          # Custom cluster configurations
 └── README.md                    # Extension documentation
-
-software/apps/extension/
-├── my-app/
-│   ├── app.yaml                 # Application manifests
-│   └── README.md               # App documentation
-└── README.md                   # Apps extension guide
 
 software/stack/extension/
 ├── my-stack/
@@ -39,6 +35,21 @@ software/stack/extension/
 │   ├── components/            # Infrastructure Helm releases
 │   └── applications/          # Application manifests
 └── README.md                  # Stack extension guide
+```
+
+**Application Extensions (.gitignore-based):**
+```
+software/apps/
+├── .gitignore                   # Excludes all except built-in apps
+├── README.md                    # Extension guide
+├── simple/                      # Built-in app (included)
+├── sample/                      # Built-in app (included)
+├── my-custom-app/              # Custom app (ignored by git)
+│   ├── kustomization.yaml      # App entry point (preferred)
+│   ├── deployment.yaml         # Kubernetes resources
+│   └── service.yaml            # Organized as separate files
+└── external-clone/             # Cloned repository (ignored by git)
+    └── app.yaml               # Legacy single-file format (supported)
 ```
 
 ### Template Processing Mechanics
@@ -60,9 +71,9 @@ spec:
 ### Auto-Detection Logic
 The platform automatically detects extensions:
 - **Kind Configs**: `infra/kubernetes/extension/kind-*.yaml` files discovered dynamically
-- **Applications**: Any directory in `software/apps/extension/` with `app.yaml`
+- **Applications**: Any directory in `software/apps/` with `kustomization.yaml` or `app.yaml` (built-in apps explicitly included in .gitignore)
 - **Software Stacks**: Directories in `software/stack/extension/` with `kustomization.yaml`
-- **Template Processing**: Applied when stack path contains `extension/`
+- **Template Processing**: Applied to software stacks from external repositories, not needed for simple application extensions
 
 ## Alternatives Considered
 
@@ -91,11 +102,11 @@ The platform automatically detects extensions:
 ### Extension Usage Workflow
 ```bash
 # 1. Custom cluster configuration
-export KIND_CONFIG=extension/my-config
-make up                              # Uses custom Kind config
+KIND_CONFIG=extension/my-config make up  # Uses custom Kind config
 
-# 2. Custom application deployment
-make deploy extension/my-app         # Deploys custom application
+# 2. Custom application deployment (simplified paths)
+make deploy my-custom-app           # Deploys from software/apps/my-custom-app/
+git clone <repo> software/apps/team-app && make deploy team-app
 
 # 3. External software stack deployment
 export GITOPS_REPO=https://github.com/my-org/custom-stack
@@ -104,10 +115,17 @@ make up extension                    # Deploys external stack with template proc
 ```
 
 ### Implementation Approach
-The platform uses convention-based detection to automatically discover and process extensions:
+The platform uses hybrid approaches for different extension types:
 
-- **Template Processing**: Extension files undergo environment variable substitution when path contains `extension/`
-- **Auto-Detection**: Platform scans extension directories for standard patterns (kind-*.yaml, app.yaml, kustomization.yaml)
+**Applications:**
+- **Simplified Paths**: Direct deployment via `make deploy app-name` → `software/apps/app-name/`
+- **.gitignore Isolation**: Built-in apps explicitly included, custom apps automatically ignored
+- **Dual Format Support**: Both Kustomization-based (preferred) and legacy app.yaml formats
+- **No Template Processing**: Applications use standard Kubernetes manifests without substitution
+
+**Infrastructure/Stacks:**
+- **Template Processing**: Stack files undergo environment variable substitution when from external repositories
+- **Auto-Detection**: Platform scans extension directories for standard patterns (kind-*.yaml, kustomization.yaml)
 - **Path Resolution**: Direct mapping from command arguments to filesystem locations
 
 ## Consequences

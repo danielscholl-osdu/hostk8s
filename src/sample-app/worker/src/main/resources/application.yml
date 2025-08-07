@@ -1,0 +1,47 @@
+# HostK8s Worker Service Configuration
+spring:
+  application:
+    name: hostk8s-worker
+
+  # Database Configuration
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DB:votes}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: 6379
+      timeout: 2000ms
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging Configuration
+logging:
+  level:
+    com.hostk8s.worker: INFO
+    org.springframework.data.redis: WARN
+    org.hibernate.SQL: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"

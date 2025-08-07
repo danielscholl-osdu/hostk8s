@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hostk8s-result
+  namespace: sample-voting
+  labels:
+    hostk8s.app: hostk8s-result
+    hostk8s.component: voting-system
+    hostk8s.tutorial: level-100
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hostk8s-result
+  template:
+    metadata:
+      labels:
+        app: hostk8s-result
+        hostk8s.app: hostk8s-result
+    spec:
+      containers:
+      - name: result
+        image: localhost:5000/hostk8s-result:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: DATABASE_URL
+          value: "postgres://postgres:postgres@postgres-infrastructure.postgres-infrastructure.svc.cluster.local:5432/votes"
+        - name: NODE_ENV
+          value: "production"
+        - name: PORT
+          value: "80"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hostk8s-result
+  namespace: sample-voting
+  labels:
+    hostk8s.app: hostk8s-result
+spec:
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  selector:
+    app: hostk8s-result
+  type: ClusterIP

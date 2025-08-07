@@ -12,6 +12,7 @@ Optimized ADR Index for Agent Context
 | 004 | Extension System Architecture       | acc    | [ADR-004](004-extension-system-architecture.md) |
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](005-ai-assisted-development-integration.md) |
 | 006 | Hybrid CI/CD Strategy               | acc    | [ADR-006](006-hybrid-ci-cd-strategy.md) |
+| 007 | Kind Configuration Fallback System | acc    | [ADR-007](007-kind-configuration-fallback-system.md) |
 
 ---
 
@@ -119,4 +120,21 @@ why: |
 tradeoffs:
 positive: [dev velocity, comprehensive coverage, resource efficiency]
 negative: [dual platform complexity, sync overhead]
+```
+
+--------------------------------------------
+```yaml
+id: 007
+title: Kind Configuration Fallback System
+status: accepted
+date: 2025-08-07
+decision: Implement 3-tier fallback system for Kind cluster configuration prioritizing user experience progression.
+why: |
+• Progressive complexity: Natural upgrade path from simple → custom → advanced
+• Zero configuration: New users get working clusters with full functionality automatically
+• Flexible customization: Advanced users get full control without complexity for others
+• Clear mental model: Explicit priority system is easy to understand and debug
+tradeoffs:
+positive: [simplified onboarding, progressive complexity, flexible customization, clean repository]
+negative: [slightly more complex logic, potential tier confusion, migration required]
 ```

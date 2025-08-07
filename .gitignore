@@ -2,6 +2,9 @@
 .env
 .envrc
 
+# Custom Kind configuration (user-specific)
+infra/kubernetes/kind-config.yaml
+
 .claude/settings.local.json
 
 .vscode/*
@@ -20,6 +23,7 @@ test-data/*
 # Source Directory code
 src/*
 !src/registry-demo
+!src/sample-app
 
 # Logs
 *.log

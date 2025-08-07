@@ -89,7 +89,7 @@ When invoked, follow these steps systematically:
 
 **Stack Types:**
 - **Sample Stack**: Default demonstration stack with common components
-- **Extension Stacks**: Filesystem-based custom applications in `software/apps/extension/`
+- **Custom Applications: Filesystem-based apps in `software/apps/` (with .gitignore isolation)
 - **Custom Stacks**: Git-based external repository stacks via `GITOPS_REPO`
 
 **Key Locations:**
