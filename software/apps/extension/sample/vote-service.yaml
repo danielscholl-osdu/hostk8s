@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote
+  labels:
+    tier: frontend
+spec:
+  selector:
+    app: vote
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+---
+# LoadBalancer service for external access (requires METALLB_ENABLED=true)
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote-lb
+  labels:
+    tier: frontend
+spec:
+  selector:
+    app: vote
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080
+  type: LoadBalancer

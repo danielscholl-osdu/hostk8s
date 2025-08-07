@@ -1,109 +1,55 @@
-# Extensions App - Multi-Service Application
+# Sample Voting Application
 
-A comprehensive 3-tier application demonstrating service-to-service communication patterns and microservices architecture.
-
-## Features
-- 3-tier architecture (Frontend → API → Database)
-- Service-to-service communication via Kubernetes DNS
-- Health checks and readiness probes
-- Resource management and scaling examples
-- Interactive web interface with testing capabilities
+Multi-service voting application demonstrating HostK8s application patterns.
 
 ## Architecture
 
-```
-Frontend (nginx) → API (nginx) → Database (postgresql)
-     ↓               ↓              ↓
- Port 30080      ClusterIP      ClusterIP
-(localhost:8080)
-```
+- **Vote**: Python web app for casting votes (frontend tier)
+- **Redis**: Vote queue and session storage (infrastructure tier)
+- **Worker**: .NET service processing votes (backend tier)
+- **Database**: PostgreSQL storing results (infrastructure tier)
+- **Result**: Node.js web app showing results (frontend tier)
 
-## Services
+## Access Methods
 
-### 🎨 Frontend Service (2 replicas)
-- **Purpose**: User interface and API communication
-- **Image**: mcr.microsoft.com/azurelinux/base/nginx with custom HTML
-- **Access**: http://localhost:8080 (NodePort 30080)
-- **Environment**: `API_URL=http://api`
+**LoadBalancer (requires METALLB_ENABLED=true):**
+- Vote: External IP from `kubectl get svc vote-lb`
+- Results: External IP from `kubectl get svc result-lb`
 
-### 🔌 API Service (2 replicas)
-- **Purpose**: Business logic and database communication
-- **Image**: mcr.microsoft.com/azurelinux/base/nginx (placeholder for real API)
-- **Internal Access**: `http://api` (ClusterIP)
-- **Environment**: `DATABASE_URL=postgresql://appuser:apppass@database:5432/appdb`
-- **Health Checks**: `/health` and `/ready` endpoints
+**NodePort (always available):**
+- Vote: http://localhost:30080
+- Results: http://localhost:30081
 
-### 🗄️ Database Service (1 replica)
-- **Purpose**: Data persistence
-- **Image**: mcr.microsoft.com/azurelinux/base/postgres:15
-- **Internal Access**: `database:5432` (ClusterIP)
-- **Credentials**: `appuser/apppass`, database: `appdb`
+**Ingress (requires INGRESS_ENABLED=true):**
+- Vote: http://localhost/vote
+- Results: http://localhost/results
 
-## Deploy
+## Commands
 
 ```bash
-make deploy extensions/sample
-# or
-kubectl apply -f software/apps/extensions/sample/app.yaml
+# Deploy application
+make deploy extension/sample
+
+# Check status
+kubectl get pods -l hostk8s.app=sample
+
+# View services
+kubectl get services -l hostk8s.app=sample
+
+# View logs
+kubectl logs -l app=vote
+kubectl logs -l app=result
+kubectl logs -l app=worker
+
+# Remove application
+make remove extension/sample
 ```
 
-## Access
-- **URL**: http://localhost:8080
-- **Service Type**: NodePort (30080)
-- **Interactive Interface**: Test buttons for API and database connectivity
+## HostK8s Patterns Demonstrated
 
-## Use Case
-Perfect for:
-- Understanding microservices communication patterns
-- Testing Kubernetes service discovery
-- Learning 3-tier application architecture
-- Prototyping real microservices deployments
-- Demonstrating horizontal pod scaling
-
-## Testing Service Communication
-
-```bash
-# Test frontend → API communication
-kubectl exec -it deployment/frontend -- wget -qO- http://api
-
-# Test API → database connectivity
-kubectl exec -it deployment/api -- nc -zv database 5432
-
-# View all pod IPs and communication paths
-kubectl get pods -o wide -l 'tier in (frontend,api,database)'
-
-# Check logs
-kubectl logs deployment/api
-kubectl logs deployment/database
-```
-
-## Scaling Examples
-
-```bash
-# Scale API service
-kubectl scale deployment api --replicas=3
-
-# Scale frontend
-kubectl scale deployment frontend --replicas=1
-
-# View updated deployment
-kubectl get pods -l tier=api
-```
-
-## Service Discovery
-
-Demonstrates Kubernetes DNS-based service discovery:
-- Frontend finds API via: `http://api` (resolves to `api.default.svc.cluster.local`)
-- API finds database via: `database:5432` (resolves to `database.default.svc.cluster.local`)
-
-## Requirements
-- Basic cluster (no special add-ons required)
-- Uses standard NodePort for external access
-
-## Cleanup
-
-```bash
-kubectl delete -f software/apps/extensions/sample/app.yaml
-# or
-kubectl delete deployment,service,configmap -l hostk8s.app=sample
-```
+- **Kustomize Structure**: Resources organized in separate files
+- **Consistent Labeling**: `hostk8s.app: sample` on all resources
+- **Tier Classification**: Resources labeled by tier (frontend, backend, infrastructure)
+- **Service Types**: ClusterIP for internal, LoadBalancer for external access
+- **Resource Limits**: Development-appropriate CPU and memory constraints
+- **Extension Pattern**: Located in `software/apps/extension/` directory
