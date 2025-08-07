@@ -6,7 +6,7 @@
 
 You're testing a microservice that connects to a database. Simple enough, but where should it run? For basic development, you might just use Docker Compose or even run everything directly in your IDE with local database connections. When you need to test Kubernetes-specific behavior like service discovery, resource limits, or ingress routing, you could spin up a cloud provider cluster, but that brings cost, slow provisioning, and the overhead of managing shared cloud resources for what might be quick development experiments.
 
-Once you've decided you need local Kubernetes for fast iteration, the next question becomes: should your application run mixed with Kubernetes system components on a single node, or isolated on a dedicated worker? This choice affects everything from debugging capabilities to resource usage patterns.
+Once you've decided you need local Kubernetes for fast iteration, the architectural decisions compound: should your application run mixed with Kubernetes system components on a single node, or isolated on a dedicated worker? How should networking be configured - basic CNI or service mesh? What about storage - ephemeral volumes or persistent data? These choices cascade through every aspect of development, affecting debugging capabilities, resource usage patterns, networking behavior, data persistence, and ultimately how closely your development environment mirrors your target deployment architecture.
 
 **The development spectrum dilemma:**
 
