@@ -3,6 +3,8 @@
 
 # Allow specific configurations
 !/kind-custom.yaml
+!/kind-config-minimal.yaml
+!/kind-worker.yaml
 
 # Allow README at root level
 !/README.md
