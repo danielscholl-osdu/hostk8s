@@ -2,7 +2,7 @@
 
 Learn HostK8s through a progressive tutorial series that builds from cluster configuration to complete software stacks.
 
-#### [Kind Cluster Configuration](kind-configuration.md)
+#### [Cluster Configuration](cluster.md)
 *Beginner | 35-45 minutes*
 
 Master Kubernetes cluster configuration using Kind. Progress from single-node development clusters to sophisticated multi-node environments with agent pools and custom networking.
