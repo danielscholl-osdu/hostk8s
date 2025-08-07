@@ -124,9 +124,24 @@ The platform treats cluster operations as a managed lifecycle rather than ad-hoc
 - **Cleanup** - Proper resource deallocation
 
 **Configuration Strategy:**
-Cluster configurations follow a progressive complexity model:
-- **Minimal → Simple → Default** - Increasing capability presets
-- **CI-optimized** - Specialized for automated testing environments
+Cluster configurations use a 3-tier fallback system optimized for progressive user experience:
+
+1. **KIND_CONFIG Override** (Explicit Control)
+   - `KIND_CONFIG=kind-custom.yaml make start` - Direct file specification
+   - `KIND_CONFIG=extension/sample make start` - Extension configurations
+   - Used for testing, CI/CD, and advanced scenarios
+
+2. **kind-config.yaml** (Personal Customization)
+   - Auto-detected user configuration file (gitignored)
+   - Created by copying from examples: `cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml`
+   - Persistent custom setup for individual developers
+
+3. **Functional Defaults** (Zero Configuration)
+   - Automatically uses kind-custom.yaml for complete functionality
+   - Includes port mappings, registry support, and ingress capabilities
+   - Ensures tutorials and examples work out of the box with `make start`
+
+This strategy eliminates configuration barriers for new users while providing complete customization for advanced workflows (detailed in [ADR-007](adr/007-kind-configuration-fallback-system.md)).
 - **Extension Points** - Custom configurations without core platform modification
 
 **Operational Consistency:**
@@ -184,38 +199,40 @@ Extension points preserve the platform's automation benefits while enabling:
 
 ### Filesystem Plugin Architecture
 
-The platform implements a **filesystem-based plugin architecture** using .gitignore patterns to create clean separation between platform code and extension code:
+The platform implements a **filesystem-based plugin architecture** using .gitignore patterns to create clean separation between platform code and custom applications:
 
 ```
-extension/
-├── .gitignore          # Excludes all content except samples
-├── README.md           # Documentation preserved
-├── sample-extension/   # Example extension (platform-maintained)
-└── my-team-extension/  # External repository (team-maintained)
+software/apps/
+├── .gitignore              # Excludes all content except built-in apps
+├── README.md               # Documentation preserved
+├── simple/                 # Built-in app (platform-maintained)
+├── sample/                 # Built-in app (platform-maintained)
+├── my-custom-app/          # External repository (team-maintained, ignored)
+└── team-prototype/         # Custom app (ignored by git)
 ```
 
-**Repository Isolation Strategy:** Extension directories use `*` .gitignore patterns, meaning teams can clone entire external repositories into these locations without affecting the main platform repository. This enables **independent development** where extension teams maintain separate version control while the platform provides integration infrastructure.
+**Repository Isolation Strategy:** The apps directory uses `*` .gitignore patterns with explicit inclusions for built-in apps (`!simple/`, `!sample/`), meaning teams can clone entire external repositories or create custom applications directly in `software/apps/` without affecting the main platform repository. This enables **independent development** where teams maintain separate version control while the platform provides unified deployment infrastructure.
 
 ### Convention-Based Discovery Pattern
 
 The platform uses **convention-over-configuration** for seamless integration of both local and external extensions:
 
 ```
-make deploy extension/my-app        →  maps to extension/my-app/app.yaml
-make build src/extension/my-app     →  maps to src/extension/my-app/
-git clone <external-repo> extension/my-app  →  immediately available
+make deploy my-app                  →  maps to software/apps/my-app/kustomization.yaml
+make build src/my-app               →  maps to src/my-app/
+git clone <external-repo> my-app    →  immediately available in software/apps/
 ```
 
-**Path Resolution:** The platform uses direct path-based routing to locate extension files - `extension/my-app` maps directly to the filesystem location, regardless of whether extensions originate from the main repository, external clones, or manual file placement.
+**Path Resolution:** The platform uses direct path-based routing to locate apps - `my-app` maps directly to `software/apps/my-app/`, regardless of whether apps originate from the main repository, external clones, or manual file placement. The .gitignore system controls which apps are tracked by the repository.
 
 ### Dual Integration Patterns
 
 The platform uses **different integration strategies** for different extension types, optimized for their specific architectural requirements:
 
 **Filesystem-Based Extensions:**
-- **Cluster Configurations:** `KIND_CONFIG=extension/sample` → `infra/kubernetes/extension/kind-sample.yaml`
-- **Source Code Builds:** `make build src/extension/my-app` → `src/extension/my-app/` (build and push to cluster registry)
-- **Application Deployments:** `make deploy extension/sample` → `software/apps/extension/sample/app.yaml`
+- **Cluster Configurations:** `KIND_CONFIG=extension/sample` → `infra/kubernetes/extension/kind-sample.yaml` *(uses extension/ namespace for infrastructure)*
+- **Source Code Builds:** `make build src/my-app` → `src/my-app/` (build and push to cluster registry)
+- **Application Deployments:** `make deploy my-app` → `software/apps/my-app/kustomization.yaml` *(simplified path)*
 
 
 **Git Repository-Based Extensions:**
@@ -232,7 +249,7 @@ Multiple teams can develop independent stacks that compose into larger environme
 - **Stack B** (applications) from `gitlab.com/team-b/software-stack-b` (depends on Stack A)
 - **Independent versioning** with cross-stack dependency management via GitOps
 
-This dual approach enables **extension isolation** at both filesystem (individual components) and repository (complete environments) levels.
+This dual approach enables **extension isolation** at both filesystem (individual components) and repository (complete environments) levels. For applications, the .gitignore-based system provides clean separation between built-in and custom apps without requiring nested directory structures.
 
 ### Template Processing Integration
 
@@ -246,7 +263,7 @@ spec:
     branch: ${GITOPS_BRANCH}    # Release specific
 ```
 
-**Conditional Template Processing:** The platform automatically applies `envsubst` template processing to extension files (path contains `"extension/"`) while applying core platform files directly without processing, enabling parameterized extensions without affecting platform stability.
+**Conditional Template Processing:** The platform automatically applies `envsubst` template processing to software stack files from external repositories while applying core platform files directly without processing, enabling parameterized extensions without affecting platform stability. Application-level extensions use the .gitignore system and don't require special template processing.
 
 
 ## Integration Points

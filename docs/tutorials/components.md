@@ -765,7 +765,7 @@ If you haven't already, deploy the voting app from the Apps tutorial:
 
 ```bash
 # Deploy the original voting app (if not already deployed)
-make deploy extension/voting-app
+make deploy voting-app
 ```
 
 This creates the voting app with its own Redis instance.
@@ -775,8 +775,8 @@ This creates the voting app with its own Redis instance.
 Create a new version that uses your shared Redis component:
 
 ```bash
-mkdir -p software/apps/extension/voting-app-shared
-cd software/apps/extension/voting-app-shared
+mkdir -p software/apps/voting-app-shared
+cd software/apps/voting-app-shared
 ```
 
 ### Step 3: Create the Shared Redis Version
@@ -1064,9 +1064,9 @@ kubectl apply -k software/components/redis-infrastructure/
 ## Deploy
 
 ```bash
-make deploy extension/voting-app-shared
+make deploy voting-app-shared
 # or
-kubectl apply -f software/apps/extension/voting-app-shared/app.yaml
+kubectl apply -f software/apps/voting-app-shared/app.yaml
 ```
 
 ## Verification
@@ -1092,7 +1092,7 @@ EOF
 Deploy the modified voting app:
 
 ```bash
-make deploy extension/voting-app-shared
+make deploy voting-app-shared
 ```
 
 ### Step 6: Test Component Integration
@@ -1346,13 +1346,13 @@ When you're finished with this tutorial, clean up your resources:
 
 ```bash
 # Remove the shared voting app
-make remove extension/voting-app-shared
+make remove voting-app-shared
 
 # Remove the Redis component
 kubectl delete -k software/components/redis-infrastructure/
 
 # Optional: Remove the original voting app if still deployed
-make remove extension/voting-app
+make remove voting-app
 ```
 
 ### Key Concepts Mastered

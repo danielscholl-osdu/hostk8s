@@ -1,0 +1,11 @@
+# Ignore everything by default
+/*
+
+# Allow specific configurations
+!/kind-custom.yaml
+
+# Allow README at root level
+!/README.md
+
+# Allow .gitignore itself
+!/.gitignore

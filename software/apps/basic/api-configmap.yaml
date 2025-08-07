@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-html
+  namespace: default
+data:
+  index.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>HostK8s API</title>
+        <meta charset="UTF-8">
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; background: #f0fff0; }
+            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+            .api-info { padding: 20px; background: #d4edda; border: 1px solid #c3e6cb; border-radius: 5px; color: #155724; }
+            h1 { color: #28a745; text-align: center; }
+            code { background: #f8f9fa; padding: 2px 6px; border-radius: 3px; color: #e83e8c; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>🚀 API Service</h1>
+
+            <div class="api-info">
+                <h2>✅ API Service Active</h2>
+                <p>This API service demonstrates:</p>
+                <ul>
+                    <li><strong>Path-based routing:</strong> <code>/api/</code></li>
+                    <li><strong>Service discovery:</strong> ClusterIP communication</li>
+                    <li><strong>Ingress routing:</strong> HTTP request routing</li>
+                    <li><strong>Multi-service apps:</strong> Frontend + API separation</li>
+                </ul>
+
+                <h3>📊 Service Info</h3>
+                <ul>
+                    <li><strong>Service:</strong> api.default.svc.cluster.local</li>
+                    <li><strong>Replicas:</strong> 2</li>
+                    <li><strong>Access:</strong> http://localhost/api/</li>
+                </ul>
+            </div>
+        </div>
+    </body>
+    </html>

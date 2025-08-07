@@ -1,292 +1,466 @@
-# Deploying Apps
+# HostK8s Application Patterns
 
-## What is a HostK8s Application?
+Learn application deployment through hands-on experience with three real apps that demonstrate the natural evolution from simple Kubernetes deployments to sophisticated Helm charts. This tutorial shows *why* different patterns exist by letting you experience the limitations that drive adoption of more advanced approaches.
 
-A **HostK8s application** is a collection of Kubernetes resources organized using specific conventions that enable automatic discovery, deployment, and management through simple commands like `make deploy <app>`.
+## The Learning Journey
 
-HostK8s uses a **convention-based approach** - the filesystem structure directly maps to deployment commands, making application management predictable and consistent.
+We'll explore three applications that represent the typical evolution of Kubernetes deployments:
 
-```bash
-make deploy extension/sample
-# ↓ Automatically maps to ↓
-software/apps/extension/sample/
-```
+- **`simple`** - Single-service web app using basic Kustomization
+- **`basic`** - Multi-service app that reveals Kustomization limitations
+- **`advanced`** - Complex voting app using Helm charts for flexibility
 
-Think of HostK8s applications like **Lego instruction sheets** - they tell the system exactly what pieces to use and how to put them together. Just as Lego instructions create consistent results every time you follow them, HostK8s applications deploy predictably across any environment.
+Each app builds on lessons from the previous one, showing you the real problems that drive architectural decisions. You'll experience port conflicts, environment configuration challenges, and resource management issues - then see how each approach solves these problems.
 
----
+## Prerequisites
 
-## The Building Blocks Philosophy
-
-HostK8s follows a **Lego blocks** approach - start with individual pieces, then learn to build increasingly sophisticated systems:
-
-```
-Individual Apps  →  Shared Components  →  Software Stacks
-   (Level 100)         (Level 150-200)      (Level 300+)
-       │                     │                   │
-   This Tutorial      Reusable Services    Complete Environments
-```
-
-**This Tutorial (Level 100):** Learn application patterns with complete visibility into every service. Each application gets its own Redis, database, and infrastructure - wasteful but educational.
-
-**Next Tutorials:** Learn to share infrastructure services across applications for efficiency, then combine everything into automated development environments.
-
-The sample voting app (Python + Redis + PostgreSQL + .NET + Node.js) serves as your consistent learning vehicle across all tutorials - same app, increasingly sophisticated HostK8s patterns.
-
----
-
-## Application Requirements
-
-For HostK8s to recognize and deploy your application, it must follow specific structural and labeling requirements.
-
-### Required Directory Structure
-
-```
-software/apps/extension/<app-name>/
-├── kustomization.yaml    # Required: Orchestrates resources
-├── <resource-files>.yaml # Kubernetes resource definitions
-└── README.md             # Recommended: Documentation
-```
-
-### Critical Requirements
-
-**1. Kustomization File**
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-metadata:
-  labels:
-    hostk8s.app: sample    # REQUIRED: Must match directory name
-commonLabels:
-  hostk8s.app: sample      # REQUIRED: Applied to all resources
-```
-
-**2. Name Consistency**
-The directory name **must match** the `hostk8s.app` label value:
-```
-Directory: software/apps/extension/sample/
-           ↓
-Label: hostk8s.app: sample
-       ↓
-Commands: make deploy extension/sample
-```
-
-**3. Extension Pattern**
-Custom applications live in `software/apps/extension/` - treat this as if you cloned an external application repository into the extension directory for HostK8s integration.
-
----
-
-## Hands-On: Deploy the Sample Application
-
-Let's immediately deploy a real application to see HostK8s patterns in action. The sample voting app at `software/apps/extension/sample/` demonstrates all the requirements you just learned.
-
-### Step 1: Start Your Cluster
+Ensure you have a HostK8s cluster with ingress capabilities:
 
 ```bash
-# Start cluster with LoadBalancer and Ingress support
-export METALLB_ENABLED=true
 export INGRESS_ENABLED=true
+export METALLB_ENABLED=true
 make start
 ```
 
-### Step 2: Deploy the Application
+## Level 1: Simple Applications
+
+### Understanding the Basics
+
+Let's start with the simplest possible application - a single web service that displays a static page. This demonstrates core Kustomization concepts without complexity.
+
+Deploy the simple application:
 
 ```bash
-# Deploy using HostK8s convention-based discovery
-make deploy extension/sample
+make deploy simple
 ```
 
-**What HostK8s does internally:**
-1. **Path Resolution**: Maps `extension/sample` → `software/apps/extension/sample/`
-2. **Kustomization Discovery**: Finds and validates `kustomization.yaml`
-3. **Label Verification**: Confirms `hostk8s.app: sample` consistency
-4. **Resource Application**: Applies all resources with `kubectl apply -k`
-
-### Step 3: Verify Pattern Recognition
+Check the deployment status:
 
 ```bash
-# Check that HostK8s properly labeled and organized everything
-kubectl get all -l hostk8s.app=sample
-
-# View the organized structure
-kubectl get pods -l hostk8s.app=sample
+make status
 ```
 
-You should see 5 pods running: vote, redis, worker, db, and result - all labeled consistently.
+You'll see:
+```
+📱 simple
+   Deployment: sample-app (2/2 ready)
+   Service: sample-app (NodePort, NodePort 30081)
+   Ingress: sample-app -> http://localhost:8080/simple
+```
 
----
+Visit http://localhost:8080/simple to see the running application.
 
-## Service Communication Patterns
+### Examining the Simple App Structure
 
-Now let's understand how services within your application discover and communicate with each other.
-
-### DNS-Based Service Discovery
-
-HostK8s applications use **standard Kubernetes DNS** for service-to-service communication:
+Let's look at what makes this work:
 
 ```bash
-# Test service discovery from inside the cluster
-kubectl exec -it deployment/worker -- nslookup redis
-kubectl exec -it deployment/worker -- nslookup db
-
-# Test actual connectivity
-kubectl exec -it deployment/worker -- nc -zv redis 6379
-kubectl exec -it deployment/worker -- nc -zv db 5432
+# View the app structure
+ls software/apps/simple/
 ```
 
-Services automatically find each other using DNS names - no IP addresses or complex discovery needed.
+You'll see:
+```
+README.md
+app.yaml           # All-in-one resource definition
+configmap.yaml     # Static HTML content
+deployment.yaml    # Pod specification
+ingress.yaml       # External access rules
+kustomization.yaml # HostK8s integration
+service.yaml       # Networking
+```
 
-### Internal vs External Services
+The `kustomization.yaml` file is what makes this a HostK8s app:
 
-Check your deployed services:
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: simple
+  labels:
+    hostk8s.app: simple
+
+resources:
+  - configmap.yaml
+  - deployment.yaml
+  - service.yaml
+  - ingress.yaml
+
+labels:
+  - pairs:
+      hostk8s.app: simple
+```
+
+This contract tells HostK8s:
+- **Identity**: The app is named "simple"
+- **Resources**: Which YAML files comprise the application
+- **Management**: Apply consistent labels for unified operations
+
+### Working with Namespaces
+
+HostK8s provides flexible namespace management for team collaboration and environment isolation.
+
+**Default namespace (clean display):**
+```bash
+make deploy simple              # Deploys to 'default'
+```
+
+**Custom namespace (explicit):**
+```bash
+make deploy simple testing      # Deploys to 'testing' namespace
+```
+
+**Environment variable:**
+```bash
+NAMESPACE=development make deploy simple
+```
+
+Try deploying to a custom namespace:
 
 ```bash
-kubectl get services -l hostk8s.app=sample
+make deploy simple testing
+make status
 ```
 
-You'll see the **HostK8s Service Pattern**:
-- **Internal services** (redis, db): ClusterIP for service-to-service communication
-- **External services** (vote-lb, result-lb): LoadBalancer for user access
+Notice how the status display shows the namespace:
+```
+📱 testing.simple
+   Deployment: sample-app (2/2 ready)
+   ...
+```
 
-**Key Insight:** Infrastructure services (redis, db) have no external access - they only communicate within the application through service DNS names.
+This `namespace.app` format makes it immediately clear where each application is running.
 
----
+## Level 2: Multi-Service Applications
 
-## Resource Allocation Patterns
+### Discovering Limitations
 
-Each application gets its own dedicated infrastructure services:
+The `simple` app works great for single services, but what happens when you need multiple services? Let's explore the `basic` app - a two-service application with a frontend and API.
+
+First, let's clean up our testing namespace:
 
 ```bash
-# Check resource allocation for this application only
-kubectl get pods -l hostk8s.app=sample
-kubectl top pods -l hostk8s.app=sample
+make remove simple testing
 ```
 
-### Resource Isolation Benefits
-
-**Complete Isolation:**
-- Each application has dedicated Redis (32Mi memory)
-- Each application has dedicated PostgreSQL (128Mi memory)
-- No resource sharing between applications
-- Clean resource ownership and boundaries
-
-**Development Advantages:**
-- **Full Control**: Customize Redis/PostgreSQL versions per application
-- **No Dependencies**: Application works independently of others
-- **Easy Debugging**: Clear resource ownership and boundaries
-- **Safe Testing**: Can't break other applications
-
-### Testing Your Application (Optional)
-
-You can verify the application works end-to-end:
+Deploy the basic application:
 
 ```bash
-# NodePort access (always available)
-open http://localhost:30080  # Voting interface
-open http://localhost:30081  # Results interface
-
-# LoadBalancer access (if METALLB_ENABLED=true)
-kubectl get svc vote-lb result-lb  # Get external IPs
-
-# Ingress access (if INGRESS_ENABLED=true)
-open http://localhost/vote     # Voting interface
-open http://localhost/results  # Results interface
+make deploy basic
+make status
 ```
 
-**Note:** Testing the application functionality is secondary to understanding HostK8s patterns.
-
-## Why Individual Apps Don't Scale
-
-The per-application resource allocation pattern you just learned works perfectly for development and learning, but creates significant problems at scale.
-
-### The Scaling Problem
-
-Imagine you have **10 different applications**, each following this individual pattern:
-
+You'll see a more complex deployment:
 ```
-App 1: vote + redis + worker + db + result (5 services)
-App 2: api + redis + processor + db + ui (5 services)
-App 3: chat + redis + handler + db + admin (5 services)
-... (7 more applications)
-
-Total: 50 services across 10 applications
+📱 basic
+   Deployment: api (1/1 ready)
+   Deployment: frontend (1/1 ready)
+   Service: api (ClusterIP, internal only)
+   Service: frontend (NodePort, NodePort 30082)
+   Ingress: basic -> http://localhost:8080/basic
 ```
 
-### Real Resource Impact
+Visit http://localhost:8080/basic to see the frontend communicating with the API service.
 
-**Memory Waste:**
-- **10 Redis instances** × 32Mi = 320Mi total
-- **10 PostgreSQL instances** × 128Mi = 1,280Mi total
-- **Total overhead**: ~1.6GB just for infrastructure services
+### Hitting Real-World Problems
 
-**Management Complexity:**
-- **10 Redis configurations** to maintain and update
-- **10 database schemas** to migrate and backup
-- **50 total pods** to monitor and troubleshoot
-- **No shared data** when applications need to communicate
-
-### The HostK8s Solution Preview
-
-In the next tutorials, you'll learn HostK8s **shared components** and **software stacks**:
-
-```
-# Instead of 10 individual Redis instances:
-1 Shared Redis Component → Serves all 10 applications
-1 Shared Database Component → Serves all 10 applications
-1 Monitoring Component → Watches everything
-
-# Result:
-✅ 10x less memory usage
-✅ 1x configuration to maintain
-✅ Shared data when beneficial
-✅ Centralized monitoring and updates
-```
-
-## Next Steps in Your Learning Journey
-
-**You Now Understand:**
-- How HostK8s applications are structured and discovered
-- The convention-based approach to deployment and management
-- Service communication patterns within applications
-- Resource allocation and isolation strategies
-- Why individual applications don't scale efficiently
-
-**Next Learning Steps:**
-1. **[Using Components](shared-components.md)** - Learn to consume pre-built infrastructure services instead of duplicating them in each application
-2. **[Building Components](components.md)** - Understand how to design reusable infrastructure services that multiple applications can share
-3. **[Software Stacks](stacks.md)** - Orchestrate complete development environments with GitOps automation
-
-### Key HostK8s Principles
-
-**Convention Over Configuration:**
-- Filesystem structure directly maps to deployment commands
-- Consistent labeling enables automatic resource management
-- Directory names must match application labels for recognition
-
-**Resource Isolation with Visibility:**
-- Each application gets dedicated infrastructure services
-- Clear resource ownership and boundaries
-- Easy debugging and troubleshooting within application scope
-
-**Scalability Through Abstraction:**
-- Individual applications provide learning foundation
-- Shared components enable production efficiency
-- Software stacks provide complete environment automation
-
-### Cleanup
-
-When you're finished with the tutorial:
+Now let's experience the limitations that drive people toward more advanced solutions. Try deploying both apps simultaneously:
 
 ```bash
-# Remove the sample application
-make remove extension/sample
-
-# Optional: Clean up the cluster entirely
-make clean
+# This should fail with conflicts
+make deploy simple
 ```
 
----
+You'll see errors like:
+```
+Service "sample-app" is invalid: spec.ports[0].nodePort: Invalid value: 30081: provided port is already allocated
+```
 
-**You've mastered HostK8s application patterns!** You understand how to structure applications that integrate seamlessly with HostK8s automation while maintaining clear resource boundaries and service communication patterns.
+This demonstrates a key limitation of static Kustomization: **port conflicts**. Both apps try to use the same NodePort, causing deployment failures.
 
-The convention-based approach you've learned forms the foundation for all HostK8s concepts - from individual applications to shared components to complete software stacks.
+### Environment Configuration Challenges
+
+The problems get worse when you need different configurations for different environments. Look at the basic app's deployment - it has hard-coded resource limits:
+
+```bash
+# View the hard-coded values
+grep -A 5 "resources:" software/apps/basic/api-deployment.yaml
+```
+
+What if you need different resource limits for development vs. production? With static Kustomization, you'd need separate files or complex overlays.
+
+### Namespace Conflicts and Team Collaboration
+
+Let's simulate a team environment where multiple developers work on the same app:
+
+```bash
+# Deploy basic app to different "developer" namespaces
+make deploy basic alice
+make deploy basic bob
+make status
+```
+
+You'll see:
+```
+📱 alice.basic
+   Deployment: api (1/1 ready)
+   ...
+📱 bob.basic
+   Deployment: api (1/1 ready)
+   ...
+```
+
+This works because namespaces provide isolation, but notice the limitations:
+- Both deployments use identical configurations
+- Resource limits are the same regardless of developer needs
+- Port assignments are managed by Kubernetes, not by developer preference
+
+## Level 3: Advanced Applications with Helm
+
+### The Solution to Flexibility Problems
+
+Now let's see how Helm charts solve the configuration and flexibility problems we've experienced. The `advanced` app is a complete voting application that uses Helm templating.
+
+First, clean up our test deployments:
+
+```bash
+make remove basic alice
+make remove basic bob
+make remove basic
+```
+
+Deploy the advanced Helm-based application:
+
+```bash
+make deploy advanced
+make status
+```
+
+You'll see a much more complex application:
+```
+📱 advanced (Helm Chart: helm-sample-0.1.0, App: , Release: advanced)
+   Deployment: db (1/1 ready)
+   Deployment: redis (1/1 ready)
+   Deployment: result (1/1 ready)
+   Deployment: vote (1/1 ready)
+   Deployment: worker (1/1 ready)
+   Service: db (ClusterIP, internal only)
+   Service: redis (ClusterIP, internal only)
+   Service: result (ClusterIP, internal only)
+   Service: vote (ClusterIP, internal only)
+   Ingress: advanced-helm-sample -> http://localhost:8080/vote
+```
+
+Visit http://localhost:8080/vote to interact with the full voting application.
+
+### Multiple Environments Without Conflicts
+
+Now here's the power of Helm - deploy the same application to different environments with different configurations:
+
+```bash
+# Deploy to development environment (uses development values)
+make deploy advanced dev
+
+# Deploy to staging with different configuration
+make deploy advanced staging
+
+make status
+```
+
+You'll see:
+```
+📱 dev.helm-sample (Helm Chart: ...)
+   ...
+📱 staging.helm-sample (Helm Chart: ...)
+   ...
+```
+
+Each deployment gets its own resources, ports, and configurations - no conflicts!
+
+### Understanding Helm's Flexibility
+
+Let's examine what makes this possible. Look at the Helm chart structure:
+
+```bash
+ls software/apps/advanced/
+```
+
+You'll see:
+```
+Chart.yaml                # Chart metadata
+values.yaml              # Default configuration
+values/
+  development.yaml       # Development overrides
+  production.yaml        # Production overrides
+templates/               # Template files
+  vote-deployment.yaml   # Templated resources
+  db-service.yaml
+  ...
+```
+
+**Templates solve the hard-coding problem:**
+
+```bash
+# View a template file
+head software/apps/advanced/templates/vote-deployment.yaml
+```
+
+You'll see templated values like:
+```yaml
+replicas: {{ .Values.vote.replicas }}
+image: "{{ .Values.vote.image.repository }}"
+resources:
+  requests:
+    memory: "{{ .Values.vote.resources.requests.memory }}"
+```
+
+**Values files provide environment-specific configuration:**
+
+```bash
+# Compare default vs development values
+grep -A 5 "memory" software/apps/advanced/values.yaml
+grep -A 5 "memory" software/apps/advanced/values/development.yaml
+```
+
+Development environments get higher memory limits to handle debugging tools and verbose logging.
+
+## Real-World Team Workflows
+
+### Individual Developer Isolation
+
+Each team member can work on their own version without conflicts:
+
+```bash
+# Alice works on feature development
+make deploy advanced alice
+
+# Bob tests a different configuration
+NAMESPACE=bob-testing make deploy advanced
+
+make status
+```
+
+You'll see:
+```
+📱 alice.helm-sample (Helm Chart: ...)
+📱 bob-testing.helm-sample (Helm Chart: ...)
+📱 dev.helm-sample (Helm Chart: ...)
+📱 staging.helm-sample (Helm Chart: ...)
+```
+
+Each developer gets complete isolation with their own databases, Redis instances, and configurations.
+
+### Environment Progression
+
+The same application can progress through environments:
+
+```bash
+# Development (low resources, debug enabled)
+make deploy advanced development
+
+# Staging (production-like resources)
+make deploy advanced staging
+
+# Production would use production values
+# NAMESPACE=production make deploy advanced
+```
+
+### Easy Cleanup
+
+Remove specific deployments without affecting others:
+
+```bash
+# Clean up Alice's development work
+make remove advanced alice
+
+# Remove staging environment
+make remove advanced staging
+
+make status  # Others remain running
+```
+
+Empty namespaces are automatically cleaned up.
+
+## Choosing the Right Pattern
+
+### When to Use Each Approach
+
+**Simple (Kustomization)**:
+- Single-service applications
+- Proof-of-concepts and demos
+- Static configurations that don't vary by environment
+- Learning Kubernetes basics
+
+**Basic (Multi-service Kustomization)**:
+- Multi-service applications with simple architectures
+- Internal tools where configuration flexibility isn't critical
+- When you need service communication patterns but not templating
+
+**Advanced (Helm Charts)**:
+- Applications that deploy to multiple environments
+- Complex multi-service architectures
+- When you need environment-specific configurations
+- Team collaboration requiring isolation
+- Production applications requiring flexibility
+
+### Evolution Path
+
+Most applications follow this natural progression:
+
+1. **Start Simple**: Begin with static Kustomization for quick prototyping
+2. **Hit Limitations**: Experience port conflicts, configuration inflexibility
+3. **Graduate to Helm**: Adopt templating for multi-environment deployments
+4. **Scale with Teams**: Use namespaces for developer and environment isolation
+
+You can always migrate applications between patterns as requirements change.
+
+## Next Steps
+
+Now that you understand application patterns, explore other HostK8s capabilities:
+
+### GitOps Automation
+
+Move beyond manual deployment to automated GitOps workflows:
+
+```bash
+make up sample  # Deploy complete software stack with Flux
+```
+
+### Infrastructure Extensions
+
+Customize cluster capabilities for specific requirements:
+
+```bash
+# Custom cluster configurations
+export KIND_CONFIG=extension/gpu-enabled
+make start
+
+# Custom software stacks
+make up extension/my-stack
+```
+
+### Development Integration
+
+Build and deploy custom applications:
+
+```bash
+# Build from source
+make build src/my-app
+
+# Deploy to development environment
+make deploy my-app development
+```
+
+The patterns you've learned - namespace management, environment-specific configurations, and application isolation - apply to all HostK8s deployment methods.
+
+## Summary
+
+You've experienced the natural evolution of Kubernetes application deployment:
+
+- **Simple apps** provide immediate deployment capabilities with basic Kustomization
+- **Multi-service apps** reveal limitations around port conflicts and configuration inflexibility
+- **Helm charts** solve these problems with templating and environment-specific values
+- **Namespace management** enables team collaboration and environment isolation
+
+This progression mirrors real-world application development, where requirements evolve from simple prototypes to production-ready systems. HostK8s supports this entire journey with consistent tooling and patterns.

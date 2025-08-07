@@ -1,0 +1,13 @@
+# Ignore everything by default
+/*
+
+# Allow specific directories and their contents
+!/simple/
+!/basic/
+!/advanced/
+
+# Allow README at root level
+!/README.md
+
+# Allow .gitignore itself
+!/.gitignore

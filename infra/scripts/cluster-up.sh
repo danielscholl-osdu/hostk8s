@@ -128,43 +128,50 @@ if kind get clusters 2>/dev/null | grep -q "^${CLUSTER_NAME}$"; then
     exit 1
 fi
 
-# Map convention names to actual config files
-case "${KIND_CONFIG}" in
-    "default")
-        KIND_CONFIG_FILE="kind-config.yaml"
-        ;;
-    "minimal")
-        KIND_CONFIG_FILE="kind-config-minimal.yaml"
-        ;;
-    "simple")
-        KIND_CONFIG_FILE="kind-config-simple.yaml"
-        ;;
-    "ci")
-        KIND_CONFIG_FILE="kind-config-ci.yaml"
-        ;;
-    *)
-        # Check if it's an extension config (format: extension/name)
-        if [[ "${KIND_CONFIG}" == extension/* ]]; then
-            EXTENSION_NAME="${KIND_CONFIG#extension/}"
-            KIND_CONFIG_FILE="extension/kind-${EXTENSION_NAME}.yaml"
-        # If it doesn't match convention, assume it's a direct filename
-        elif [[ "${KIND_CONFIG}" == *.yaml ]]; then
-            KIND_CONFIG_FILE="${KIND_CONFIG}"
-        else
-            log_error "Unknown config name: ${KIND_CONFIG}"
-            log_error "Available options: default, minimal, simple, ci"
-            log_error "Extension configs: extension/your-config-name (via KIND_CONFIG env var)"
-            log_error "Or use full filename like: kind-config-custom.yaml"
-            exit 1
-        fi
-        ;;
-esac
+# Determine Kind configuration file with 3-tier fallback:
+# 1. KIND_CONFIG environment variable (if set)
+# 2. kind-config.yaml (if exists)
+# 3. No config (use Kind defaults)
 
-KIND_CONFIG_PATH="infra/kubernetes/${KIND_CONFIG_FILE}"
-if [ ! -f "${KIND_CONFIG_PATH}" ]; then
+KIND_CONFIG_FILE=""
+KIND_CONFIG_PATH=""
+
+if [ -n "${KIND_CONFIG}" ]; then
+    # KIND_CONFIG explicitly set - use it
+    if [[ "${KIND_CONFIG}" == extension/* ]]; then
+        # Extension config (format: extension/name)
+        EXTENSION_NAME="${KIND_CONFIG#extension/}"
+        KIND_CONFIG_FILE="extension/kind-${EXTENSION_NAME}.yaml"
+    elif [[ "${KIND_CONFIG}" == *.yaml ]]; then
+        # Direct filename
+        KIND_CONFIG_FILE="${KIND_CONFIG}"
+    elif [ -f "infra/kubernetes/kind-${KIND_CONFIG}.yaml" ]; then
+        # Named config (auto-discover kind-*.yaml files)
+        KIND_CONFIG_FILE="kind-${KIND_CONFIG}.yaml"
+    else
+        log_error "Unknown config name: ${KIND_CONFIG}"
+        log_error "Available configurations:"
+        find infra/kubernetes -name "kind-*.yaml" -exec basename {} .yaml \; | sed 's/kind-/  /' | sort 2>/dev/null || echo "  No configurations found"
+        log_error "Extension configs: extension/your-config-name"
+        log_error "Or use full filename like: kind-custom.yaml"
+        exit 1
+    fi
+    KIND_CONFIG_PATH="infra/kubernetes/${KIND_CONFIG_FILE}"
+elif [ -f "infra/kubernetes/kind-config.yaml" ]; then
+    # User has a custom kind-config.yaml - use it
+    KIND_CONFIG_FILE="kind-config.yaml"
+    KIND_CONFIG_PATH="infra/kubernetes/${KIND_CONFIG_FILE}"
+else
+    # No config specified and no kind-config.yaml - use functional defaults
+    KIND_CONFIG_FILE="kind-custom.yaml"
+    KIND_CONFIG_PATH="infra/kubernetes/${KIND_CONFIG_FILE}"
+fi
+
+# Validate config file exists (if one was specified)
+if [ -n "${KIND_CONFIG_PATH}" ] && [ ! -f "${KIND_CONFIG_PATH}" ]; then
     log_error "Kind config file not found: ${KIND_CONFIG_PATH}"
     log_error "Available configs:"
-    ls -1 infra/kubernetes/kind-config*.yaml 2>/dev/null || true
+    ls -1 infra/kubernetes/kind-*.yaml 2>/dev/null || true
     if [ -d "infra/kubernetes/extension" ]; then
         log_error "Extension configs:"
         find infra/kubernetes/extension -name "kind-*.yaml" 2>/dev/null | sed 's|infra/kubernetes/extension/kind-|extension/|' | sed 's|\.yaml||' || true

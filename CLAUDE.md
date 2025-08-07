@@ -51,7 +51,7 @@ make status        # Check health
 make sync          # Force GitOps sync
 
 # Extensions
-make deploy extension/<name>     # Deploy extension app
+make deploy <name>               # Deploy app
 make up extension/<stack>        # Deploy extension stack
 ```
 
@@ -89,6 +89,6 @@ hostk8s/
 
 ## Extension Patterns
 
-**Filesystem**: Place in `software/apps/extension/` or `infra/kubernetes/extension/`
+**Filesystem**: Place in `software/apps/` (with .gitignore isolation) or `infra/kubernetes/extension/`
 **Git-Based**: Set `GITOPS_REPO` environment variable
 **Custom Kind**: Use `KIND_CONFIG=extension/<name>`

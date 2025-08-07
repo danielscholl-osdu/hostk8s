@@ -198,8 +198,8 @@ This is a **HostK8s pattern** - components provide predictable service discovery
 Create a new version of the voting app that uses the shared component:
 
 ```bash
-mkdir -p software/apps/extension/voting-app-shared
-cd software/apps/extension/voting-app-shared
+mkdir -p software/apps/voting-app-shared
+cd software/apps/voting-app-shared
 ```
 
 Create the modified application:
@@ -442,7 +442,7 @@ EOF
 
 ```bash
 # Deploy the voting app that uses shared Redis
-make deploy extension/voting-app-shared
+make deploy voting-app-shared
 ```
 
 ---
@@ -489,7 +489,7 @@ Deploy the original voting app alongside the shared version:
 
 ```bash
 # Deploy the original voting app (if not already deployed)
-make deploy extension/voting-app
+make deploy voting-app
 ```
 
 Now you have:
@@ -694,13 +694,13 @@ When you're finished experimenting:
 
 ```bash
 # Remove the shared voting app
-make remove extension/voting-app-shared
+make remove voting-app-shared
 
 # Remove the Redis component
 kubectl delete -k software/components/redis-infrastructure/
 
 # Remove the original voting app if desired
-make remove extension/voting-app
+make remove voting-app
 ```
 
 ---

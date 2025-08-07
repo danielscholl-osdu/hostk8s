@@ -2,6 +2,9 @@
 .env
 .envrc
 
+# Custom Kind configuration (user-specific)
+infra/kubernetes/kind-config.yaml
+
 .claude/settings.local.json
 
 .vscode/*
