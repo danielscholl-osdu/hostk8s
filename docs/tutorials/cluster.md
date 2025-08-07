@@ -30,20 +30,26 @@ You need Kubernetes for testing service mesh, resource limits, or ingress behavi
 
 HostK8s solves this through **configurable cluster architectures** that let you match your environment to your specific development needs. Rather than forcing you into a one-size-fits-all solution, the platform provides a foundation where you can create clusters optimized for different scenarios.
 
-**Built-in Starting Points:**
-- **Single-Node** (`kind-custom.yaml`) - Optimizes for speed and simplicity
-- **Multi-Node** (`kind-worker.yaml`) - Provides production-like workload isolation
+### Built-in Starting Points
 
-**Beyond Defaults: Tailoring Your Cluster**
+- **Single-Node** (`kind-custom.yaml`) - Fast, lightweight, ideal for prototyping
+- **Multi-Node** (`kind-worker.yaml`) - Isolated, production-like workload separation
+
+### Beyond Defaults: Tailoring Your Cluster
+
 But these are just starting points. You can create configurations optimized for your specific needs:
 - **High-scale testing** - Multi-node clusters with more workers to test distributed applications
 - **Resource-constrained development** - Minimal single-node for CI environments or laptops
-- **Cloud-simulation** - Configurations that mirror your production cloud provider's node structure
+- **Cloud-simulation** - Match your GKE/EKS/AKS structure for realistic local validation
 - **Specialized networking** - Custom CNI configurations for service mesh testing
 - **Storage-focused** - Multiple persistent volumes for database-heavy applications
 
-**The Configuration Philosophy:**
-Your cluster configuration becomes part of your project's infrastructure-as-code. Team members get identical environments, CI systems can replicate your exact setup, and you can evolve your development environment alongside your application architecture.
+### The Configuration Philosophy
+
+Your cluster configuration becomes part of your project's infrastructure-as-code. Benefits:
+- Team members get identical environments
+- CI systems can replicate your exact setup
+- Environment evolves alongside your application architecture
 
 The key insight: **your cluster choice affects not just resources, but how closely your development matches your specific production requirements.**
 
@@ -91,7 +97,7 @@ kubectl get pods -o wide
 # All pods running on hostk8s-control-plane
 ```
 
-**Architecture:**
+**Single-Node Architecture:**
 ```
 ┌─────────────────────────────────────┐
 │        hostk8s-control-plane       │
@@ -142,7 +148,7 @@ kubectl get pods -o wide
 # Pod now running on hostk8s-worker (not control plane)
 ```
 
-**Architecture:**
+**Multi-Node Architecture:**
 ```
 ┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐
 │     hostk8s-control-plane          │ │        hostk8s-worker              │
@@ -161,17 +167,13 @@ kubectl get pods -o wide
 
 ### Understanding Workload Scheduling
 
-Ever wonder how Kubernetes decides where your app runs? Here's the key mechanism:
-
-Check why applications avoid the control plane:
+Ever wonder how Kubernetes decides where your app runs? You'll see Kubernetes avoids the control plane because it's "tainted" - we'll explore how that works in the next section.
 
 ```bash
 kubectl describe nodes | grep Taints
 # hostk8s-control-plane: node-role.kubernetes.io/control-plane:NoSchedule
 # hostk8s-worker: <none>
 ```
-
-This **taint** prevents user applications from competing with critical system components for resources.
 
 ## Core Configuration Concepts
 
@@ -181,7 +183,11 @@ Understanding how Kubernetes schedules workloads is crucial for everything you'l
 
 In Kubernetes, nodes have specific roles that determine what runs on them. The **control plane** nodes handle the brain functions of the cluster. They run the API server that receives your kubectl commands, etcd that stores cluster state, and the scheduler that decides where your applications should run. **Worker** nodes are where your actual applications live and execute.
 
-The beauty of the multi-node setup is that it shows you how Kubernetes automatically enforces this separation through taints. When you deploy an application, Kubernetes looks at each node and says "can this workload run here?" The control plane node says "no, I'm tainted for system components only," so your application lands on the worker node where it belongs. This automatic orchestration is what makes Kubernetes powerful in production environments.
+**How Taints Enforce Separation:**
+
+The multi-node setup shows you how Kubernetes automatically enforces this separation through taints. When you deploy an application, Kubernetes looks at each node and asks "can this workload run here?" The control plane node says "no, I'm tainted for system components only," so your application lands on the worker node where it belongs.
+
+This **taint** (`node-role.kubernetes.io/control-plane:NoSchedule`) prevents user applications from competing with critical system components for resources. This automatic orchestration is what makes Kubernetes powerful in production environments - your workloads get scheduled appropriately without manual intervention.
 
 ### Storage for Development
 
@@ -235,9 +241,7 @@ This progression ensures you can experiment (tier 1), set personal preferences (
 
 ## Making the Choice
 
-The experiences you just completed show the core tradeoff: single-node prioritizes development speed while multi-node provides production-like isolation. Your choice depends on what you're optimizing for in your current development phase.
-
-Most developers start with single-node for rapid iteration, then move to multi-node when they need to debug workload scheduling, test resource isolation, or prepare for production deployment.
+Your hands-on experience shows the fundamental tradeoff: single-node prioritizes speed, multi-node provides realistic isolation. Most developers start with single-node for rapid iteration, then move to multi-node when they need production-like workload scheduling and debugging clarity.
 
 ## Building Toward Applications
 
@@ -252,6 +256,6 @@ In the [next tutorial](apps.md), you'll deploy increasingly complex applications
 
 ## Summary
 
-Cluster configuration shapes your entire development experience. Through hands-on experience, you've seen how single-node optimizes for speed while multi-node provides production-like isolation. Both configurations support the same core features (storage, registry, ingress), but excel in different development phases.
+Cluster configuration shapes your entire development experience. As you experienced, the architectural choices cascade through networking, storage, debugging, and scheduling behavior. Both configurations support the same core features, but serve different development needs.
 
 The key insight: different development stages benefit from different cluster architectures. HostK8s makes it easy to switch between them without losing your data or development workflow.
