@@ -87,7 +87,7 @@ load_environment() {
     # Set defaults
     export CLUSTER_NAME=${CLUSTER_NAME:-hostk8s}
     export K8S_VERSION=${K8S_VERSION:-v1.33.2}
-    export KIND_CONFIG=${KIND_CONFIG:-default}
+    export KIND_CONFIG=${KIND_CONFIG:-}
     export METALLB_ENABLED=${METALLB_ENABLED:-false}
     export INGRESS_ENABLED=${INGRESS_ENABLED:-false}
     export FLUX_ENABLED=${FLUX_ENABLED:-false}
@@ -156,6 +156,51 @@ get_ingress_for_app() {
     kubectl get ingress -l "$label" --all-namespaces --no-headers 2>/dev/null || true
 }
 
+get_app_namespaces() {
+    local app_name="$1"
+    local app_type="${2:-app}"
+    local label=$(get_app_label "$app_name" "$app_type")
+    kubectl get deployments -l "$label" --all-namespaces --no-headers 2>/dev/null | awk '{print $1}' | sort | uniq | tr '\n' ',' | sed 's/,$//' || echo "default"
+}
+
+# Helm helpers
+is_helm_managed_app() {
+    local app_name="$1"
+    local label=$(get_app_label "$app_name" "app")
+    local managed_by=$(kubectl get deployments -l "$label" --all-namespaces -o jsonpath='{.items[0].metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null || echo "")
+    [ "$managed_by" = "Helm" ]
+}
+
+get_helm_chart_info() {
+    local app_name="$1"
+    local label=$(get_app_label "$app_name" "app")
+
+    # Get chart info from deployment labels
+    local chart_label=$(kubectl get deployments -l "$label" --all-namespaces -o jsonpath='{.items[0].metadata.labels.helm\.sh/chart}' 2>/dev/null || echo "")
+    local app_version=$(kubectl get deployments -l "$label" --all-namespaces -o jsonpath='{.items[0].metadata.labels.app\.kubernetes\.io/version}' 2>/dev/null || echo "")
+    local instance=$(kubectl get deployments -l "$label" --all-namespaces -o jsonpath='{.items[0].metadata.labels.app\.kubernetes\.io/instance}' 2>/dev/null || echo "")
+
+    if [ -n "$chart_label" ]; then
+        echo "chart:$chart_label,version:$app_version,release:$instance"
+    fi
+}
+
+get_helm_release_info() {
+    local app_name="$1"
+    if command -v helm >/dev/null 2>&1; then
+        # Try to find the release by checking if any release has resources with our app label
+        local releases=$(helm list -q 2>/dev/null || echo "")
+        for release in $releases; do
+            # Check if this release manages resources with our app label
+            local release_app=$(kubectl get deployments -l "app.kubernetes.io/instance=$release" --all-namespaces -o jsonpath='{.items[0].metadata.labels.hostk8s\.app}' 2>/dev/null || echo "")
+            if [ "$release_app" = "$app_name" ]; then
+                helm list -f "^${release}$" -o json 2>/dev/null | jq -r '.[0] | "\(.chart):\(.app_version):\(.status)"' 2>/dev/null || echo ""
+                return
+            fi
+        done
+    fi
+}
+
 # GitOps/Flux helpers
 has_flux() {
     kubectl get namespace flux-system >/dev/null 2>&1
@@ -215,18 +260,43 @@ validate_kind_config_arg() {
 
 # App deployment helpers
 list_available_apps() {
-    find software/apps/ -name "app.yaml" -exec dirname {} \; 2>/dev/null | sed 's|software/apps/||' | sort || echo "  No apps found"
+    {
+        # Helm charts (advanced pattern)
+        find software/apps/ -name "Chart.yaml" -exec dirname {} \; 2>/dev/null
+        # Kustomization apps (preferred pattern)
+        find software/apps/ -name "kustomization.yaml" -exec dirname {} \; 2>/dev/null
+        # Legacy app.yaml apps (transitional support)
+        find software/apps/ -name "app.yaml" -exec dirname {} \; 2>/dev/null
+    } | sed 's|software/apps/||' | sort -u || echo "  No apps found"
 }
 
 validate_app_exists() {
     local app_name="$1"
-    if [ ! -f "software/apps/$app_name/app.yaml" ]; then
+    if [ -f "software/apps/$app_name/Chart.yaml" ]; then
+        return 0  # Helm chart (advanced pattern)
+    elif [ -f "software/apps/$app_name/kustomization.yaml" ]; then
+        return 0  # Kustomization app (preferred pattern)
+    elif [ -f "software/apps/$app_name/app.yaml" ]; then
+        return 0  # Legacy single-file app (transitional support)
+    else
         log_error "App not found: $app_name"
         log_info "Available apps:"
         list_available_apps | sed 's/^/  /'
         return 1
     fi
-    return 0
+}
+
+get_app_deployment_type() {
+    local app_name="$1"
+    if [ -f "software/apps/$app_name/Chart.yaml" ]; then
+        echo "helm"
+    elif [ -f "software/apps/$app_name/kustomization.yaml" ]; then
+        echo "kustomization"
+    elif [ -f "software/apps/$app_name/app.yaml" ]; then
+        echo "legacy"
+    else
+        echo "none"
+    fi
 }
 
 # Service access helpers

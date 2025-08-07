@@ -50,8 +50,8 @@ software/stack/example/
 
 **Filesystem-Based:**
 ```bash
-make deploy extension/my-app   # software/apps/extension/my-app/app.yaml
-make build src/extension/my-app
+make deploy my-app            # software/apps/my-app/kustomization.yaml
+make build src/my-app
 KIND_CONFIG=extension/custom   # infra/kubernetes/extension/kind-custom.yaml
 ```
 

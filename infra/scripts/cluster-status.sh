@@ -131,7 +131,14 @@ show_gitops_applications() {
     show_ingress_controller_status
 
     for app in $gitops_apps; do
-        echo "📱 GitOps Application: $app"
+        local namespaces=$(get_app_namespaces "$app" "application")
+        local display_name
+        if [ "$namespaces" = "default" ]; then
+            display_name="$app"
+        else
+            display_name="$namespaces.$app"
+        fi
+        echo "📱 $display_name (GitOps)"
         show_app_deployments "$app" "application"
         show_app_services "$app" "application"
         show_app_ingress "$app" "application"
@@ -166,7 +173,27 @@ show_manual_deployed_apps() {
     log_info "Manual Deployed Apps"
 
     for app in $deployed_apps; do
-        echo "📱 $app"
+        local namespaces=$(get_app_namespaces "$app" "app")
+        local display_name
+        if [ "$namespaces" = "default" ]; then
+            display_name="$app"
+        else
+            display_name="$namespaces.$app"
+        fi
+
+        if is_helm_managed_app "$app"; then
+            local helm_info=$(get_helm_chart_info "$app")
+            if [ -n "$helm_info" ]; then
+                local chart=$(echo "$helm_info" | cut -d',' -f1 | cut -d':' -f2)
+                local version=$(echo "$helm_info" | cut -d',' -f2 | cut -d':' -f2)
+                local release=$(echo "$helm_info" | cut -d',' -f3 | cut -d':' -f2)
+                echo "📱 $display_name (Helm Chart: $chart, App: $version, Release: $release)"
+            else
+                echo "📱 $display_name (Helm-managed)"
+            fi
+        else
+            echo "📱 $display_name"
+        fi
         show_app_deployments "$app" "app"
         show_app_services "$app" "app"
         show_app_ingress "$app" "app"
@@ -180,7 +207,7 @@ show_app_deployments() {
 
     get_deployments_for_app "$app_name" "$app_type" | while read -r ns name ready up total age; do
         [ -z "$ns" ] && continue
-        echo "   Deployment: $name ($ready ready, $ns namespace)"
+        echo "   Deployment: $name ($ready ready)"
     done
 }
 
@@ -279,39 +306,63 @@ show_health_check() {
     fi
 }
 
-show_control_plane_status() {
-    local control_plane_status="NotReady"
-    local control_plane_message=""
-
-    # Get control plane node info
-    local node_info=$(kubectl get nodes --no-headers 2>/dev/null | grep "control-plane")
-    if [ -n "$node_info" ]; then
-        local node_status=$(echo "$node_info" | awk '{print $2}')
-        local node_age=$(echo "$node_info" | awk '{print $4}')
-        local k8s_version=$(echo "$node_info" | awk '{print $5}')
-
-        if [ "$node_status" = "Ready" ]; then
-            control_plane_status="Ready"
-            control_plane_message="Kubernetes $k8s_version (up ${node_age})"
-        else
-            control_plane_status="$node_status"
-            control_plane_message="Node status: $node_status"
-        fi
-    else
-        control_plane_status="NotFound"
-        control_plane_message="Control plane node not found"
+show_cluster_nodes() {
+    # Get all nodes info
+    local all_nodes=$(kubectl get nodes --no-headers 2>/dev/null)
+    if [ -z "$all_nodes" ]; then
+        echo "⚙️  Cluster Nodes: NotFound"
+        echo "   Status: No nodes found"
+        return
     fi
 
-    echo "⚙️  Control Plane: $control_plane_status"
-    [ -n "$control_plane_message" ] && echo "   Status: $control_plane_message"
+    # Count total nodes and check if multi-node
+    local node_count=$(echo "$all_nodes" | wc -l | tr -d ' ')
+    local is_multinode=false
+    if [ "$node_count" -gt 1 ]; then
+        is_multinode=true
+    fi
+
+    # Process each node
+    echo "$all_nodes" | while read -r name status roles age k8s_version; do
+        local node_type="Node"
+        local node_icon="🖥️ "
+
+        # Determine node type and icon based on roles
+        if echo "$roles" | grep -q "control-plane"; then
+            node_type="Control Plane"
+            node_icon="⚙️  "
+        elif echo "$roles" | grep -q "worker"; then
+            node_type="Worker"
+            node_icon="👷 "
+        elif echo "$roles" | grep -q "agent"; then
+            node_type="Agent"
+            node_icon="🤖 "
+        elif [ "$roles" = "<none>" ]; then
+            node_type="Worker"
+            node_icon="👷 "
+        fi
+
+        # Show node status
+        echo "${node_icon}${node_type}: $status"
+        if [ "$status" = "Ready" ]; then
+            echo "   Status: Kubernetes $k8s_version (up $age)"
+        else
+            echo "   Status: Node status: $status"
+        fi
+
+        # Add node name for multi-node clusters
+        if [ "$is_multinode" = "true" ]; then
+            echo "   Node: $name"
+        fi
+    done
 }
 
 show_addon_status() {
     # Always show addons section since control plane is always present
     log_info "Cluster Addons"
 
-    # Show control plane status (always required)
-    show_control_plane_status
+    # Show all cluster nodes
+    show_cluster_nodes
 
     # Show Flux status if installed
     if has_flux; then

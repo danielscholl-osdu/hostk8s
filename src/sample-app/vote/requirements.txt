@@ -1,0 +1,5 @@
+# Using uv for faster dependency management
+Flask>=3.0.0
+Redis>=5.0.0
+gunicorn>=21.0.0
+watchdog>=3.0.0

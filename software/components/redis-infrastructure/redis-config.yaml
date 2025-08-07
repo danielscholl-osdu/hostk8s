@@ -1,0 +1,28 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: redis-infrastructure
+  labels:
+    hostk8s.component: redis-infrastructure
+    app: redis
+data:
+  redis.conf: |
+    # Redis configuration for HostK8s development
+    bind 0.0.0.0
+    port 6379
+
+    # Persistence configuration
+    save 900 1      # Save snapshot if at least 1 key changed in 900 seconds
+    save 300 10     # Save snapshot if at least 10 keys changed in 300 seconds
+    save 60 10000   # Save snapshot if at least 10000 keys changed in 60 seconds
+
+    # Memory management
+    maxmemory 256mb
+    maxmemory-policy allkeys-lru
+
+    # Security (basic for development)
+    requirepass devpassword
+
+    # Logging
+    loglevel notice

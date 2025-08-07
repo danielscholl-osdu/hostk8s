@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: redis-infrastructure
+  labels:
+    hostk8s.component: redis-infrastructure
+    component.hostk8s.io/type: infrastructure
+    component.hostk8s.io/category: database

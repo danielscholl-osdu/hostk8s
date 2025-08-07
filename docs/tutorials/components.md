@@ -1,34 +1,36 @@
-# Shared Components
+# Building Components
 
-*Learn to build reusable infrastructure services that multiple applications can share*
+*Learn HostK8s component design patterns and customization techniques*
 
 | **Time** | **Level** | **Prerequisites** |
 |----------|-----------|-------------------|
-| 45-60 minutes | 200 (Intermediate) | Apps tutorial, basic Kubernetes networking |
+| 30-40 minutes | 200 (Intermediate) | Level 100 (Apps), Level 150 (Using Shared Components) |
 
 ## Overview
 
-In the [Apps tutorial](apps.md), you learned to deploy individual applications like the voting app. But what happens when multiple applications need the same infrastructure services? Creating separate Redis instances for each app wastes resources and creates management overhead.
+In [Level 150](shared-components.md), you learned to **use** pre-built HostK8s components and connect applications to shared infrastructure. You experienced the benefits of resource efficiency and centralized management.
 
-**Shared Components** solve this by providing reusable infrastructure services that multiple applications can consume. Components are the building blocks that bridge individual apps and complete software stacks.
+**Building Components** teaches you how HostK8s components are designed, when to build your own, and how to customize existing components for your specific needs.
 
-**What You'll Build:**
-- Redis infrastructure component with persistent storage
-- Redis Commander web interface for data management
-- Integration with the voting app from the Apps tutorial
-- Foundation for the Software Stacks tutorial
+This tutorial focuses on **HostK8s component patterns** - the design principles and structures that make components reusable and maintainable. You won't manually create YAML files (that's tedious and error-prone), but you'll understand the patterns that make components work.
 
 **What You'll Learn:**
-- Component vs Application architectural patterns
-- Multi-service component organization
-- Shared infrastructure service patterns
-- Component testing and validation strategies
+- HostK8s component design principles and patterns
+- How to analyze and customize existing components
+- When to build new components vs use existing ones
+- Component lifecycle management and versioning
 - How components prepare you for software stacks
 
+**What You Won't Learn (Not Required):**
+- Manual YAML file creation (provided as downloadable files)
+- Redis internals or configuration details
+- Kubernetes operator development
+- Complex component orchestration (that's Level 250+)
+
 **Prerequisites:**
-- **Completed the Apps tutorial** - We'll modify the voting app to use your Redis component
-- **Docker Desktop** v4.0+ and 4GB+ RAM
-- **Basic Kubernetes networking** - Services, pods, namespaces
+- **Level 100 completed** - Understanding of HostK8s application patterns
+- **Level 150 completed** - Experience using shared components
+- **Component mindset** - Focus on HostK8s patterns, not underlying technologies
 
 **Resource Expectations:**
 - **Startup time:** 3-4 minutes for component deployment
@@ -37,110 +39,127 @@ In the [Apps tutorial](apps.md), you learned to deploy individual applications l
 
 ## Contents
 
-1. [Understanding Shared Components](#part-1-understanding-shared-components)
-2. [Component Architecture and Structure](#part-2-component-architecture-and-structure)
-3. [Building the Redis Infrastructure Component](#part-3-building-the-redis-infrastructure-component)
-4. [Testing and Validating Your Component](#part-4-testing-and-validating-your-component)
-5. [Integrating Components with Applications](#part-5-integrating-components-with-applications)
-6. [Component Management and Operations](#part-6-component-management-and-operations)
-7. [Next Steps: From Components to Stacks](#part-7-next-steps-from-components-to-stacks)
+1. [Component Design Principles](#part-1-component-design-principles)
+2. [Analyzing the Redis Infrastructure Component](#part-2-analyzing-the-redis-infrastructure-component)
+3. [HostK8s Component Patterns](#part-3-hostk8s-component-patterns)
+4. [Customizing Components](#part-4-customizing-components)
+5. [When to Build vs Use Components](#part-5-when-to-build-vs-use-components)
+6. [Component Lifecycle Management](#part-6-component-lifecycle-management)
+7. [Preparing for Software Stacks](#part-7-preparing-for-software-stacks)
 
 ---
 
-## Part 1: Understanding Shared Components
+## Part 1: Component Design Principles
 
-### What is a Shared Component?
+### Recap: Your Journey So Far
 
-A **shared component** is a reusable infrastructure service that multiple applications can consume. Unlike applications that serve end users, components provide services to other applications.
+**Level 100**: You built voting app with individual Redis - understood all the pieces
+**Level 150**: You used pre-built Redis component - experienced resource efficiency
+**Level 200**: Now learn how HostK8s components are designed and when to build them
 
-**Components vs Applications:**
+### HostK8s Component Philosophy
 
-| **Aspect** | **Applications** | **Components** |
-|------------|------------------|----------------|
-| **Purpose** | Serve end users | Serve other applications |
-| **Examples** | Voting app, web dashboard | Redis cache, database, monitoring |
-| **Consumers** | Humans via browsers/APIs | Applications via internal services |
-| **Lifecycle** | App-specific deployment | Shared across multiple apps |
-| **Scaling** | Scale with user load | Scale with application demands |
+**Components are building blocks**, not applications. Just like Lego blocks, they:
 
-### The Component Abstraction Level
+- **Do one thing well** - Redis component provides caching, database component provides storage
+- **Follow standard patterns** - Consistent structure across all HostK8s components
+- **Compose into larger systems** - Multiple components combine into software stacks
+- **Are designed for reuse** - Same component works across different applications
 
-Components exist between individual apps and complete software stacks:
+### The "Good Component" Principles
+
+**✅ Good HostK8s Components:**
+- **Single responsibility** - Do one infrastructure function well
+- **Standard structure** - Follow HostK8s directory and labeling patterns
+- **Predictable interfaces** - Applications know how to connect to them
+- **Self-contained** - Include everything needed (server, UI, storage, config)
+- **Production-ready** - Health checks, monitoring, persistence included
+
+**❌ Poor Components:**
+- Try to do multiple unrelated things
+- Custom structures that don't follow HostK8s patterns
+- Require complex application-side configuration
+- Missing operational features (monitoring, health checks)
+- Tightly coupled to specific applications
+
+### Design Pattern: Infrastructure vs Applications
+
+**Remember from Level 150:** Your voting app used the Redis Infrastructure Component
 
 ```
-Individual Apps     →  Shared Components    →  Software Stacks
-(Level 100)            (Level 200)             (Level 300)
-
-voting-app          →  redis-component      →  microservices-stack
-simple-web          →  database-component   →  ai-platform-stack
-api-service         →  monitoring-component →  data-pipeline-stack
+┌─────────────────────────────────────────────┐
+│              Your Application               │  ← Business Logic
+│  ┌─────────────┐ ┌─────────────┐          │
+│  │    Vote     │ │   Result    │          │
+│  │  Service    │ │  Service    │          │
+│  └─────────────┘ └─────────────┘          │
+└─────────────┬───────────┬───────────────────┘
+              │           │
+              ▼           ▼
+┌─────────────────────────────────────────────┐
+│          Infrastructure Component           │  ← Shared Services
+│  ┌─────────────┐ ┌─────────────┐          │
+│  │    Redis    │ │   Redis     │          │
+│  │   Server    │ │  Commander  │          │
+│  └─────────────┘ └─────────────┘          │
+└─────────────────────────────────────────────┘
 ```
 
-### Why Components Matter
+**Key Insight**: Applications focus on business logic, components provide infrastructure services.
 
-**Without Components (App-Specific Services):**
-```
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   Voting App    │  │   Chat App      │  │   API Service   │
-│  ┌───────────┐  │  │  ┌───────────┐  │  │  ┌───────────┐  │
-│  │   Redis   │  │  │  │   Redis   │  │  │  │   Redis   │  │
-│  │  Instance │  │  │  │  Instance │  │  │  │  Instance │  │
-│  └───────────┘  │  │  └───────────┘  │  │  └───────────┘  │
-└─────────────────┘  └─────────────────┘  └─────────────────┘
-```
+### When Components Make Sense
 
-**Problems:**
-- Resource waste (3x Redis instances)
-- Management overhead (3x configuration)
-- Inconsistent configurations
-- Data isolation (can't share cache data)
+**✅ Build HostK8s Components When:**
+- Multiple applications need the same infrastructure
+- You want consistent configuration across projects
+- Operational overhead of individual services is too high
+- Teams benefit from shared, well-managed infrastructure
 
-**With Shared Components:**
-```
-┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│   Voting App    │  │   Chat App      │  │   API Service   │
-└─────────┬───────┘  └─────────┬───────┘  └─────────┬───────┘
-          │                    │                    │
-          └──────────────┬─────────────┬────────────┘
-                         │             │
-              ┌─────────────────────────────────┐
-              │    Redis Infrastructure         │
-              │        Component                │
-              │  ┌───────────┐ ┌─────────────┐ │
-              │  │   Redis   │ │    Redis    │ │
-              │  │  Server   │ │  Commander  │ │
-              │  └───────────┘ └─────────────┘ │
-              └─────────────────────────────────┘
-```
+**❌ Don't Build Components When:**
+- Only one application needs the service
+- Applications have completely different requirements
+- The service is tightly coupled to specific business logic
+- Overhead of sharing exceeds benefits
 
-**Benefits:**
-- Single Redis instance serves all apps
-- Centralized management and monitoring
-- Consistent configuration and security
-- Shared cache data across applications
-- Foundation for complete software stacks
+### HostK8s Component Categories
+
+**Platform Services:** Redis, databases, message queues, search engines
+**Security Services:** Certificate management, authentication, secrets management
+**Monitoring Services:** Metrics collection, log aggregation, tracing
+**Networking Services:** Ingress controllers, service mesh, load balancers
+
+Each category follows the same HostK8s patterns you'll learn in this tutorial.
 
 ---
 
-## Part 2: Component Architecture and Structure
+## Part 2: Analyzing the Redis Infrastructure Component
 
-### Component Directory Structure
+### Let's Analyze a Real HostK8s Component
 
-Components follow a standardized structure in the `software/components/` directory:
+In Level 150, you used the Redis Infrastructure Component. Let's examine how it's designed and why it follows HostK8s patterns.
 
+**Examine the component structure:**
+```bash
+# Look at the Redis Infrastructure Component you used
+ls -la software/components/redis-infrastructure/
 ```
-software/components/redis-infrastructure/
-├── README.md              # Component documentation
-├── kustomization.yaml     # Main component definition
-├── namespace.yaml         # Dedicated namespace
-├── redis-deployment.yaml # Redis server configuration
-├── redis-service.yaml    # Redis internal service
-├── redis-pvc.yaml        # Persistent storage
-├── commander-deployment.yaml # Redis Commander UI
-├── commander-service.yaml    # Commander external service
-└── values/               # Configuration values (optional)
-    └── redis-config.yaml
+
+**You should see:**
 ```
+├── README.md                  # Component documentation
+├── kustomization.yaml         # HostK8s component definition
+├── namespace.yaml             # Isolation boundary
+├── redis-config.yaml          # Service configuration
+├── redis-deployment.yaml     # Core service
+├── redis-service.yaml        # Internal interface
+├── redis-pvc.yaml            # Data persistence
+├── commander-deployment.yaml  # Management interface
+└── commander-service.yaml     # External interface
+```
+
+### HostK8s Component Analysis
+
+Let's examine each piece and understand the **HostK8s patterns** (not the Redis details):
 
 ### Component Design Principles
 
@@ -746,7 +765,7 @@ If you haven't already, deploy the voting app from the Apps tutorial:
 
 ```bash
 # Deploy the original voting app (if not already deployed)
-make deploy extension/voting-app
+make deploy voting-app
 ```
 
 This creates the voting app with its own Redis instance.
@@ -756,8 +775,8 @@ This creates the voting app with its own Redis instance.
 Create a new version that uses your shared Redis component:
 
 ```bash
-mkdir -p software/apps/extension/voting-app-shared
-cd software/apps/extension/voting-app-shared
+mkdir -p software/apps/voting-app-shared
+cd software/apps/voting-app-shared
 ```
 
 ### Step 3: Create the Shared Redis Version
@@ -1045,9 +1064,9 @@ kubectl apply -k software/components/redis-infrastructure/
 ## Deploy
 
 ```bash
-make deploy extension/voting-app-shared
+make deploy voting-app-shared
 # or
-kubectl apply -f software/apps/extension/voting-app-shared/app.yaml
+kubectl apply -f software/apps/voting-app-shared/app.yaml
 ```
 
 ## Verification
@@ -1073,7 +1092,7 @@ EOF
 Deploy the modified voting app:
 
 ```bash
-make deploy extension/voting-app-shared
+make deploy voting-app-shared
 ```
 
 ### Step 6: Test Component Integration
@@ -1327,13 +1346,13 @@ When you're finished with this tutorial, clean up your resources:
 
 ```bash
 # Remove the shared voting app
-make remove extension/voting-app-shared
+make remove voting-app-shared
 
 # Remove the Redis component
 kubectl delete -k software/components/redis-infrastructure/
 
 # Optional: Remove the original voting app if still deployed
-make remove extension/voting-app
+make remove voting-app
 ```
 
 ### Key Concepts Mastered

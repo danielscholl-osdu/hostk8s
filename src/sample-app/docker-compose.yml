@@ -1,0 +1,57 @@
+# HostK8s Sample App - Build Configuration
+# Used by: make build sample-vote, make build sample-result
+# Purpose: Build and push images to HostK8s registry
+
+version: '3.8'
+
+services:
+  hostk8s-vote:
+    build:
+      context: ./vote
+      target: prod
+      labels:
+        - "hostk8s.app=hostk8s-vote"
+        - "hostk8s.component=voting-system"
+    image: localhost:5000/hostk8s-vote:latest
+    environment:
+      - REDIS_HOST=redis-infrastructure.redis-infrastructure.svc.cluster.local
+      - OPTION_A=Kubernetes
+      - OPTION_B=Docker Swarm
+    labels:
+      - "hostk8s.app=hostk8s-vote"
+      - "hostk8s.tutorial=level-100-400"
+
+  hostk8s-result:
+    build:
+      context: ./result
+      target: prod
+      labels:
+        - "hostk8s.app=hostk8s-result"
+        - "hostk8s.component=voting-system"
+    image: localhost:5000/hostk8s-result:latest
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres-infrastructure.postgres-infrastructure.svc.cluster.local:5432/votes
+    labels:
+      - "hostk8s.app=hostk8s-result"
+      - "hostk8s.tutorial=level-100-400"
+
+  hostk8s-worker:
+    build:
+      context: ./worker
+      target: prod
+      labels:
+        - "hostk8s.app=hostk8s-worker"
+        - "hostk8s.component=voting-system"
+    image: localhost:5000/hostk8s-worker:latest
+    environment:
+      - REDIS_HOST=redis-infrastructure.redis-infrastructure.svc.cluster.local
+      - POSTGRES_HOST=postgres-infrastructure.postgres-infrastructure.svc.cluster.local
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=votes
+    labels:
+      - "hostk8s.app=hostk8s-worker"
+      - "hostk8s.tutorial=level-100-400"
+
+# Note: No volumes or ports needed - this is for building images only
+# Runtime configuration handled by Kubernetes manifests

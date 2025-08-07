@@ -14,6 +14,7 @@ repos:
       - id: check-yaml
         name: Check YAML syntax
         args: ['--allow-multiple-documents']
+        exclude: 'software/apps/advanced/templates/.*\.yaml$'
       - id: check-added-large-files
         name: Check for large files
       - id: check-merge-conflict
@@ -26,6 +27,7 @@ repos:
         name: Lint YAML files
         args: ['-c', '.yamllint.yaml']  # Use same config as GitLab CI
         files: \.(yaml|yml)$
+        exclude: 'software/apps/advanced/templates/.*\.yaml$'
 
   - repo: local
     hooks:

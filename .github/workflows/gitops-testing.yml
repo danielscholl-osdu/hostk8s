@@ -178,7 +178,7 @@ jobs:
         with:
           cluster_name: hostk8s-gitops
           node_image: kindest/node:v1.33.2
-          config: infra/kubernetes/kind-config.yaml
+          config: infra/kubernetes/kind-custom.yaml
           registry: true
 
       - name: Install additional tools

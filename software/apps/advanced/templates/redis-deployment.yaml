@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.redis.name }}
+  labels:
+    {{- include "helm-sample.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis
+    tier: backend
+spec:
+  replicas: {{ .Values.redis.replicas }}
+  selector:
+    matchLabels:
+      {{- include "helm-sample.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  template:
+    metadata:
+      labels:
+        {{- include "helm-sample.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: redis
+        tier: backend
+    spec:
+      containers:
+      - name: redis
+        image: "{{ .Values.redis.image.repository }}:{{ .Values.redis.image.tag }}"
+        imagePullPolicy: {{ .Values.redis.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.redis.service.targetPort }}
+        resources:
+          {{- toYaml .Values.redis.resources | nindent 10 }}

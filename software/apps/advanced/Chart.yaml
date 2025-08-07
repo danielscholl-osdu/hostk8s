@@ -1,0 +1,20 @@
+apiVersion: v2
+name: helm-sample
+description: A Helm chart for the HostK8s voting application sample
+type: application
+version: 0.1.0
+appVersion: ""
+
+keywords:
+  - voting
+  - microservices
+  - sample
+  - hostk8s
+
+maintainers:
+  - name: HostK8s Team
+    email: hostk8s@example.com
+
+annotations:
+  hostk8s.app: helm-sample
+  hostk8s.pattern: helm
