@@ -28,44 +28,38 @@ You need Kubernetes for testing service mesh, resource limits, or ingress behavi
 
 ## How HostK8s Solves This
 
-HostK8s solves this through **configurable cluster architectures** that let you match your environment to your specific development needs. Rather than forcing you into a one-size-fits-all solution, the platform provides a foundation where you can create clusters optimized for different scenarios.
+HostK8s solves this through **configurable cluster architecture patterns** that let you version control your development environment alongside your application code. Rather than forcing you into a one-size-fits-all solution, the platform provides the framework and patterns to create clusters optimized for your specific needs.
 
-### Built-in Starting Points
+### Sample Configuration Patterns
 
-- **Single-Node** (`kind-custom.yaml`) - Fast, lightweight, ideal for prototyping
-- **Multi-Node** (`kind-worker.yaml`) - Isolated, production-like workload separation
+HostK8s includes example configurations that demonstrate common patterns:
 
-### Beyond Defaults: Tailoring Your Cluster
+- **Single-Node** (`kind-custom.yaml`) - Shows fast iteration setup
+- **Multi-Node** (`kind-worker.yaml`) - Demonstrates workload isolation patterns
 
-But these are just starting points. You can create configurations optimized for your specific needs:
-- **High-scale testing** - Multi-node clusters with more workers to test distributed applications
-- **Resource-constrained development** - Minimal single-node for CI environments or laptops
-- **Cloud-simulation** - Match your GKE/EKS/AKS structure for realistic local validation
-- **Specialized networking** - Custom CNI configurations for service mesh testing
-- **Storage-focused** - Multiple persistent volumes for database-heavy applications
+Like the sample applications in this repository, these configurations are **learning examples** - real projects create their own configurations tailored to their specific requirements.
 
-### The Configuration Philosophy
+### Real-World Configuration Examples
 
-Your cluster configuration becomes part of your project's infrastructure-as-code. Benefits:
+Teams create their own configurations based on their needs:
+- **Data platforms** - Custom configurations with specialized storage and networking for large-scale data processing
+- **Microservice teams** - Service mesh configurations that mirror their production Istio setup
+- **CI environments** - Minimal resource configurations optimized for automated testing
+- **Enterprise teams** - Security-focused configurations that match corporate compliance requirements
+
+### The Configuration-as-Code Pattern
+
+Your cluster configuration becomes part of your project's infrastructure-as-code:
 - Team members get identical environments
-- CI systems can replicate your exact setup
+- CI systems replicate your exact setup
 - Environment evolves alongside your application architecture
+- Configuration decisions are documented and version controlled
 
-The key insight: **your cluster choice affects not just resources, but how closely your development matches your specific production requirements.**
+The key insight: **your development environment architecture should be as intentional and version-controlled as your application architecture.**
 
-## Prerequisites
+## Using the Default Configuration
 
-Start with a clean environment to experience the differences:
-
-```bash
-make clean
-```
-
-## Experience 1: Single-Node Development
-
-### The Fast Iteration Approach
-
-Let's start with single-node to understand when speed matters most.
+HostK8s starts with a functional single-node configuration by default:
 
 ```bash
 make start
@@ -78,50 +72,41 @@ Control Plane: Ready
    Status: Kubernetes v1.33.2 (up 30s)
 ```
 
-**What just happened:**
+**Default behavior:**
+- Uses `infra/kubernetes/kind-custom.yaml` automatically
 - One Docker container running everything
 - ~30 second startup time
-- ~600MB RAM total usage
+- Applications share resources with Kubernetes system components
 
-Deploy an application to see resource sharing:
+Deploy an application to see the default behavior:
 
 ```bash
 make deploy simple
-curl http://localhost:8080/simple
-```
-
-Check where your application landed:
-
-```bash
 kubectl get pods -o wide
 # All pods running on hostk8s-control-plane
 ```
 
 **Single-Node Architecture:**
 ```
-┌─────────────────────────────────────┐
-│        hostk8s-control-plane       │
-│  ┌─────────────┐ ┌─────────────────┐│
-│  │System       │ │Your             ││
-│  │Components   │ │Applications     ││
-│  │• API Server │ │• simple-app     ││
-│  │• etcd       │ │• voting-app     ││
-│  │• scheduler  │ │                 ││
-│  └─────────────┘ └─────────────────┘│
-└─────────────────────────────────────┘
+┌───────────────────────────────────────┐
+│        hostk8s-control-plane          │
+│  ┌─────────────┐ ┌─────────────────┐  │
+│  │System       │ │Your             │  │
+│  │Components   │ │Applications     │  │
+│  │• API Server │ │• simple-app     │  │
+│  │• etcd       │ │• voting-app     │  │
+│  │• scheduler  │ │                 │  │
+│  └─────────────┘ └─────────────────┘  │
+└───────────────────────────────────────┘
 ```
 
-**Key Insight:** Your application shares resources directly with Kubernetes system components (API server, etcd, scheduler).
+## Using Sample Configurations
 
-## Experience 2: Multi-Node Development
-
-### The Production-Like Approach
-
-Now let's experience workload isolation with a multi-node cluster:
+HostK8s uses **convention-based naming** for configurations. When you run `make start worker`, it automatically finds and uses `infra/kubernetes/kind-worker.yaml`.
 
 ```bash
 make clean
-KIND_CONFIG=worker make start
+make start worker
 make status
 ```
 
@@ -135,12 +120,12 @@ Worker: Ready
    Node: hostk8s-worker
 ```
 
-**What changed:**
-- Two Docker containers with defined roles
-- ~45 second startup (slightly longer)
-- Same ~600MB RAM total, but isolated
+**Convention-based pattern:**
+- `make start worker` → uses `infra/kubernetes/kind-worker.yaml`
+- `make start minimal` → uses `infra/kubernetes/kind-config-minimal.yaml`
+- `make start` → uses `infra/kubernetes/kind-config.yaml` (if exists) or `kind-custom.yaml` (default)
 
-Deploy the same application:
+Deploy the same application to see the difference:
 
 ```bash
 make deploy simple
@@ -151,7 +136,7 @@ kubectl get pods -o wide
 **Multi-Node Architecture:**
 ```
 ┌─────────────────────────────────────┐ ┌─────────────────────────────────────┐
-│     hostk8s-control-plane          │ │        hostk8s-worker              │
+│     hostk8s-control-plane           │ │        hostk8s-worker               │
 │  ┌─────────────────────────────────┐│ │  ┌─────────────────────────────────┐│
 │  │System Components                ││ │  │Your Applications                ││
 │  │• API Server                     ││ │  │• simple-app                     ││
@@ -163,17 +148,154 @@ kubectl get pods -o wide
 └─────────────────────────────────────┘ └─────────────────────────────────────┘
 ```
 
-**Key Insight:** Kubernetes automatically isolates your workloads from system components using node taints.
-
-### Understanding Workload Scheduling
-
-Ever wonder how Kubernetes decides where your app runs? You'll see Kubernetes avoids the control plane because it's "tainted" - we'll explore how that works in the next section.
+**Why applications avoid the control plane:**
 
 ```bash
 kubectl describe nodes | grep Taints
 # hostk8s-control-plane: node-role.kubernetes.io/control-plane:NoSchedule
 # hostk8s-worker: <none>
 ```
+
+The control plane node is "tainted" to prevent user applications from competing with system components for resources.
+
+## Creating Your Custom Configuration
+
+Let's create a custom configuration by starting with the single-node setup and adding a worker node plus custom networking. This demonstrates the two most common modifications teams make.
+
+### Step 1: Create Your Default Configuration
+
+Copy the single-node configuration as your starting point:
+
+```bash
+# Copy the single-node configuration as a base
+cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml
+```
+
+Once you create `infra/kubernetes/kind-config.yaml`, it becomes your **personal default**. Running `make start` (without specifying a configuration name) will use this file automatically.
+
+### Step 2: Add a Worker Node
+
+Open your configuration file and add a worker node:
+
+```bash
+# Edit your custom configuration
+vi infra/kubernetes/kind-config.yaml
+```
+
+Find the `nodes:` section and add a worker:
+
+```yaml
+nodes:
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+    - containerPort: 80
+      hostPort: 8080
+      listenAddress: "127.0.0.1"
+      protocol: TCP
+    - containerPort: 443
+      hostPort: 8443
+      listenAddress: "127.0.0.1"
+      protocol: TCP
+    - containerPort: 6443
+      hostPort: 6443
+- role: worker  # Add this line
+```
+
+### Step 3: Customize Network Subnets
+
+Add custom networking to avoid conflicts with your VPN or corporate network:
+
+```yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+# Add custom networking
+networking:
+  podSubnet: "10.240.0.0/16"
+  serviceSubnet: "10.0.0.0/16"
+nodes:
+- role: control-plane
+  # ... rest of configuration
+- role: worker
+```
+
+### Step 4: Test Your Custom Configuration
+
+Start your custom cluster and verify the changes:
+
+```bash
+# Your custom configuration is now the default
+make start
+make status
+```
+
+You should see your worker node is running:
+```
+Control Plane: Ready
+   Status: Kubernetes v1.33.2 (up 45s)
+   Node: hostk8s-control-plane
+Worker: Ready
+   Status: Kubernetes v1.33.2 (up 31s)
+   Node: hostk8s-worker
+```
+
+### Step 5: Verify Your Changes
+
+Check that your custom pod and service subnets are configured:
+
+```bash
+# Check cluster network configuration
+kubectl cluster-info dump | grep -E "pod-subnet|service-subnet"
+```
+
+You should see your custom networking values:
+```
+"--pod-subnet=10.240.0.0/16"
+"--service-subnet=10.0.0.0/16"
+```
+
+Deploy an application to verify worker node scheduling:
+
+```bash
+make deploy simple
+kubectl get pods -o wide
+# Pod should run on hostk8s-worker (not control-plane)
+```
+
+**What you've accomplished:**
+- **Added worker node isolation** - applications run separately from system components
+- **Custom networking** - avoided conflicts with corporate/VPN networks
+- **Personal default configuration** - your team can replicate this setup
+
+### Step 6: Share With Your Team
+
+Since `kind-config.yaml` is gitignored by default, you can create a team configuration:
+
+```bash
+# Create a team configuration that can be version controlled
+cp infra/kubernetes/kind-config.yaml infra/kubernetes/kind-istio.yaml
+
+# Team members can use it with:
+# make start istio
+```
+
+### Understanding the Configuration Hierarchy
+
+HostK8s uses this priority order:
+
+1. **Named configuration:** `make start worker` → `kind-worker.yaml`
+2. **Personal default:** `make start` → `kind-config.yaml` (if exists)
+3. **System fallback:** `make start` → `kind-custom.yaml` (built-in default)
+
+This system lets you:
+- **Experiment** with named configurations (`make start minimal`)
+- **Set personal preferences** with `kind-config.yaml`
+- **Always have working defaults** via `kind-custom.yaml`
 
 ## Core Configuration Concepts
 
