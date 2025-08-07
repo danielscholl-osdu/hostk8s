@@ -4,6 +4,10 @@
 
 extends: relaxed
 
+# Ignore patterns
+ignore: |
+  software/apps/advanced/templates/*
+
 rules:
   # Document format
   document-start: disable  # Don't require --- at start
