@@ -17,13 +17,13 @@ Once you've decided you need local Kubernetes for fast iteration, the next quest
 - **Production mismatch** - Need to test real scheduling but want fast iteration
 
 *Cost vs Access:*
-- **Cloud overhead** - AKS, EKS, GKE provide real Kubernetes but with cost, startup time, and shared resource constraints
+- **Cloud overhead** - Cloud providers offer real Kubernetes but with cost, startup time, and vendor lock-in risks
 
 *Debuggability:*
 - **Context switching** - Moving between different development environments breaks flow
 
 **The Configuration Challenge:**
-You need Kubernetes for testing service mesh, resource limits, or ingress behavior, but cloud services add cost and complexity while local solutions sacrifice either speed or realism. Traditional approaches force you to choose between realistic testing, development velocity, and cost control.
+You need Kubernetes for testing service mesh, resource limits, or ingress behavior, but cloud services add cost and vendor coupling while local solutions sacrifice either speed or realism. Traditional approaches force you to choose between realistic testing, development velocity, and platform independence.
 
 ## How HostK8s Solves This
 
@@ -232,22 +232,11 @@ make start                       # Uses functional defaults (kind-custom.yaml)
 
 This progression ensures you can experiment (tier 1), set personal preferences (tier 2), or rely on working defaults (tier 3) without configuration complexity.
 
-## Single-Node vs Multi-Node Comparison
+## Making the Choice
 
-Your cluster configuration choice affects your entire development workflow:
+The experiences you just completed show the core tradeoff: single-node prioritizes development speed while multi-node provides production-like isolation. Your choice depends on what you're optimizing for in your current development phase.
 
-| Aspect | Single-Node | Multi-Node |
-|--------|-------------|------------|
-| **Startup Time** | ~30 seconds | ~45 seconds |
-| **Memory Usage** | ~600MB total | ~600MB total (distributed) |
-| **Architecture** | Everything on control-plane | Workloads isolated on worker |
-| **Best For** | Rapid prototyping, learning | Integration testing, production prep |
-| **Resource Isolation** | Mixed workloads | Clear separation |
-| **Debugging** | Shared resource confusion | Component isolation |
-| **Production Similarity** | Low | High |
-| **Mental Complexity** | Simple (one place) | Realistic (distributed) |
-
-**Recommendation:** Start with single-node for speed and simplicity, move to multi-node when you need production-like behavior and workload isolation.
+Most developers start with single-node for rapid iteration, then move to multi-node when they need to debug workload scheduling, test resource isolation, or prepare for production deployment.
 
 ## Building Toward Applications
 
@@ -262,6 +251,6 @@ In the [next tutorial](apps.md), you'll deploy increasingly complex applications
 
 ## Summary
 
-Cluster configuration shapes your entire development experience. The [comparison table](#single-node-vs-multi-node-comparison) shows how single-node optimizes for speed while multi-node provides production-like isolation. Both configurations support the same core features (storage, registry, ingress), but excel in different development phases.
+Cluster configuration shapes your entire development experience. Through hands-on experience, you've seen how single-node optimizes for speed while multi-node provides production-like isolation. Both configurations support the same core features (storage, registry, ingress), but excel in different development phases.
 
 The key insight: different development stages benefit from different cluster architectures. HostK8s makes it easy to switch between them without losing your data or development workflow.
