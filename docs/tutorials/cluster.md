@@ -1,45 +1,42 @@
-# Kind Configuration Guide
+# Cluster Configuration
 
-Learn when and why to customize Kind cluster configurations through practical examples. This guide covers the key decisions you'll face when choosing between single-node and multi-node development clusters.
+*Learn HostK8s cluster configuration by experiencing the development workflow trade-offs that drive configuration decisions*
 
-## Configuration Decision Framework
+## The Development Workflow Challenge
 
-HostK8s provides two primary cluster configurations, each optimized for different development scenarios:
+You're testing a microservice that connects to a database. Simple enough - but where should it run? Mixed with Kubernetes system components on a single node, or isolated on a dedicated worker? This choice affects everything from debugging capabilities to resource usage patterns.
 
-- **Single-Node** (`kind-custom.yaml`) - Control plane handles everything
-- **Multi-Node** (`kind-worker.yaml`) - Dedicated worker node for applications
+**Current development environment problems:**
+- **Resource competition** - Your app competes with API server and etcd for CPU/memory
+- **Production mismatch** - Single-node doesn't reflect production scheduling behavior
+- **Debugging complexity** - System components make it harder to isolate application issues
+- **Iteration speed** - Need fast startup vs realistic testing environment
 
-The choice depends on what you're testing and how closely you want to simulate production environments.
+**The Configuration Dilemma:**
+Most developers want both fast iteration AND production-like behavior, but traditional Kubernetes development forces you to choose one or the other.
+
+## How HostK8s Solves This
+
+HostK8s provides two cluster configurations that address different points in the development workflow:
+
+- **Single-Node** (`kind-custom.yaml`) - Optimizes for speed and simplicity
+- **Multi-Node** (`kind-worker.yaml`) - Provides production-like workload isolation
+
+The key insight: **your cluster choice affects not just resources, but how closely your development matches production behavior.**
 
 ## Prerequisites
 
+Start with a clean environment to experience the differences:
+
 ```bash
-# Start with a clean environment
 make clean
 ```
 
-## Configuration 1: Single-Node Development
+## Experience 1: Single-Node Development
 
-### When to Choose Single-Node
-- **Quick prototyping** - Fast startup, minimal resources
-- **Learning Kubernetes** - Simplified mental model
-- **Simple applications** - Single service or basic microservices
-- **Resource constraints** - Limited laptop memory/CPU
+### The Fast Iteration Approach
 
-### Understanding the Configuration
-
-```bash
-# View the single-node configuration
-cat infra/kubernetes/kind-custom.yaml
-```
-
-**Key Features:**
-- **Single container** - Control plane runs everything
-- **Registry support** - Local image development (ports 5001, 5443)
-- **Persistent storage** - Mounts to `./data/storage` for PVCs
-- **HTTP/HTTPS access** - Standard ingress on ports 8080/8443
-
-### Deploy and Test
+Let's start with single-node to understand when speed matters most.
 
 ```bash
 make start
@@ -52,36 +49,40 @@ You'll see:
    Status: Kubernetes v1.33.2 (up 30s)
 ```
 
-Deploy a test application:
+**What just happened:**
+- One Docker container running everything
+- ~30 second startup time
+- ~600MB RAM total usage
+
+Deploy an application to see resource sharing:
+
 ```bash
 make deploy simple
 curl http://localhost:8080/simple
 ```
 
-**Resource Impact:** ~600MB RAM total, all workloads share control plane resources.
-
-## Configuration 2: Multi-Node Development
-
-### When to Choose Multi-Node
-- **Production-like testing** - Separate control plane from workloads
-- **Resource isolation** - System components don't compete with apps
-- **Scheduling behavior** - Test node affinity, taints, tolerations
-- **Distributed applications** - Apps that require multiple nodes
-
-### Understanding the Configuration
+Check where your application landed:
 
 ```bash
-# View the multi-node configuration
-cat infra/kubernetes/kind-worker.yaml
+kubectl get pods -o wide
+# All pods running on hostk8s-control-plane
 ```
 
-**Key Features:**
-- **Two containers** - Control plane + dedicated worker
-- **Workload isolation** - Apps run only on worker node
-- **Same registry/storage** - Identical development features
-- **Standard roles** - `control-plane` and `worker` roles
+**Key Insight:** Your application shares resources directly with Kubernetes system components (API server, etcd, scheduler).
 
-### Deploy and Test
+### When Single-Node Works Best
+
+This configuration excels when you need:
+- **Rapid prototyping** - 30-second cluster startup
+- **Resource constraints** - Limited laptop memory/CPU
+- **Simple applications** - Single service or basic microservices
+- **Learning** - Simplified mental model
+
+## Experience 2: Multi-Node Development
+
+### The Production-Like Approach
+
+Now let's experience workload isolation with a multi-node cluster:
 
 ```bash
 make clean
@@ -99,69 +100,72 @@ You'll see:
    Node: hostk8s-worker
 ```
 
-Test workload scheduling:
+**What changed:**
+- Two Docker containers with defined roles
+- ~45 second startup (slightly longer)
+- Same ~600MB RAM total, but isolated
+
+Deploy the same application:
+
 ```bash
 make deploy simple
 kubectl get pods -o wide
-# Shows pod running on hostk8s-worker (not control plane)
+# Pod now running on hostk8s-worker (not control plane)
 ```
 
-**Resource Impact:** ~600MB RAM total, but workloads isolated from control plane.
+**Key Insight:** Kubernetes automatically isolates your workloads from system components using node taints.
 
-## Key Configuration Concepts
+### Understanding Workload Scheduling
 
-### Node Roles and Scheduling
+Check why applications avoid the control plane:
 
-**Single-Node:** Applications share resources with Kubernetes system components.
-
-**Multi-Node:** Control plane has a taint that prevents user workloads from scheduling there:
 ```bash
 kubectl describe nodes | grep Taints
 # hostk8s-control-plane: node-role.kubernetes.io/control-plane:NoSchedule
 # hostk8s-worker: <none>
 ```
 
-This means your applications automatically get isolated from critical system components.
+This **taint** prevents user applications from competing with critical system components for resources.
 
-### Storage Configuration
+### When Multi-Node Works Best
 
-Both configurations support persistent storage through host mounts:
+This configuration excels when you need:
+- **Production-like testing** - Realistic workload placement
+- **Resource isolation** - Apps don't compete with system components
+- **Distributed applications** - Testing scheduling across nodes
+- **Debugging complex issues** - Isolate app problems from system problems
+
+## Core Configuration Concepts
+
+### Node Roles and Scheduling
+
+Both configurations teach you fundamental Kubernetes concepts you'll use throughout HostK8s:
+
+**Node Roles:**
+- **Control Plane** - Runs Kubernetes system components (API server, etcd, scheduler)
+- **Worker** - Runs your application workloads
+
+**Scheduling Behavior:**
+- **Single-Node** - Everything runs together (faster, but mixed workloads)
+- **Multi-Node** - Automatic separation (realistic, isolated debugging)
+
+### Storage for Development
+
+Both configurations support persistent data in your project:
 
 ```yaml
-# In both configs
+# Both configs include
 extraMounts:
-- hostPath: ./data/storage    # Your project's data folder
+- hostPath: ./data/storage    # Your project's persistent data
   containerPath: /mnt/data    # Available inside containers
-  readOnly: false
 ```
 
-**Usage in PersistentVolumes:**
-```yaml
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: app-storage
-spec:
-  capacity:
-    storage: 1Gi
-  hostPath:
-    path: /mnt/data           # Maps to ./data/storage
-  storageClassName: local
-```
+**Why this matters:** Your databases and application data survive cluster restarts - essential for development iteration.
 
-### Local Registry Configuration
+### Local Registry Support
 
-Both configurations include local registry support:
+Both configurations include local registry for development workflows:
 
-```yaml
-# Registry configuration enables
-containerdConfigPatches:
-- |-
-  [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
-    endpoint = ["http://registry.registry.svc.cluster.local:5000"]
-```
-
-**Development workflow:**
 ```bash
 # Build and push to local registry
 docker build -t localhost:5000/myapp .
@@ -171,143 +175,60 @@ docker push localhost:5000/myapp
 kubectl create deployment myapp --image=localhost:5000/myapp
 ```
 
-## Configuration Customization Patterns
+**Why this matters:** Fast development cycles without pushing to external registries.
 
-### Adding Custom Storage Mounts
+## Configuration Management
 
-```yaml
-# Add to any node in your config
-extraMounts:
-- hostPath: ./my-project-data
-  containerPath: /mnt/project
-  readOnly: false
-```
+HostK8s uses a 3-tier system that lets you experiment without breaking your workflow:
 
-### Customizing Port Mappings
-
-```yaml
-# Add custom port access
-extraPortMappings:
-- containerPort: 30090    # Kubernetes NodePort
-  hostPort: 9090          # Access from laptop
-  protocol: TCP
-```
-
-### Adding Node Labels
-
-```yaml
-# Custom labels for workload targeting
-labels:
-  environment: development
-  workload-type: web
-```
-
-## Making Configuration Persistent
-
-### Temporary Override (Testing)
+### Testing Configurations
 ```bash
-KIND_CONFIG=worker make start    # One-time use
+KIND_CONFIG=worker make start    # Try multi-node temporarily
 ```
 
-### Personal Default (Your Preference)
+### Personal Defaults
 ```bash
-# Copy your preferred config as default
+# Set your preferred configuration
 cp infra/kubernetes/kind-worker.yaml infra/kubernetes/kind-config.yaml
-make start                       # Always uses your config
+make start                       # Always uses your preference
 ```
 
-### System Default (Functional Baseline)
+### System Defaults
 ```bash
-make start                       # Uses kind-custom.yaml automatically
+make start                       # Uses functional defaults (kind-custom.yaml)
 ```
 
-## Resource and Performance Comparison
+## Making the Choice
 
-| Aspect | Single-Node | Multi-Node |
-|--------|-------------|------------|
-| **Startup Time** | ~30 seconds | ~45 seconds |
-| **Memory Usage** | ~600MB total | ~600MB total |
-| **Containers** | 1 (shared) | 2 (isolated) |
-| **Scheduling** | Mixed workloads | Separated workloads |
-| **Production-Like** | Basic | More realistic |
+Your cluster configuration choice affects your entire development workflow:
 
-## Decision Tree
+| Development Stage | Single-Node | Multi-Node |
+|------------------|-------------|------------|
+| **Prototyping** | ✅ Fast iteration | ⚠️ Slower startup |
+| **Integration Testing** | ⚠️ Mixed workloads | ✅ Isolated workloads |
+| **Debugging** | ⚠️ Shared resources | ✅ Clear separation |
+| **Production Prep** | ❌ Unrealistic | ✅ Realistic behavior |
 
-**Choose Single-Node when:**
-- Getting started with Kubernetes
-- Building simple applications
-- Limited development resources
-- Need fastest possible iteration
+**The Pattern:** Start with single-node for speed, move to multi-node when you need production-like behavior.
 
-**Choose Multi-Node when:**
-- Testing distributed applications
-- Need workload isolation
-- Simulating production scheduling
-- Testing node-specific features
+## Building Toward Applications
 
-## Common Modifications
+The concepts you've learned here become the foundation for application deployment:
 
-### Adding More Worker Nodes
+- **Node roles** determine where your applications run
+- **Resource isolation** affects how applications interact
+- **Workload scheduling** becomes important for multi-service applications
+- **Storage mounts** enable persistent application data
 
-```yaml
-# Add to kind-worker.yaml
-- role: worker
-  image: kindest/node:v1.33.2
-  labels:
-    node-role.kubernetes.io/worker: ""
-  extraMounts:
-  - hostPath: /tmp/kind-storage-2
-    containerPath: /mnt/storage
-    readOnly: false
-```
-
-### Custom Networking
-
-```yaml
-# Modify networking section
-networking:
-  podSubnet: "172.16.0.0/16"      # Custom pod network
-  serviceSubnet: "172.17.0.0/16"  # Custom service network
-```
-
-### Adding Registry Mirrors
-
-```yaml
-# Add to containerdConfigPatches
-[plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
-  endpoint = ["https://my-private-registry.com"]
-```
-
-## Next Steps
-
-With your Kind configuration knowledge, explore:
-
-**Application Deployment:**
-```bash
-# Test your custom cluster
-make deploy simple      # Basic deployment
-make deploy complex     # Multi-service app
-```
-
-**GitOps Integration:**
-```bash
-# Use custom config with automated deployment
-KIND_CONFIG=worker make up sample
-```
-
-**Extension Development:**
-```bash
-# Create project-specific configurations
-cp infra/kubernetes/kind-worker.yaml infra/kubernetes/extension/kind-myproject.yaml
-```
+In the [next tutorial](apps.md), you'll deploy increasingly complex applications and experience how cluster configuration choices affect application behavior, resource usage, and debugging capabilities.
 
 ## Summary
 
-Kind configuration is about choosing the right development environment for your needs:
+Cluster configuration isn't just about resources - it's about matching your development environment to your testing needs:
 
-- **Single-node** optimizes for speed and simplicity
-- **Multi-node** optimizes for realistic production testing
+- **Single-node** optimizes for development speed and simplicity
+- **Multi-node** provides production-like workload isolation and scheduling
 - **Both support** the same development features (registry, storage, ingress)
-- **Customization** enables project-specific requirements
+- **Your choice** affects debugging, resource usage, and production similarity
 
-The key insight is that your configuration choice affects not just resources, but also how closely your development environment matches production behavior. Start simple with single-node, then move to multi-node when you need to test production-like scheduling and isolation.
+The key insight: different development phases need different cluster configurations. HostK8s makes it easy to switch between them without losing your data or development workflow.
