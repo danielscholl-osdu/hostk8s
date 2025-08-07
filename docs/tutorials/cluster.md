@@ -21,12 +21,24 @@ You need Kubernetes for testing service mesh, resource limits, or ingress behavi
 
 ## How HostK8s Solves This
 
-HostK8s provides two cluster configurations that address different points in the development workflow:
+HostK8s solves this through **configurable cluster architectures** that let you match your environment to your specific development needs. Rather than forcing you into a one-size-fits-all solution, the platform provides a foundation where you can create clusters optimized for different scenarios.
 
+**Built-in Starting Points:**
 - **Single-Node** (`kind-custom.yaml`) - Optimizes for speed and simplicity
 - **Multi-Node** (`kind-worker.yaml`) - Provides production-like workload isolation
 
-The key insight: **your cluster choice affects not just resources, but how closely your development matches production behavior.**
+**The Real Power - Custom Configurations:**
+But these are just starting points. You can create configurations optimized for your specific needs:
+- **High-scale testing** - Multi-node clusters with more workers to test distributed applications
+- **Resource-constrained development** - Minimal single-node for CI environments or laptops
+- **Cloud-simulation** - Configurations that mirror your production cloud provider's node structure
+- **Specialized networking** - Custom CNI configurations for service mesh testing
+- **Storage-focused** - Multiple persistent volumes for database-heavy applications
+
+**The Configuration Philosophy:**
+Your cluster configuration becomes part of your project's infrastructure-as-code. Team members get identical environments, CI systems can replicate your exact setup, and you can evolve your development environment alongside your application architecture.
+
+The key insight: **your cluster choice affects not just resources, but how closely your development matches your specific production requirements.**
 
 ## Prerequisites
 
