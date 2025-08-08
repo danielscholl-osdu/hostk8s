@@ -63,6 +63,7 @@ For a deeper understanding of the platform's design:
 
 * [Architecture Guide](docs/architecture.md)
 * [AI Guide](docs/ai-guide.md)
+* [Tutorials](docs/tutorials/README.md)
 
 ---
 
