@@ -102,11 +102,9 @@ This demonstrates the **internal vs external service** pattern — the frontend 
 
 ## The Static YAML Wall: When Flexibility Matters
 
-Let's deploy both applications together to see what works:
+With both applications now deployed, let's analyze what we have running:
 
 ```bash
-make deploy basic
-make deploy simple
 make status
 ```
 
