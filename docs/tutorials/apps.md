@@ -13,7 +13,7 @@ Just as managing raw Kubernetes infrastructure creates complexity chaos, traditi
 - **Team conflicts** - Developers stepping on each other's ports and configurations
 - **Resource waste** - Every application deploying its own copy of identical infrastructure services
 
-HostK8s addresses these through software application patterns just like it did with cluster configuration patterns in the previous tutorial — providing consistent interfaces via the application contract, declarative configuration, and abstraction that lets you focus on what your applications do rather than how they deploy.
+HostK8s addresses these through software application patterns just like it did with cluster configuration patterns in the previous tutorial. It provides consistent interfaces via the application contract, declarative configuration, and abstraction that lets you focus on what your applications do rather than how they deploy.
 
 ---
 
@@ -42,7 +42,7 @@ simple
     └── service.yaml            # Internal networking and discovery
 ```
 
-The critical file is `kustomization.yaml` — this creates the **Application Contract** with the four HostK8s capabilities that makes `make deploy` work:
+The critical file is `kustomization.yaml`. This creates the **Application Contract** with the four HostK8s capabilities that makes `make deploy` work:
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -69,9 +69,9 @@ labels:
 | **Resource Labeling** | Applies `hostk8s.app: simple` to everything | `make status` finds all pieces instantly |
 | **Lifecycle Management** | Groups resources for operations | `make remove` cleans up completely |
 
-**The key insight:** HostK8s queries Kubernetes for all resources with `hostk8s.app: simple` — giving you unified status, deployment, and cleanup through a single application name, whether you're using static YAML or complex Helm charts.
+**The key insight:** HostK8s queries Kubernetes for all resources with `hostk8s.app: simple`, giving you unified status, deployment, and cleanup through a single application name, whether you're using static YAML or complex Helm charts.
 
-> **Application Contract Pattern**: A standardized interface (`kustomization.yaml`) that enables HostK8s to discover, deploy, and manage any application through consistent commands, regardless of the application's internal complexity.
+> **Application Contract**: A standardized interface (`kustomization.yaml`) that enables HostK8s to discover, deploy, and manage any application through consistent commands, regardless of the application's internal complexity.
 
 ---
 
@@ -239,7 +239,7 @@ make deploy basic alice
 make deploy advanced staging
 ```
 
-📌 **Same commands, any complexity** — that's the HostK8s abstraction.
+📌 **Same commands, any complexity**: that's the HostK8s abstraction.
 
 ---
 
