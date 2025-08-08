@@ -13,14 +13,14 @@ Once you've decided you need local Kubernetes for fast iteration, the architectu
 *Speed vs Realism:*
 - **Too simple** - Docker Compose works for basic scenarios but can't test Kubernetes features
 - **Too complex** - Full production clusters are slow and resource-heavy for development
-- **Resource competition** - Single-node Kubernetes mixes your app with system components
 
 *Cost vs Access:*
 - **Cloud overhead** - Cloud providers offer real Kubernetes but with cost, startup time, and vendor lock-in risks
+- **Access constraints** - Cloud security policies often block direct access to cluster internals, limiting debugging and inspection
 
 *Debuggability:*
 - **Context switching** - Moving between different development environments breaks flow
-- **Access restrictions** - Cloud security constraints block direct debugging connections to cluster services
+- **Observability** - Fast access to logs, metrics, and the ability to toggle debug modes is essential for iterative development
 
 **The Configuration Challenge:**
 You need Kubernetes for testing service mesh, resource limits, or ingress behavior, but cloud services add cost, vendor coupling, and debugging access restrictions while local solutions sacrifice either speed or realism. Traditional approaches force you to choose between realistic testing, development velocity, platform independence, and debugging accessibility.
