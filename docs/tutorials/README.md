@@ -2,17 +2,16 @@
 
 Learn HostK8s through a progressive tutorial series that builds from cluster configuration to complete software stacks.
 
-#### [Kind Configuration](cluster.md)
+#### [Cluster Configuration](cluster.md)
 *Beginner | 20-30 minutes*
 
 Learn when and why to customize Kind cluster configurations. Master the key decisions between single-node and multi-node development clusters through practical examples.
 
 **Key Topics:**
-- Single-node vs multi-node configuration decisions
-- Node roles and workload scheduling
-- Storage mounts for persistent data
-- Local registry configuration for development
-- 3-tier configuration system (temporary, personal, default)
+- Development workflow trade-offs (speed vs realism)
+- Single-node vs multi-node architecture patterns
+- Node roles, taints, and workload scheduling
+- 3-tier configuration system (named, personal, system fallback)
 
 ---
 
