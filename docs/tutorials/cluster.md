@@ -140,7 +140,7 @@ Start your cluster with the customized configuration:
 
 ```bash
 # Uses your custom configuration automatically
-make start
+INGRESS_ENABLED=true make start
 make status
 # If no worker node appears: check kind-config.yaml has the worker role section
 ```
@@ -153,6 +153,18 @@ You should see your worker node is running:
 🚜 Worker: Ready
    Status: Kubernetes v1.33.2 (up 31s)
    Node: hostk8s-worker
+```
+
+### Verify Your Changes
+
+Deploy an application to verify worker node scheduling:
+
+```bash
+make deploy simple
+kubectl get pods -o wide
+# Pod should run on hostk8s-worker (not control-plane)
+
+make clean   # Remove the cluster and clean up
 ```
 
 **Multi-Node Architecture:**
@@ -169,33 +181,8 @@ You should see your worker node is running:
 └───────────────────────────────────┘  └───────────────────────────────────┘
 ```
 
-### Verify Your Changes
-
-Check that your custom pod and service subnets are configured:
-
-```bash
-# Check cluster network configuration
-kubectl cluster-info dump | grep -E "pod-subnet|service-subnet"
-```
-
-You should see your custom networking values:
-```
-"--pod-subnet=10.244.0.0/16"
-"--service-subnet=10.96.0.0/12"
-```
-
-Deploy an application to verify worker node scheduling:
-
-```bash
-make deploy simple
-kubectl get pods -o wide
-# Pod should run on hostk8s-worker (not control-plane)
-# If pod runs on control-plane: worker node might not be ready yet, wait 30s and check again
-```
-
 **What you've accomplished:**
 - **Added worker node isolation** - applications run separately from system components
-- **Custom networking** - avoided conflicts with corporate/VPN networks
 - **Personal default configuration** - your project can replicate this setup
 
 ---
