@@ -71,7 +71,7 @@ You'll see:
 ```
 
 **Default behavior:**
-- Uses `infra/kubernetes/kind-custom.yaml` automatically
+- Uses the built-in `kind-custom.yaml` configuration automatically
 - One Docker container running everything
 - ~30 second startup time
 - Applications share resources with Kubernetes system components
@@ -101,11 +101,15 @@ make clean
 └───────────────────────────────────────┘
 ```
 
-## Creating a Custom Configuration
+## Creating A Custom Configuration
 
 The most common way to customize HostK8s is by creating your own default configuration.
 
-When you start the cluster HostK8s looks for your personal configuration file first. If you haven't created one, it uses the built-in default configuration.
+When you start the cluster, HostK8s looks for a custom configuration file first. If not, it falls back to the built-in default configuration.
+
+**Understanding the files:**
+- **`kind-custom.yaml`** - System-provided base configuration (don't edit this)
+- **`kind-config.yaml`** - Your personal override (you create and customize this)
 
 **Your configuration workflow:**
 1. **Copy the base** - Start with the working single-node configuration
@@ -119,9 +123,7 @@ Create your personal default:
 cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml
 ```
 
-Once you have `kind-config.yaml`, running `make start` will automatically use your customized configuration instead of the system default. This gives you personalized defaults while maintaining the ability to fall back to working configurations.
-
-## Customizing Your Configuration
+Once you have `kind-config.yaml`, `make start` will automatically detect and use it instead of the system default—giving you custom defaults with the safety net of a known-good base.
 
 The `kind-custom.yaml` includes commented examples for the two most common customizations: **adding a worker node** and **expanding network subnets**. Simply uncomment the sections you need:
 
@@ -137,7 +139,7 @@ For additional configuration options, see the [Kind Configuration Guide](https:/
 Start your cluster with the customized configuration:
 
 ```bash
-# Uses your personal default configuration automatically
+# Uses your custom configuration automatically
 make start
 make status
 # If no worker node appears: check kind-config.yaml has the worker role section
@@ -196,34 +198,6 @@ kubectl get pods -o wide
 - **Custom networking** - avoided conflicts with corporate/VPN networks
 - **Personal default configuration** - your project can replicate this setup
 
-## Why Configuration Choices Matter
-
-### When to Use Each Approach
-
-**Single-node (default kind-custom.yaml):**
-- Testing API integration and basic Kubernetes features
-- Learning Kubernetes without scheduling complexity
-- Quick CI environments where isolation isn't critical
-- "I just need my app to talk to Kubernetes APIs"
-
-**Multi-node (your custom kind-config.yaml):**
-- Debugging scheduling differences between dev and production
-- Testing resource constraints and node affinity rules
-- Production-like development when deployment targeting matters
-- "My app behaves differently when it lands on different nodes"
-
-### Node Roles and Scheduling
-
-Understanding how Kubernetes schedules workloads is crucial for everything you'll do in HostK8s. Your configuration choices directly affect where applications run and how they behave.
-
-In Kubernetes, nodes have specific roles that determine what runs on them. The **control plane** nodes handle the brain functions of the cluster. They run the API server that receives your kubectl commands, etcd that stores cluster state, and the scheduler that decides where your applications should run. **Worker** nodes are where your actual applications live and execute.
-
-**How Taints Enforce Separation:**
-
-The multi-node setup shows you how Kubernetes automatically enforces this separation through taints. When you deploy an application, Kubernetes looks at each node and asks "can this workload run here?" The control plane node says "no, I'm tainted for system components only," so your application lands on the worker node where it belongs.
-
-This **taint** (`node-role.kubernetes.io/control-plane:NoSchedule`) prevents user applications from competing with critical system components for resources. This automatic orchestration is what makes Kubernetes powerful in production environments - your workloads get scheduled appropriately without manual intervention.
-
 ---
 
 ### Multiple Configuration Support
@@ -239,7 +213,9 @@ make start my-config  # Uses infra/kubernetes/kind-my-config.yaml
 2. **Personal default:** `make start` → `kind-config.yaml` (if you created it)
 3. **System fallback:** `make start` → `kind-custom.yaml` (built-in base)
 
-This system gives you personal defaults while supporting specialized configurations for different deployment scenarios.
+This layered fallback approach ensures your workflow always has a safe default. At the same time, it gives you the flexibility to maintain specialized configurations for different deployment scenarios.
+
+---
 
 ## What Comes Next
 
@@ -253,13 +229,3 @@ These concepts form the foundation for application development. In the next tuto
 The cluster architecture decisions you've learned here will directly affect everything you build on top.
 
 👉 Continue to: [Application Deployment](apps.md)
-
-## Summary
-
-Your development environment is infrastructure.
-
-Through HostK8s, you've seen how a cluster's configuration directly affects application behavior, debugging workflows, and development speed. Whether you're optimizing for fast iteration or production realism, choosing the right architecture — and version-controlling it — makes all the difference.
-
-HostK8s makes these tradeoffs practical: same tooling, same interface, different outcomes — all under your control.
-
-**Key takeaway**: treat your development environment as deliberately as your application code. HostK8s makes that easy.
