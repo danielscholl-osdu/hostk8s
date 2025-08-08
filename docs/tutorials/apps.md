@@ -102,11 +102,7 @@ This demonstrates the **internal vs external service** pattern — the frontend 
 
 ## The Static YAML Wall: When Flexibility Matters
 
-With both applications now deployed, let's analyze what we have running:
-
-```bash
-make status
-```
+With both applications deployed, let's analyze in more detail what we have running:
 
 You'll see both applications running successfully:
 ```
@@ -123,7 +119,7 @@ You'll see both applications running successfully:
    Ingress: sample-app -> http://localhost:8080/simple
 ```
 
-**Why this works:** Different apps use different hard-coded values — no conflicts occur.
+**Why this works:** When different apps use different hard-coded values — no conflicts occur.
 
 ### Where Static YAML Breaks Down
 
@@ -146,7 +142,7 @@ to perform this operation.
 ❌ Failed to deploy basic via Kustomization to feature
 ```
 
-**What happened:** HostK8s created the `feature` namespace and tried to deploy there, but every YAML file in the `basic` app has hardcoded `namespace: default`:
+**What happened:** HostK8s created the `feature` namespace and tried to deploy there, but every YAML file in the `basic` app has a hardcoded `namespace: default`:
 
 ```yaml
 # basic/frontend-deployment.yaml - HARDCODED NAMESPACE
@@ -165,7 +161,7 @@ metadata:
 
 Static YAML files can't adapt to different deployment contexts. When you need team isolation, feature branch testing, or environment-specific deployments, you need **dynamic configuration**.
 
-This is where Helm templates shine—they provide deployment-time flexibility while maintaining the same `make deploy` simplicity. This is the **Complexity Abstraction Pattern** in action.
+This is where Helm templates shine—they provide deployment-time flexibility while maintaining the same `make deploy` simplicity. You get the power of dynamic configuration without losing the ease of consistent commands.
 
 ### The Voting Application: Helm in Action
 
