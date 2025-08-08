@@ -4,7 +4,7 @@
 
 ## From Infrastructure to Applications
 
-In the previous tutorial, you experienced how HostK8s eliminates Kubernetes infrastructure complexity through cluster architecture patterns. Now you face the next challenge: **what you deploy on that infrastructure**.
+In the previous tutorial, you experienced how HostK8s eliminates Kubernetes infrastructure complexity through cluster configuration patterns. Now you face the next challenge: **what you deploy on that infrastructure**.
 
 Just as managing raw Kubernetes infrastructure creates complexity chaos, traditional application deployment recreates the same problems at the application layer:
 
