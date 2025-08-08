@@ -13,6 +13,7 @@ Optimized ADR Index for Agent Context
 | 005 | AI-Assisted Development Integration | acc    | [ADR-005](005-ai-assisted-development-integration.md) |
 | 006 | Hybrid CI/CD Strategy               | acc    | [ADR-006](006-hybrid-ci-cd-strategy.md) |
 | 007 | Kind Configuration Fallback System | acc    | [ADR-007](007-kind-configuration-fallback-system.md) |
+| 008 | Source Code Build System Architecture | acc    | [ADR-008](008-source-code-build-system.md) |
 
 ---
 
@@ -137,4 +138,22 @@ why: |
 tradeoffs:
 positive: [simplified onboarding, progressive complexity, flexible customization, clean repository]
 negative: [slightly more complex logic, potential tier confusion, migration required]
+```
+
+--------------------------------------------
+```yaml
+id: 008
+title: Source Code Build System Architecture
+status: accepted
+date: 2025-08-08
+decision: Implement comprehensive source code build system enabling developers to build, containerize, and deploy applications directly from source code using make build src/APP_NAME.
+why: |
+• Development velocity: Enable rapid iteration on source code within Kubernetes environments
+• Multi-language support: Accommodate diverse development stacks (Node.js, Python, Java, C#, etc.)
+• Container-native: Leverage Docker Compose for consistent, reproducible builds
+• Registry integration: Automatic push to cluster registry for immediate deployment
+• Educational value: Provide complete examples for learning different technology stacks
+tradeoffs:
+positive: [rapid development, multi-language support, educational excellence, registry integration, GitOps compatibility]
+negative: [build dependencies, registry complexity, disk usage, build time, platform dependencies]
 ```

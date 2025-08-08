@@ -110,17 +110,30 @@ deploy:
 	@echo "📦 Deploying application..."
 ```
 
-### Argument Handling
+### Advanced Argument Handling
 ```makefile
-# Flexible argument support
-start: ## Start cluster (Usage: make start [minimal|simple|default])
-	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "sample" ]; then \
-		FLUX_ENABLED=true GITOPS_STAMP="$$ARG" ./infra/scripts/cluster-up.sh; \
-	elif [ "$$ARG" = "minimal" ] || [ "$$ARG" = "simple" ]; then \
-		KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
-	else \
-		./infra/scripts/cluster-up.sh; \
+# Comprehensive argument support for applications
+deploy: ## Deploy application (Usage: make deploy [app-name] [namespace])
+	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	POSITIONAL_NS="$(word 3,$(MAKECMDGOALS))"; \
+	TARGET_NAMESPACE="$${POSITIONAL_NS:-$${NAMESPACE:-default}}"; \
+	if [ -z "$$APP_NAME" ]; then \
+		APP_NAME="simple"; \
+		echo "No app specified, using default: $$APP_NAME"; \
+	fi; \
+	./infra/scripts/deploy-app.sh "$$APP_NAME" "$$TARGET_NAMESPACE"
+
+# Source code builds with path validation
+build: ## Build and push application from src/
+	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
+	./infra/scripts/build.sh "$$APP_PATH"
+
+# Extension stack deployment with template processing
+up: ## Deploy software stack with extension support
+	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
+	if [[ "$$STACK_NAME" == extension/* ]]; then \
+		echo "Deploying extension software stack: $$STACK_NAME"; \
+		./infra/scripts/deploy-stack.sh "$$STACK_NAME"; \
 	fi
 ```
 
@@ -128,11 +141,12 @@ start: ## Start cluster (Usage: make start [minimal|simple|default])
 
 **Positive:**
 - **Clear Separation**: Make handles interface concerns, scripts handle operational complexity
-- **Maintainability**: 68% reduction in Makefile size (424→137 lines) with improved script organization
+- **Maintainability**: Structured growth from 137→190 lines supporting expanded feature set
 - **Testability**: Complex operations in dedicated scripts can be tested independently
 - **Developer Experience**: Consistent `make` interface with detailed script-level help
 - **Evolution**: Scripts can be enhanced without changing user-facing interface
 - **Debugging**: Issues isolated to either interface layer (Make) or operational layer (scripts)
+- **Feature Coverage**: Comprehensive support for applications, source builds, and extensions
 
 **Negative:**
 - **Two-Layer System**: Understanding requires familiarity with both Make patterns and script organization
@@ -149,11 +163,16 @@ start: ## Start cluster (Usage: make start [minimal|simple|default])
 - `infra/scripts/deploy-app.sh` - Application deployment with validation
 - `infra/scripts/flux-sync.sh` - Flux reconciliation operations
 - `infra/scripts/build.sh` - Docker application build and registry push
+- `infra/scripts/deploy-stack.sh` - Software stack deployment and management
+- `infra/scripts/cluster-up.sh` - Advanced cluster creation with fallback configuration
+- `infra/scripts/cluster-restart.sh` - Development iteration optimization
 
-### Makefile Simplification
+### Makefile Evolution
 - **Original**: Complex inline bash logic, difficult to maintain and test
-- **Optimized**: Thin routing layer, 68% size reduction, consistent patterns
+- **Optimized**: Thin routing layer with controlled growth for feature completeness
 - **Pattern**: `make target` → argument extraction → `./infra/scripts/target.sh args`
+- **Scope Expansion**: Added comprehensive application deployment, source code builds, and extension support
+- **Current Size**: 190 lines supporting full platform feature set while maintaining thin layer principle
 
 ## Success Criteria
 - All operations accessible via consistent `make <command>` pattern

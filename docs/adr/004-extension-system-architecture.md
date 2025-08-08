@@ -21,19 +21,23 @@ Implement a **comprehensive extension system** using .gitignore-based isolation 
 
 ### Extension Directory Structure
 
-**Infrastructure Extensions (folder-based):**
+**Infrastructure Extensions (simplified approach):**
 ```
-infra/kubernetes/extension/
-├── kind-my-config.yaml          # Custom cluster configurations
-└── README.md                    # Extension documentation
+# Cluster Configuration Extensions (use main directory)
+infra/kubernetes/
+├── kind-custom.yaml             # Full-featured default config
+├── kind-minimal.yaml            # Minimal config example
+└── kind-my-config.yaml          # Custom user configs (create as needed)
 
+# Software Stack Extensions (implemented)
 software/stack/extension/
-├── my-stack/
+├── software-stack/             # External GitOps stack example
 │   ├── kustomization.yaml      # Stack entry point
 │   ├── repository.yaml         # GitRepository with template variables
 │   ├── stack.yaml             # Component dependencies
 │   ├── components/            # Infrastructure Helm releases
 │   └── applications/          # Application manifests
+├── tutorial-stack/             # Tutorial example stack
 └── README.md                  # Stack extension guide
 ```
 
@@ -69,11 +73,11 @@ spec:
 ```
 
 ### Auto-Detection Logic
-The platform automatically detects extensions:
-- **Kind Configs**: `infra/kubernetes/extension/kind-*.yaml` files discovered dynamically
-- **Applications**: Any directory in `software/apps/` with `kustomization.yaml` or `app.yaml` (built-in apps explicitly included in .gitignore)
-- **Software Stacks**: Directories in `software/stack/extension/` with `kustomization.yaml`
-- **Template Processing**: Applied to software stacks from external repositories, not needed for simple application extensions
+The platform automatically detects extensions with simplified approach:
+- **Kind Configs**: `infra/kubernetes/kind-*.yaml` files discovered dynamically (no separate extension folder needed) ✓ **IMPLEMENTED**
+- **Applications**: Any directory in `software/apps/` with `kustomization.yaml` or `app.yaml` (built-in apps explicitly included in .gitignore) ✓ **IMPLEMENTED**
+- **Software Stacks**: Directories in `software/stack/extension/` with `kustomization.yaml` ✓ **IMPLEMENTED**
+- **Template Processing**: Applied to software stacks from external repositories, not needed for simple application extensions ✓ **IMPLEMENTED**
 
 ## Alternatives Considered
 
@@ -101,14 +105,15 @@ The platform automatically detects extensions:
 
 ### Extension Usage Workflow
 ```bash
-# 1. Custom cluster configuration
-KIND_CONFIG=extension/my-config make up  # Uses custom Kind config
+# 1. Custom cluster configuration (create configs as needed in main directory)
+cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-my-config.yaml
+KIND_CONFIG=my-config make up       # Uses custom Kind config (no extension/ folder needed)
 
-# 2. Custom application deployment (simplified paths)
+# 2. Custom application deployment (fully implemented)
 make deploy my-custom-app           # Deploys from software/apps/my-custom-app/
 git clone <repo> software/apps/team-app && make deploy team-app
 
-# 3. External software stack deployment
+# 3. Extension software stack deployment (uses existing extension/ pattern)
 export GITOPS_REPO=https://github.com/my-org/custom-stack
 export GITOPS_BRANCH=develop
 make up extension                    # Deploys external stack with template processing
