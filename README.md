@@ -124,41 +124,32 @@ make status             # Monitor GitOps reconciliation
 make sync               # Force Flux reconciliation when needed
 ```
 
-### 3. Custom Extensions
+### 3. Customizations
 
 Custom applications and cluster configurations for specialized requirements. Enables **complete customization** while leveraging the HostK8s framework.
 
 **Custom Clusters:**
 ```bash
-# Option 1: Create kind-config.yaml for persistent custom config
-cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml
-# Edit kind-config.yaml as needed
-make start                        # Uses your kind-config.yaml
+cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml. # Copy starter and modify
 
-# Option 2: Use environment variable for temporary config
-KIND_CONFIG=kind-custom.yaml make start   # Use example config
-KIND_CONFIG=extension/sample make start   # Use extension config
-make deploy simple                # Deploy to default namespace
-make deploy simple testing           # Deploy to testing namespace
-NAMESPACE=apps make deploy simple    # Deploy to apps namespace
-make status                       # Check customized environment
+export METALLB_ENABLED=true
+export INGRESS_ENABLED=true
+make start                      # Uses the modified cluster configuration
 ```
 
 **Custom Applications:**
 ```bash
 # Add apps to software/apps/your-app-name/
-export METALLB_ENABLED=true
-export INGRESS_ENABLED=true
-make start                   # Start with required infrastructure
-make deploy helm-sample       # Deploy Helm chart application
-make status                  # Verify deployment
+
+make deploy helm-sample        # Deploy Helm chart application
+make status                    # Verify deployment
 ```
 
 **Custom Software Stacks:**
 ```bash
 # Create complete stacks in software/stack/extension/
 export GITOPS_REPO=https://github.com/yourorg/custom-stack
-make up extension/my-stack        # Deploy complete custom environment
+make up extension                 # Deploy complete custom environment
 make status                       # Monitor custom stack deployment
 ```
 
@@ -184,101 +175,3 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
 | `NAMESPACE`       | Default namespace for app deployments         | `default` |
-
-### Kind Configuration
-
-HostK8s uses a 3-tier fallback system for Kind cluster configuration:
-
-1. **KIND_CONFIG environment variable** - Explicit config override
-2. **kind-config.yaml** - User's persistent custom configuration
-3. **Functional defaults** - Uses kind-custom.yaml for complete functionality
-
-```bash
-# Tier 3: Functional defaults (recommended for beginners)
-make start                    # Uses kind-custom.yaml automatically
-
-# Tier 2: Custom configuration (persistent)
-cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml
-# Edit kind-config.yaml for your needs
-make start
-
-# Tier 1: Environment override (temporary)
-KIND_CONFIG=kind-custom.yaml make start
-KIND_CONFIG=extension/my-config make start
-```
-
-**Available Example Configurations:**
-- `kind-custom.yaml` - Full-featured example with port mappings and registry support
-- `kind-config-minimal.yaml` - Minimal configuration for testing
-- `extension/kind-sample.yaml` - Extended configuration for complex setups
-
----
-
-## Namespace Management
-
-HostK8s supports deploying applications to custom namespaces using multiple syntax options for flexibility in different workflows.
-
-### Namespace Syntax Options
-
-**Default Deployment (default namespace):**
-```bash
-make deploy simple              # Deploys to 'default' namespace
-```
-
-**Positional Namespace Argument:**
-```bash
-make deploy simple testing      # Deploys to 'testing' namespace
-make deploy complex staging     # Deploys to 'staging' namespace
-make deploy helm-sample prod    # Deploys to 'prod' namespace
-```
-
-**Environment Variable:**
-```bash
-NAMESPACE=apps make deploy simple       # Deploys to 'apps' namespace
-NAMESPACE=development make deploy complex
-```
-
-### Available Applications
-
-| App Name | Type | Description |
-|----------|------|-------------|
-| `simple` | Basic | Single pod application for testing |
-| `complex` | Intermediate | Multi-service app with Kustomization |
-| `helm-sample` | Advanced | Full Helm chart with voting app |
-
-### Namespace Examples
-
-**Development Workflow:**
-```bash
-# Create isolated development environment
-make deploy simple dev-john
-make deploy complex integration-tests
-NAMESPACE=feature-branch make deploy helm-sample
-```
-
-**Team Collaboration:**
-```bash
-# Each team member gets their own namespace
-make deploy simple alice
-make deploy simple bob
-make status  # Shows apps across all namespaces
-```
-
-**Multi-Environment Testing:**
-```bash
-# Test same app in different environments
-make deploy helm-sample dev
-make deploy helm-sample staging
-NAMESPACE=production make deploy helm-sample
-```
-
-### Namespace Management
-
-- **Automatic Creation**: Namespaces are created automatically if they don't exist
-- **Cleanup**: Empty namespaces are automatically removed when the last app is removed
-- **Isolation**: Each namespace provides complete resource isolation
-- **Status Visibility**: `make status` shows apps across all namespaces with namespace labels
-
----
-
-# Test external status reporting
