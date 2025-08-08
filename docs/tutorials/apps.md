@@ -13,7 +13,7 @@ Just as managing raw Kubernetes infrastructure creates complexity chaos, traditi
 - **Team conflicts** - Developers stepping on each other's ports and configurations
 - **Resource waste** - Every application deploying its own copy of identical infrastructure services
 
-HostK8s addresses these through application patterns just like it did with cluster architecture patterns in the previous tutorial — providing consistent interfaces via the application contract, declarative configuration, and abstraction that lets you focus on what your applications do rather than how they deploy.
+HostK8s addresses these through software application patterns just like it did with cluster configuration patterns in the previous tutorial — providing consistent interfaces via the application contract, declarative configuration, and abstraction that lets you focus on what your applications do rather than how they deploy.
 
 ---
 
