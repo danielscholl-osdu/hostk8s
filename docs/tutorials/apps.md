@@ -2,12 +2,11 @@
 
 *Understanding HostK8s application patterns and why they eliminate deployment complexity*
 
-## The Application Deployment Problem
+## From Infrastructure to Applications
 
-You've configured your cluster architecture and experienced how HostK8s eliminates the complexity of managing Kubernetes infrastructure (from [Cluster Configuration](cluster.md)).
-But infrastructure is just the foundation — the real challenge is **what you deploy on it**.
+In the previous tutorial, you experienced how HostK8s eliminates Kubernetes infrastructure complexity through cluster architecture patterns. Now you face the next challenge: **what you deploy on that infrastructure**.
 
-Traditional Kubernetes application deployment creates the same complexity problems that HostK8s solves at the infrastructure level:
+Just as managing raw Kubernetes infrastructure creates complexity chaos, traditional application deployment recreates the same problems at the application layer:
 
 - **Deployment chaos** - Dozens of YAML files to track, apply in the right order, and manage individually
 - **Environment inconsistency** - Hard-coded values that work locally but break in different environments
@@ -43,7 +42,7 @@ simple
     └── service.yaml            # Internal networking and discovery
 ```
 
-The critical file is `kustomization.yaml` — this creates the **Application Contract Pattern** that makes `make deploy simple` work:
+The critical file is `kustomization.yaml` — this creates the **Application Contract** with the four HostK8s capabilities that makes `make deploy` work:
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -62,7 +61,6 @@ labels:
       hostk8s.app: simple
 ```
 
-**This contract enables four key HostK8s capabilities:**
 
 | Capability | How It Works | Why It Matters |
 |------------|--------------|----------------|
@@ -73,11 +71,13 @@ labels:
 
 **The key insight:** HostK8s queries Kubernetes for all resources with `hostk8s.app: simple` — giving you unified status, deployment, and cleanup through a single application name, whether you're using static YAML or complex Helm charts.
 
+> **Application Contract Pattern**: A standardized interface (`kustomization.yaml`) that enables HostK8s to discover, deploy, and manage any application through consistent commands, regardless of the application's internal complexity.
+
 ---
 
 ## Multi‑Service Applications
 
-Single‑service apps like `simple` demonstrate the contract, but most real apps use multiple cooperating services. Deploy the **basic** app to see how this works:
+The `simple` app demonstrates the contract, but real applications rarely consist of a single service. Let's see how HostK8s handles multi-service architectures by deploying the **basic** app:
 
 ```bash
 make deploy basic
@@ -100,7 +100,7 @@ This demonstrates the **internal vs external service** pattern — the frontend 
 
 ---
 
-## Configuration Inflexibility: The Static YAML Wall
+## The Static YAML Wall: When Flexibility Matters
 
 Let's deploy both applications together to see what works:
 
@@ -140,8 +140,11 @@ make deploy basic feature
 [15:00:35] Creating namespace: feature
 namespace/feature created
 [15:00:35] Using Kustomization deployment (preferred)
-the namespace from the provided object "default" does not match the namespace "feature".
-You must pass '--namespace=default' to perform this operation.
+
+Error from server (BadRequest): the namespace from the provided object "default"
+does not match the namespace "feature". You must pass '--namespace=default'
+to perform this operation.
+
 ❌ Failed to deploy basic via Kustomization to feature
 ```
 
@@ -160,9 +163,11 @@ metadata:
 
 ---
 
-## Template‑Based Flexibility with Helm
+## Breaking Through the YAML Wall with Helm
 
-Helm templates unlock **dynamic configuration** at deployment time while keeping the same `make deploy` simplicity — an example of the **Complexity Abstraction Pattern**.
+Static YAML files can't adapt to different deployment contexts. When you need team isolation, feature branch testing, or environment-specific deployments, you need **dynamic configuration**.
+
+This is where Helm templates shine—they provide deployment-time flexibility while maintaining the same `make deploy` simplicity. This is the **Complexity Abstraction Pattern** in action.
 
 ### The Voting Application: Helm in Action
 
@@ -201,7 +206,7 @@ Check ingress paths:
 
 ---
 
-## Multi‑Version with Environment Overrides
+## Environment-Specific Configuration
 
 Helm supports **per-environment configuration overrides** via values files:
 
@@ -238,21 +243,21 @@ make deploy advanced staging
 
 ---
 
-## The Resource Duplication Problem
+## The Hidden Cost of Isolation
 
-Run:
+While Helm solves configuration flexibility, it reveals another challenge. Run this command to see what's happening with shared infrastructure:
 
 ```bash
 kubectl get deployments --all-namespaces | grep -E "(redis|db)"
 ```
 
-Each voting app release has its own Redis & DB — resource waste + ops overhead.
+Notice anything? Each voting app deployment runs its own Redis and database instances—that's resource waste and operational overhead multiplied by every environment.
 
 ---
 
-## The Complete Workflow from Source
+## Building from Source Code
 
-HostK8s also builds from source:
+Beyond deploying pre-built applications, HostK8s also handles the complete source-to-deployment workflow:
 
 ```bash
 make build src/registry-demo
@@ -272,20 +277,21 @@ Static YAML → Multi-Service YAML → Helm Templates
 ```
 
 - Static: simple, limited flexibility
-- Multi‑Service: introduces infra patterns + conflicts
+- Multi‑Service: introduces service interaction patterns but creates configuration conflicts
 - Helm: fixes config conflicts, enables environments, but duplicates infra
 
 ---
 
-## Summary & What's Next
+## Key Takeaways
 
-You've learned:
+You've experienced the evolution of Kubernetes application deployment:
 
-- **Application Contract Pattern**
-- **Complexity Abstraction Pattern**
-- Multi‑service infra separation
-- Helm‑driven flexibility & environment overrides
-- Source → registry → cluster workflow
-- Trade‑off: flexibility vs infrastructure duplication
+- **Static YAML**: Simple but inflexible—breaks when you need multiple environments
+- **Helm Templates**: Solves configuration conflicts and enables per-environment customization
+- **The Trade-off**: Flexibility comes at the cost of infrastructure duplication
 
-👉 **Continue to:** [Using Components](shared-components.md) — learn how to **share infrastructure** (like Redis) across apps while keeping environment isolation.
+The Application Contract Pattern ensures consistent deployment commands regardless of underlying complexity, but shared infrastructure remains a challenge.
+
+**Next**: Learn how to share infrastructure components (like Redis) across applications while maintaining environment isolation.
+
+👉 **Continue to:** [Using Components](shared-components.md)
