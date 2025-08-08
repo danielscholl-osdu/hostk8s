@@ -68,11 +68,14 @@ For a deeper understanding of the platform's design:
 
 ## Quick Start
 
-**Get started in 2 steps:**
+**Get started in a 3 simple steps:**
 
 ```bash
 git clone https://community.opengroup.org/danielscholl/hostk8s.git
-make up sample # Start cluster with a sample software stack
+
+export FLUX_ENABLED=true        # Enable the GitOps AddOn
+make start                      # Start a gitops enabled cluster
+make up                         # Bring up a simple software stack
 ```
 
 ### Prerequisites
@@ -97,7 +100,7 @@ Direct cluster management with manual application deployments. Ideal for **itera
 ```bash
 export INGRESS_ENABLED=true
 make start              # Start basic cluster
-make deploy simple      # Deploy to default namespace
+make deploy             # Deploy the default app (simple) to the default namespace
 make status             # Check cluster and app status
 make clean              # Complete cleanup
 ```
@@ -105,10 +108,11 @@ make clean              # Complete cleanup
 **Advanced Development:**
 ```bash
 export INGRESS_ENABLED=true
+export METALLB_ENABLED=true
 make start              # Start cluster with LoadBalancer and Ingress
-make deploy complex     # Deploy complex multi-service app
+make deploy basic       # Deploy a multi-tier app
 make status             # Monitor cluster health
-make restart            # Quick reset for development iteration
+make restart            # Quick reset of the cluster without app
 make stop               # Stop cluster (preserve data)
 ```
 
@@ -118,7 +122,9 @@ Complete software stack deployments using GitOps automation. Perfect for **consi
 
 **Built-in Sample Stack:**
 ```bash
+export INGRESS_ENABLED=true
 export FLUX_ENABLED=true
+make start              # Start the cluster with Flux
 make up sample          # Deploy complete GitOps environment
 make status             # Monitor GitOps reconciliation
 make sync               # Force Flux reconciliation when needed
@@ -141,7 +147,7 @@ make start                      # Uses the modified cluster configuration
 ```bash
 # Add apps to software/apps/your-app-name/
 
-make deploy helm-sample        # Deploy Helm chart application
+make deploy advanced           # Deploy Helm chart application
 make status                    # Verify deployment
 ```
 

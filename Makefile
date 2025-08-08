@@ -61,19 +61,17 @@ start: ## Start cluster (Usage: make start [config-name] - auto-discovers kind-*
 stop: ## Stop cluster
 	@./infra/scripts/cluster-down.sh
 
-up: ## Deploy software stack (Usage: make up <stack-name>)
+up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
 	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
 	if [ -z "$$STACK_NAME" ]; then \
-		echo "Stack name required. Usage: make up <stack-name>"; \
-		echo "Available stacks:"; \
-		find software/stack -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' || true; \
-		exit 1; \
+		STACK_NAME="sample"; \
+		echo "No stack specified, using default: $$STACK_NAME"; \
 	fi; \
 	if [ "$$STACK_NAME" = "sample" ]; then \
 		echo "Deploying local software stack: $$STACK_NAME"; \
 		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
 			echo "Cluster exists - deploying software stack to existing cluster..."; \
-			SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/deploy-stack.sh; \
+			./infra/scripts/deploy-stack.sh "$$STACK_NAME"; \
 		else \
 			echo "Creating new cluster with software stack..."; \
 			FLUX_ENABLED=true SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/cluster-up.sh; \
@@ -82,7 +80,7 @@ up: ## Deploy software stack (Usage: make up <stack-name>)
 		echo "Deploying extension software stack: $$STACK_NAME"; \
 		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
 			echo "Cluster exists - deploying extension stack to existing cluster..."; \
-			SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/deploy-stack.sh; \
+			./infra/scripts/deploy-stack.sh "$$STACK_NAME"; \
 		else \
 			echo "Creating new cluster with extension stack..."; \
 			FLUX_ENABLED=true SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/cluster-up.sh; \
@@ -142,19 +140,13 @@ sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=
 
 ##@ Applications
 
-deploy: ## Deploy application (Usage: make deploy <app-name> [namespace] or NAMESPACE=ns make deploy <app-name>)
+deploy: ## Deploy application (Usage: make deploy [app-name] [namespace] - defaults to 'simple')
 	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
 	POSITIONAL_NS="$(word 3,$(MAKECMDGOALS))"; \
 	TARGET_NAMESPACE="$${POSITIONAL_NS:-$${NAMESPACE:-default}}"; \
 	if [ -z "$$APP_NAME" ]; then \
-		echo "Application name required. Usage: make deploy <app-name> [namespace]"; \
-		echo "Examples:"; \
-		echo "  make deploy simple                    # Deploy to default namespace"; \
-		echo "  make deploy simple testing           # Deploy to testing namespace"; \
-		echo "  NAMESPACE=apps make deploy simple    # Deploy to apps namespace"; \
-		echo "Available applications:"; \
-		find software/apps -mindepth 1 -maxdepth 1 -type d | sed 's|software/apps/||' || true; \
-		exit 1; \
+		APP_NAME="simple"; \
+		echo "No app specified, using default: $$APP_NAME"; \
 	fi; \
 	./infra/scripts/deploy-app.sh "$$APP_NAME" "$$TARGET_NAMESPACE"
 
