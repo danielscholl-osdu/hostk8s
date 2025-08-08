@@ -94,7 +94,7 @@ These decisions work together to create a platform that prioritizes developer pr
 
 The platform simplifies complex Kubernetes operations through a three-layer abstraction:
 
-1. **Make Interface Layer** - Standardized commands engineers recognize (`install`, `up`, `down`, `test`, `clean`)
+1. **Make Interface Layer** - Standardized commands engineers recognize (`install`, `start`, `stop`, `up`, `down`, `restart`, `clean`, `status`)
 2. **Script Orchestration Layer** - Single-responsibility scripts managing specific operations
 3. **Common Utilities Layer** - Shared functions ensuring consistent behavior (logging, error handling, environment management)
 
@@ -128,7 +128,7 @@ Cluster configurations use a 3-tier fallback system optimized for progressive us
 
 1. **KIND_CONFIG Override** (Explicit Control)
    - `KIND_CONFIG=kind-custom.yaml make start` - Direct file specification
-   - `KIND_CONFIG=extension/sample make start` - Extension configurations
+   - `KIND_CONFIG=minimal make start` - Alternative configurations
    - Used for testing, CI/CD, and advanced scenarios
 
 2. **kind-config.yaml** (Personal Customization)
@@ -166,6 +166,32 @@ Software stacks deploy complete, coherent environments rather than individual ap
 **Implementation Approach:**
 Stacks use GitOps patterns with Flux for continuous deployment, enabling complete environment reproducibility and version control. (Detailed design in [ADR-003](adr/003-gitops-stack-pattern.md))
 
+### Source Code Build System Architecture
+
+**The Development Iteration Problem:**
+Modern development workflows require rapid build-test-deploy cycles within Kubernetes environments. Developers need to containerize and deploy source code changes quickly without complex CI/CD setup for local development.
+
+**The Solution:**
+The platform provides a comprehensive source code build system through `make build src/APP_NAME`, supporting multiple programming languages and automatic integration with the cluster container registry.
+
+**Key Capabilities:**
+- **Multi-Language Support** - Node.js, Python, Java, C#/.NET applications
+- **Container-Native Builds** - Docker Compose integration for consistent, reproducible builds
+- **Cluster Registry Integration** - Automatic push to localhost:5000 registry for immediate deployment
+- **Educational Progression** - Simple to complex examples (registry-demo → sample-app → example-voting-app)
+- **Development Velocity** - Fast iteration cycles for source code changes
+
+**Build System Workflow:**
+```bash
+make build src/sample-app        # Build all services and push to cluster registry
+make deploy voting-app           # Deploy using built containers
+make status                      # Verify deployment
+# Edit source code, repeat cycle
+```
+
+**Architecture Integration:**
+The build system integrates seamlessly with the GitOps stack pattern - applications can be built locally and deployed via standard Kubernetes manifests, maintaining consistency between development and production workflows. (Detailed design in [ADR-008](adr/008-source-code-build-system.md))
+
 ### Extensibility Architecture
 
 **The Innovation Challenge:**
@@ -179,8 +205,9 @@ The platform treats extensibility as a **contract-based architecture**. Extensio
 
 For example:
 - `make deploy <my_app>` works with any application following the deployment contract (standardized manifest structure)
-- `make build <my_app>` can build any application with a defined build contract (docker-compose, Dockerfile, etc.), automatically pushing to the cluster registry
+- `make build src/<my_app>` can build any application with a defined build contract (docker-compose.yml structure), automatically pushing to the cluster registry
 - `make up <my_stack>` deploys any software stack meeting the stack contract (kustomization structure, dependency definitions)
+- `make start [config]` creates clusters using any Kind configuration following the platform's naming conventions
 
 **Separation of Platform and User Concerns:**
 This contract-based approach enables **zero-coupling extensibility**. You can build, deploy, and orchestrate applications without their code being directly related to the platform codebase. The platform handles environment management, orchestration, and lifecycle operations while users focus on their specific domain implementations.
@@ -230,7 +257,7 @@ git clone <external-repo> my-app    →  immediately available in software/apps/
 The platform uses **different integration strategies** for different extension types, optimized for their specific architectural requirements:
 
 **Filesystem-Based Extensions:**
-- **Cluster Configurations:** `KIND_CONFIG=extension/sample` → `infra/kubernetes/extension/kind-sample.yaml` *(uses extension/ namespace for infrastructure)*
+- **Cluster Configurations:** `KIND_CONFIG=my-config` → `infra/kubernetes/kind-my-config.yaml` *(custom configurations in main directory)*
 - **Source Code Builds:** `make build src/my-app` → `src/my-app/` (build and push to cluster registry)
 - **Application Deployments:** `make deploy my-app` → `software/apps/my-app/kustomization.yaml` *(simplified path)*
 
@@ -286,7 +313,7 @@ The platform's lightweight architecture enables CI/CD systems to implement **dis
 ```bash
 # CI/CD systems can leverage these patterns
 make start minimal       # Create lightweight validation cluster
-make test                # Validate functionality
+make status              # Validate functionality
 make clean               # Destroy environment
 ```
 
@@ -342,3 +369,13 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Temporary workaround using GitLab CI for validation then triggering GitHub Actions for Kubernetes testing due to GitLab runner limitations
 - **Benefits**: Preserves GitLab workflow, accesses GitHub K8s tooling, smart change detection
 - **Tradeoffs**: Operational complexity, dual platform dependency, temporary solution
+
+**[ADR-007: Kind Configuration 3-Tier Fallback System](adr/007-kind-configuration-fallback-system.md)**
+- **Decision**: Implement 3-tier fallback system for Kind cluster configuration prioritizing user experience progression
+- **Benefits**: Simplified onboarding, progressive complexity, flexible customization, clean repository
+- **Tradeoffs**: Slightly more complex logic, potential tier confusion, migration required
+
+**[ADR-008: Source Code Build System Architecture](adr/008-source-code-build-system.md)**
+- **Decision**: Comprehensive source code build system enabling developers to build, containerize, and deploy applications directly from source code
+- **Benefits**: Rapid development velocity, multi-language support, educational value, registry integration, GitOps compatibility
+- **Tradeoffs**: Build dependencies, registry complexity, disk usage, build time, platform dependencies
