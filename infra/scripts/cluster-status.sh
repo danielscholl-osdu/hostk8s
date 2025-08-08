@@ -310,7 +310,7 @@ show_cluster_nodes() {
     # Get all nodes info
     local all_nodes=$(kubectl get nodes --no-headers 2>/dev/null)
     if [ -z "$all_nodes" ]; then
-        echo "⚙️  Cluster Nodes: NotFound"
+        echo "🕹️ Cluster Nodes: NotFound"
         echo "   Status: No nodes found"
         return
     fi
@@ -330,16 +330,16 @@ show_cluster_nodes() {
         # Determine node type and icon based on roles
         if echo "$roles" | grep -q "control-plane"; then
             node_type="Control Plane"
-            node_icon="⚙️  "
+            node_icon="🕹️ "
         elif echo "$roles" | grep -q "worker"; then
             node_type="Worker"
-            node_icon="👷 "
+            node_icon="🚜 "
         elif echo "$roles" | grep -q "agent"; then
             node_type="Agent"
             node_icon="🤖 "
         elif [ "$roles" = "<none>" ]; then
             node_type="Worker"
-            node_icon="👷 "
+            node_icon="🚜 "
         fi
 
         # Show node status

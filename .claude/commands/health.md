@@ -13,54 +13,31 @@ Here are the arguments provided with the command:
 {{ARGUMENTS}}
 </arguments>
 
-Your task is to analyze the cluster health based on these arguments and generate a detailed report. Follow these steps:
+Important Context:
+HostK8s supports two primary operation modes:
+1. Manual Operations: Direct app deployment (`make deploy <app>`) - works with basic Kind clusters
+2. Automated Operations: Software stack deployment (`make up <stack>`) - requires Flux installation
 
-1. Parse the provided arguments and determine the mode of operation:
+Your task is to analyze the cluster health based on the provided arguments and generate a detailed report. Follow these steps in your analysis:
+
+1. Parse the arguments and determine the mode of operation:
    - Full Cluster Health (Default): No specific arguments
    - Component-Specific Health: A component name is specified (e.g., cert-manager, ingress-nginx, flux-system)
    - Quick Status Check: --quick flag
    - Detailed Analysis: --detailed flag
 
-2. Perform your cluster analysis inside <cluster_health_analysis> tags within your thinking block. In your analysis, include the following steps:
+2. Determine what agents to use to assist you in your analysis by running the 'make status' command gathering preliminary informationand analyzing its output:
+   - If Flux Add On is not enabled then only use the cluster-agent.
+   - If Flux Add On is enabled then use both the cluster-agent and the software-agent in parallel.
 
-   a. Parse and list the provided arguments.
-   b. Determine the mode of operation based on the parsed arguments.
-   c. List all components of the cluster that need to be checked, numbering each one.
-   d. Run the 'make status' command and note its exact output.
-   e. Extract and list all components mentioned in the 'make status' output.
-   f. Check if Flux is installed based on the 'make status' output.
-   g. If Flux is installed:
-      - Conduct infrastructure analysis using the cluster-agent:
-        * List key points about node health, resource capacity, and core services.
-        * Analyze recent cluster events and logs.
-      - Perform software analysis using the software-agent:
-        * List key points about GitOps status, application health, and deployment issues.
-        * Check for any recent failed deployments or updates.
-   h. If Flux is not installed, skip the software analysis step.
-   i. Summarize resource usage and efficiency metrics:
-      - Note current CPU/Memory usage vs capacity (exact percentages)
-      - Analyze resource requests vs limits
-      - Identify over-provisioned components
-      - Calculate available headroom for development workloads
-   j. Analyze the resource usage of each component individually.
-   k. Compare the current cluster state with ideal development environment metrics.
-   l. List any critical issues identified, numbering each one.
-   m. Consider potential security vulnerabilities:
-      - Check for outdated components or known CVEs
-      - Analyze network policies and access controls
-      - List each potential vulnerability found
-   n. Brainstorm optimization opportunities:
-      - Resource allocation improvements
-      - Performance enhancements
-      - Configuration optimizations
-      - List each opportunity identified
-   o. For component-specific analysis (if applicable):
-      - Dive deep into the specified component's health metrics
-      - Analyze its dependencies and interactions with other components
+3. Conduct your cluster health analysis, including:
+   - Analyze infrastructure and software/capabilities
+   - Assess resource usage and efficiency
+   - Identify critical issues and security vulnerabilities
+   - Consider optimization opportunities
+   - For component-specific analysis, focus on the specified component's health metrics
 
-   It's okay for this section to be quite long, as it involves multiple detailed steps.
-
-3. After your analysis, generate a comprehensive health report using the following structure:
+3. Generate a comprehensive health report using the following structure:
 
 ```markdown
 # HostK8s Cluster Health Report
@@ -100,25 +77,28 @@ Your task is to analyze the cluster health based on these arguments and generate
 [Additional sections for component-specific analysis if applicable]
 ```
 
-For component-specific analysis, include:
-- Current Status: Running/Failed/Pending with details
-- Resource Usage: Actual vs allocated CPU/memory
-- Configuration Health: Proper settings, security, networking
-- Dependencies: Required services and their status
-- Recent Events: Errors, warnings, or notable changes
-- Optimization Potential: Component-specific improvement opportunities
-
-Important:
-- This is a development server, not a production environment, so evaluate against objectives typical for normal resource-conscious development activities.
-- Flux controllers use ~6GB memory limits by default. This is acceptable overhead.
+Important guidelines:
+- This is a development server, not a production environment. Evaluate against objectives typical for normal resource-conscious development activities.
+- Not having GitOps installed is perfectly acceptable and expected.
+- Flux controllers using ~6GB memory limits by default is acceptable overhead.
+- Differentiate between basic Kind cluster capabilities vs HostK8s software stack capabilities.
+- For clusters without Flux: Focus on manual operations readiness (`make deploy <app>`).
+- For clusters with Flux: Focus on GitOps workflow health and software stack status.
+- Don't assume software stacks are the desired next step - they're ONE option among many.
 - Tailor your response based on the specific mode of operation determined by the parsed arguments.
 - Provide detailed, actionable insights focused on optimizing the development environment.
 - Ensure the data directory exists (create if needed) and include a generation timestamp for tracking report freshness.
-- The report should be clear and concise, professional looking with NO emojis.
+- The report should be clear, concise, and professional-looking with NO emojis.
 
-Your final output should consist of:
+Conduct your analysis inside <cluster_health_analysis> tags in your thinking block. In this analysis:
+1. Extract and list key information from the arguments.
+2. Analyze the current cluster state based on the 'make status' command output.
+3. Evaluate the cluster against development environment objectives.
+4. Formulate your health assessment and recommendations.
+
+Keep this analysis internal and do not include it in your final output. Your final output should consist only of:
 1. The markdown report displayed in the chat.
 2. A question asking if the user wants to save the report to a file.
 3. If the user confirms, a confirmation that the report has been saved to data/health.md.
 
-Do not duplicate or rehash any of the work you did in the cluster health analysis thinking block.
+Do not repeat any of your analysis or thought process in the final output.

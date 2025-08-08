@@ -56,3 +56,18 @@ nodes:
       - hostPath: ./data/storage
         containerPath: /mnt/data
         readOnly: false
+
+  # - role: worker
+  #   image: kindest/node:v1.33.2
+  #   kubeadmConfigPatches:
+  #     - |
+  #       kind: JoinConfiguration
+  #       nodeRegistration:
+  #         kubeletExtraArgs: {}
+  #   extraMounts:
+  #     - hostPath: /tmp/kind-local-storage
+  #       containerPath: /mnt/local-storage
+  #       readOnly: false
+  #     - hostPath: ./data/storage
+  #       containerPath: /mnt/data
+  #       readOnly: false

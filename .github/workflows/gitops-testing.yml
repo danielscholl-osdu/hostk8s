@@ -51,7 +51,7 @@ jobs:
         with:
           cluster_name: hostk8s-minimal
           node_image: kindest/node:v1.33.2
-          config: infra/kubernetes/kind-config-minimal.yaml
+          config: infra/kubernetes/kind-minimal.yaml
 
       - name: Install Flux CLI
         run: |

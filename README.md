@@ -79,7 +79,7 @@ make up sample # Start cluster with a sample software stack
 
 * **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
 * **2+ CPU cores, 4GB+ RAM** (8GB recommended)
-* **Mac, Linux, or Windows WSL2**
+* **Mac, Linux, or WSL2**
 
 > **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install`.
 

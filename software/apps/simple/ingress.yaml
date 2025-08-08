@@ -11,9 +11,9 @@ spec:
       http:
         paths:
           - path: /simple
-        pathType: Prefix
-        backend:
-          service:
-            name: sample-app
-            port:
-              number: 80
+            pathType: Prefix
+            backend:
+              service:
+                name: sample-app
+                port:
+                  number: 80

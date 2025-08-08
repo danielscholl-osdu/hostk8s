@@ -14,7 +14,6 @@ Once you've decided you need local Kubernetes for fast iteration, the architectu
 - **Too simple** - Docker Compose works for basic scenarios but can't test Kubernetes features
 - **Too complex** - Full production clusters are slow and resource-heavy for development
 - **Resource competition** - Single-node Kubernetes mixes your app with system components
-- **Production mismatch** - Need to test real scheduling but want fast iteration
 
 *Cost vs Access:*
 - **Cloud overhead** - Cloud providers offer real Kubernetes but with cost, startup time, and vendor lock-in risks
@@ -67,7 +66,7 @@ make status
 
 You'll see:
 ```
-Control Plane: Ready
+🕹️ Control Plane: Ready
    Status: Kubernetes v1.33.2 (up 30s)
 ```
 
@@ -83,6 +82,9 @@ Deploy an application to see the default behavior:
 make deploy simple
 kubectl get pods -o wide
 # All pods running on hostk8s-control-plane
+
+make clean
+# Remove the cluster after exploration
 ```
 
 **Single-Node Architecture:**
@@ -101,13 +103,9 @@ kubectl get pods -o wide
 
 ## Creating Your Personal Default Configuration
 
-The most common way to customize HostK8s is by creating your own default configuration. When you run:
+The most common way to customize HostK8s is by creating your own default configuration.
 
-```bash
-make start
-```
-
-HostK8s looks for your personal configuration file first. If you haven't created one, it uses the built-in default configuration.
+When you start the cluster HostK8s looks for your personal configuration file first. If you haven't created one, it uses the built-in default configuration.
 
 **Your configuration workflow:**
 1. **Copy the base** - Start with the working single-node configuration
@@ -125,37 +123,14 @@ Once you have `kind-config.yaml`, running `make start` will automatically use yo
 
 ## Customizing Your Configuration
 
-Let's customize your personal configuration by adding a worker node and custom networking. These are the two most common modifications projects make.
+The `kind-custom.yaml` includes commented examples for the two most common customizations: **adding a worker node** and **expanding network subnets**. Simply uncomment the sections you need:
 
-### Add a Worker Node
+**Worker Node**: Uncomment the worker node section to isolate applications from system components.
 
-Find the `nodes:` section and add a worker:
+**Network Subnets**: The default Class B networks (`172.20.0.0/24` and `172.20.1.0/24`) avoid common home network conflicts. For larger deployments or different IP addressing, modify the network block.
 
-```yaml
-nodes:
-# Add a worker role
-- role: worker
-  image: kindest/node:v1.33.2
-  extraMounts:
-  - hostPath: /tmp/kind-storage
-    containerPath: /mnt/storage
-    readOnly: false
-  - hostPath: ./data/storage
-    containerPath: /mnt/data
-    readOnly: false
-  labels:
-    node-role.kubernetes.io/worker: ""
-```
+For additional configuration options, see the [Kind Configuration Guide](https://kind.sigs.k8s.io/docs/user/configuration/).
 
-### Customize Network Subnets
-
-The default configuration uses safe Class B networks (`172.20.0.0/24` and `172.20.1.0/24`) that avoid common home network conflicts. If you need more IP addresses for larger deployments, expand to Class A networks:
-
-```yaml
-networking:
-  podSubnet: "10.244.0.0/16"    # Expands from 254 to 65,534 pod IPs
-  serviceSubnet: "10.96.0.0/12"  # Expands from 254 to 1,048,574 service IPs
-```
 
 ### Test Your Custom Configuration
 
@@ -165,14 +140,15 @@ Start your cluster with the customized configuration:
 # Uses your personal default configuration automatically
 make start
 make status
+# If no worker node appears: check kind-config.yaml has the worker role section
 ```
 
 You should see your worker node is running:
 ```
-Control Plane: Ready
+🕹️ Control Plane: Ready
    Status: Kubernetes v1.33.2 (up 45s)
    Node: hostk8s-control-plane
-Worker: Ready
+🚜 Worker: Ready
    Status: Kubernetes v1.33.2 (up 31s)
    Node: hostk8s-worker
 ```
@@ -198,6 +174,7 @@ Deploy an application to verify worker node scheduling:
 make deploy simple
 kubectl get pods -o wide
 # Pod should run on hostk8s-worker (not control-plane)
+# If pod runs on control-plane: worker node might not be ready yet, wait 30s and check again
 ```
 
 **What you've accomplished:**
@@ -206,6 +183,20 @@ kubectl get pods -o wide
 - **Personal default configuration** - your project can replicate this setup
 
 ## Why Configuration Choices Matter
+
+### When to Use Each Approach
+
+**Single-node (default kind-custom.yaml):**
+- Testing API integration and basic Kubernetes features
+- Learning Kubernetes without scheduling complexity
+- Quick CI environments where isolation isn't critical
+- "I just need my app to talk to Kubernetes APIs"
+
+**Multi-node (your custom kind-config.yaml):**
+- Debugging scheduling differences between dev and production
+- Testing resource constraints and node affinity rules
+- Production-like development when deployment targeting matters
+- "My app behaves differently when it lands on different nodes"
 
 ### Node Roles and Scheduling
 

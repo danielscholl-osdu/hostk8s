@@ -31,6 +31,7 @@ Use this tool proactively when encountering complex configurations, unfamiliar F
 When invoked, follow these steps systematically:
 
 1. **Identify Stack Context**
+   - Determine if the cluster has flux installed if not Exit immediately and say "Flux is not installed."
    - Determine which software stack is involved (sample, extension, custom)
    - Review stack composition and component dependencies
    - Check GitOps repository structure and organization
