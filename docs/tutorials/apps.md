@@ -48,20 +48,24 @@ The critical file is `kustomization.yaml`. This creates the **Application Contra
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 metadata:
-  name: simple
+  name: basic
   labels:
-    hostk8s.app: simple
+    hostk8s.app: basic
+namespace: default
 resources:
-  - configmap.yaml
-  - deployment.yaml
-  - service.yaml
+  - frontend-deployment.yaml
+  - frontend-configmap.yaml
+  - frontend-service.yaml
+  - api-deployment.yaml
+  - api-configmap.yaml
+  - api-service.yaml
   - ingress.yaml
 labels:
   - pairs:
-      hostk8s.app: simple
+      hostk8s.app: basic
 ```
 
-> **Learn More**: This uses Kubernetes [Kustomization](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) for declarative configuration management. Kustomize provides powerful capabilities including namespace transformations, resource patching, and configuration overlays.
+For additional configuration capabilities, see the [Kustomization Guide](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
 
 
 | Capability | How It Works | Why It Matters |
