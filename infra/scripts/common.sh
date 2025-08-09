@@ -304,12 +304,7 @@ get_nodeport_access() {
     local service_line="$1"
     local ports=$(echo "$service_line" | awk '{print $6}')
     local nodeport=$(echo "$ports" | grep -o '[0-9]*:3[0-9]*/' | cut -d: -f2 | cut -d/ -f1)
-
-    case "$nodeport" in
-        "30080") echo "http://localhost:8080" ;;
-        "30443") echo "https://localhost:8443" ;;
-        *) echo "NodePort $nodeport - not mapped to localhost" ;;
-    esac
+    echo "$nodeport"
 }
 
 get_loadbalancer_access() {

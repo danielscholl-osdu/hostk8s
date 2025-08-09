@@ -220,15 +220,15 @@ show_app_services() {
 
         case "$type" in
             "NodePort")
-                local access=$(get_nodeport_access "$ns $name $type $cluster_ip $external_ip $ports $age")
-                echo "   Service: $name ($type, $access)"
+                local nodeport=$(get_nodeport_access "$ns $name $type $cluster_ip $external_ip $ports $age")
+                echo "   Service: $name (NodePort $nodeport)"
                 ;;
             "LoadBalancer")
                 local access=$(get_loadbalancer_access "$ns $name $type $cluster_ip $external_ip $ports $age")
                 echo "   Service: $name ($type, $access)"
                 ;;
             "ClusterIP")
-                echo "   Service: $name ($type, internal only)"
+                echo "   Service: $name (ClusterIP)"
                 ;;
             *)
                 echo "   Service: $name ($type)"

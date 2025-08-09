@@ -6,6 +6,8 @@ metadata:
   labels:
     hostk8s.app: basic
 
+namespace: default
+
 resources:
   - frontend-deployment.yaml
   - frontend-configmap.yaml

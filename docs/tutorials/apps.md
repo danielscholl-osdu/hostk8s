@@ -61,6 +61,8 @@ labels:
       hostk8s.app: simple
 ```
 
+> **Learn More**: This uses Kubernetes [Kustomization](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/) for declarative configuration management. Kustomize provides powerful capabilities including namespace transformations, resource patching, and configuration overlays.
+
 
 | Capability | How It Works | Why It Matters |
 |------------|--------------|----------------|
@@ -89,45 +91,89 @@ You'll see:
 📱 basic
    Deployment: api (2/2 ready)
    Deployment: frontend (2/2 ready)
-   Service: api (ClusterIP, internal only)
-   Service: frontend (ClusterIP, internal only)
-   Ingress: app2-ingress -> http://localhost:8080/frontend
-```
-
-This demonstrates the **internal vs external service** pattern — the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
-
-**Namespace Convention:** Each deployment runs in a separate Kubernetes namespace: `make deploy basic feature` → namespace `feature.basic`. This enables team isolation, parallel environments, and safe experimentation.
-
----
-
-## The Static YAML Wall: When Flexibility Matters
-
-With both applications deployed, let's analyze in more detail what we have running:
-
-You'll see both applications running successfully:
-```
-📱 basic
-   Deployment: api (2/2 ready)
-   Deployment: frontend (2/2 ready)
-   Service: api (ClusterIP, internal only)
-   Service: frontend (ClusterIP, internal only)
+   Service: api (ClusterIP)
+   Service: frontend (ClusterIP)
    Ingress: app2-ingress -> http://localhost:8080/frontend
 
 📱 simple
    Deployment: sample-app (2/2 ready)
-   Service: sample-app (NodePort, NodePort 30081 - not mapped to localhost)
+   Service: sample-app (NodePort)
    Ingress: sample-app -> http://localhost:8080/simple
 ```
 
-**Why this works:** When different apps use different hard-coded values — no conflicts occur.
+Notice both applications are running successfully in the same `default` namespace. This demonstrates the **internal vs external service** pattern — the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
 
-### Where Static YAML Breaks Down
+**Why this works:** When different apps use different hard-coded values, no conflicts occur.
 
-Now try deploying the same app to a different namespace (a common development need):
+### HostK8s Namespace Convention
+
+Running everything in the same namespace works for simple testing, but real development teams need **isolation**. HostK8s supports this through a namespace convention:
+
+```bash
+make deploy <app> <namespace>    # Deploy to custom namespace
+```
+
+For example:
+- `make deploy basic feature` → namespace `feature`
+- `make deploy basic staging` → namespace `staging`
+- `make deploy basic alice` → namespace `alice`
+
+This enables team isolation, parallel environments, and safe experimentation. Let's try it:
 
 ```bash
 make deploy basic feature
 ```
+
+---
+
+## The Static YAML Wall: When the Convention Breaks
+
+**You'll hit this error:**
+```
+[15:00:35] Creating namespace: feature
+namespace/feature created
+[15:00:35] Using Kustomization deployment (preferred)
+
+Error from server (BadRequest): the namespace from the provided object "default"
+does not match the namespace "feature". You must pass '--namespace=default'
+to perform this operation.
+
+❌ Failed to deploy basic via Kustomization to feature
+```
+
+**What happened:** HostK8s created the `feature` namespace and tried to deploy there, but the `basic` app's kustomization.yaml specifies `namespace: default`:
+
+```yaml
+# basic/kustomization.yaml - STATIC NAMESPACE
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: basic
+namespace: default  # ← Controls all resources
+resources:
+  - frontend-deployment.yaml
+  # ... other files
+```
+
+### Understanding Kustomization's Namespace Capability
+
+**How it works:** Kustomize's `namespace` field overrides the namespace for all resources, even if they had hardcoded values. This is actually a powerful feature - you could edit `kustomization.yaml` to say `namespace: feature` and redeploy.
+
+**The real limitation:** Static configuration files can't respond to **dynamic deployment contexts**. HostK8s needs to support `make deploy basic feature` with the same static files, but the kustomization file can't adapt to command-line arguments.
+
+To deploy to different namespaces, you'd need to:
+1. Edit `kustomization.yaml` to change `namespace: default` → `namespace: feature`
+2. Deploy the modified version
+3. Remember to change it back for the next deployment
+
+This is the core problem that leads teams to complex workarounds:
+- **Kustomize overlays** - Create `overlays/feature/kustomization.yaml` that sets different namespaces
+- **Manual file editing** - Change kustomization files for each deployment
+- **Separate app copies** - Maintain different versions for different environments
+- **Custom scripts** - Build deployment automation to modify files
+- **Avoiding isolation** - Just deploy everything to default and accept conflicts
+
+What we need is **template-based configuration** that can adapt at deployment time, accepting parameters like namespace, environment, and release name without requiring file modifications.
 
 **You'll hit this error:**
 ```
