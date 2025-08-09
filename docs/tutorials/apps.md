@@ -47,26 +47,22 @@ The critical file is `kustomization.yaml`. This creates the **Application Contra
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
+
 metadata:
-  name: basic
+  name: simple
   labels:
-    hostk8s.app: basic
-namespace: default
+    hostk8s.app: simple
+
 resources:
-  - frontend-deployment.yaml
-  - frontend-configmap.yaml
-  - frontend-service.yaml
-  - api-deployment.yaml
-  - api-configmap.yaml
-  - api-service.yaml
+  - deployment.yaml
+  - configmap.yaml
+  - service.yaml
   - ingress.yaml
+
 labels:
   - pairs:
-      hostk8s.app: basic
+      hostk8s.app: simple
 ```
-
-For additional configuration capabilities, see the [Kustomization Guide](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
-
 
 | Capability | How It Works | Why It Matters |
 |------------|--------------|----------------|
@@ -119,10 +115,9 @@ make deploy <app> <namespace>    # Deploy to custom namespace
 
 For example:
 - `make deploy basic feature` → namespace `feature`
-- `make deploy basic staging` → namespace `staging`
-- `make deploy basic alice` → namespace `alice`
+- `make deploy basic test` → namespace `test`
 
-This enables team isolation, parallel environments, and safe experimentation. Let's try it:
+This enables isolation, parallel environments, and safe experimentation. Let's try it:
 
 ```bash
 make deploy basic feature
@@ -168,7 +163,6 @@ resources:
 To deploy to different namespaces, you'd need to:
 1. Edit `kustomization.yaml` to change `namespace: default` → `namespace: feature`
 2. Deploy the modified version
-3. Remember to change it back for the next deployment
 
 This is the core problem that leads teams to complex workarounds:
 - **Kustomize overlays** - Create `overlays/feature/kustomization.yaml` that sets different namespaces
@@ -176,6 +170,8 @@ This is the core problem that leads teams to complex workarounds:
 - **Separate app copies** - Maintain different versions for different environments
 - **Custom scripts** - Build deployment automation to modify files
 - **Avoiding isolation** - Just deploy everything to default and accept conflicts
+
+For configuration capabilities, see the [Kustomization Guide](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
 
 What we need is **template-based configuration** that can adapt at deployment time, accepting parameters like namespace, environment, and release name without requiring file modifications.
 
