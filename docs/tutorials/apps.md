@@ -48,18 +48,15 @@ The critical file is `kustomization.yaml`. This creates the **Application Contra
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 metadata:
   name: simple
   labels:
     hostk8s.app: simple
-
 resources:
   - deployment.yaml
   - configmap.yaml
   - service.yaml
   - ingress.yaml
-
 labels:
   - pairs:
       hostk8s.app: simple
@@ -80,7 +77,7 @@ labels:
 
 ## Multi‑Service Applications
 
-The `simple` app demonstrates the contract, but real applications rarely consist of a single service. Let's see how HostK8s handles multi-service architectures by deploying the **basic** app:
+The simple app demonstrated the contract, but real applications rarely consist of a single service. Let's see how HostK8s handles multi-service architectures by deploying the `basic` app:
 
 ```bash
 make deploy basic
