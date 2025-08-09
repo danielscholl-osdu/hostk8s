@@ -24,6 +24,7 @@ Let's start by getting our cluster running and deploying a simple application to
 ```bash
 # Start your cluster with ingress capabilities
 export INGRESS_ENABLED=true
+
 make start
 make deploy simple
 make status

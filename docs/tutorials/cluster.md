@@ -140,9 +140,10 @@ Start your cluster with the customized configuration:
 
 ```bash
 # Uses your custom configuration automatically
-INGRESS_ENABLED=true make start
+export INGRESS_ENABLED=true
+
+make start
 make status
-# If no worker node appears: check kind-config.yaml has the worker role section
 ```
 
 You should see your worker node is running:
@@ -164,7 +165,7 @@ make deploy simple
 kubectl get pods -o wide
 # Pod should run on hostk8s-worker (not control-plane)
 
-make clean   # Remove the cluster and clean up
+make clean
 ```
 
 **Multi-Node Architecture:**
@@ -192,7 +193,8 @@ make clean   # Remove the cluster and clean up
 **Advanced usage:** HostK8s also supports multiple named configurations for different scenarios (local vs cloud, minimal vs full-featured, etc.):
 
 ```bash
-make start my-config  # Uses infra/kubernetes/kind-my-config.yaml
+# Uses infra/kubernetes/kind-my-config.yaml
+make start my-config
 ```
 
 **Configuration priority:**
