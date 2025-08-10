@@ -179,9 +179,9 @@ For configuration capabilities, see the [Kustomization Guide](https://kubernetes
 
 ### Why Static YAML Hits a Wall
 
-**We just hit the fundamental limitation:** Static YAML can't adapt to deployment context. The kustomization file is locked to `namespace: default` and has no way to accept parameters at deployment time, whether that's namespace, environment, release name, or configuration values like replica counts (1 replica to prove functionality, 2 replicas to prove scale).
+**We just hit the complexity wall:** While Kustomize offers overlays, patches, and cross-cutting fields to handle deployment-time parameters like namespace, environment, or replica counts (1 replica to prove functionality, 2 replicas to prove scale), it requires complex directory structures, patch files, and careful configuration management.
 
-This becomes a real problem when teams need isolation through separate namespaces, when you want feature branch preview deployments, or when the same app needs different configurations across dev, staging, and production environments. Static configuration forces you into workarounds like Kustomize overlays, manual file editing, or custom scripts, all of which make deployment complex and error-prone.
+This becomes cumbersome when teams need isolation through separate namespaces, feature branch preview deployments, or different configurations across dev, staging, and production environments. Kustomize solutions require overlay directories, strategic merge patches, and structured file hierarchies that make deployment management complex compared to simpler approaches.
 
 **What we need is template-based configuration** that accepts deployment-time parameters without modifying source files. Instead of static file juggling, we need a clean parameter contract.
 
