@@ -43,7 +43,7 @@ simple
     └── service.yaml            # Internal networking and discovery
 ```
 
-The critical file is `kustomization.yaml`. This creates the **Application Contract** with the four HostK8s capabilities that makes `make deploy` work:
+The critical file is `kustomization.yaml` that creates an Application Contract with four HostK8s capabilities that work with `make deploy`.
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -69,17 +69,19 @@ labels:
 | **Resource Labeling** | Applies `hostk8s.app: simple` to everything | `make status` finds all pieces instantly |
 | **Lifecycle Management** | Groups resources for operations | `make remove` cleans up completely |
 
-**The key insight:** HostK8s queries Kubernetes for all resources with `hostk8s.app: simple`, giving you unified status, deployment, and cleanup through a single application name, whether you're using static YAML or complex Helm charts.
+**The key insight:**
 
-> **Application Contract**: A standardized interface (`kustomization.yaml`) that enables HostK8s to discover, deploy, and manage any application through consistent commands, regardless of the application's internal complexity.
+HostK8s queries Kubernetes for all resources with `hostk8s.app: simple`, giving you unified status, deployment, and cleanup through a single application name, regardless of the application's internal complexity.
 
 ---
 
 ## Multi‑Service Applications
 
-The simple app demonstrated the contract, but real applications rarely consist of a single service. Let's see how HostK8s handles multi-service architectures by deploying the `basic` app:
+The simple app demonstrated the kustomization contract, but real applications rarely consist of a single service. Let's see how HostK8s handles multi-service architectures by deploying the `basic` app:
 
 ```bash
+# Deploy the basic application
+
 make deploy basic
 make status
 ```
@@ -99,7 +101,7 @@ You'll see:
    Ingress: sample-app -> http://localhost:8080/simple
 ```
 
-Notice both applications are running successfully in the same `default` namespace. This demonstrates the **internal vs external service** pattern — the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
+Notice both applications are running successfully in the same `default` namespace. You can see how **internal and external service communication paths** work — the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
 
 **Why this works:** When different apps use different hard-coded values, no conflicts occur.
 
