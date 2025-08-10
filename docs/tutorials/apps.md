@@ -43,7 +43,7 @@ simple
     └── service.yaml            # Internal networking and discovery
 ```
 
-The critical file is `kustomization.yaml` that creates an Application Contract with four HostK8s capabilities that work with `make deploy`.
+The critical file is the `kustomization.yaml` file which creates an Application Contract around four HostK8s capabilities that enable `make deploy`.
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
