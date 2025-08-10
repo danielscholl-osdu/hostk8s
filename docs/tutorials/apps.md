@@ -101,7 +101,7 @@ You'll see:
    Ingress: sample-app -> http://localhost:8080/simple
 ```
 
-**Multiple applications, no conflicts.** Both applications coexist successfully in the same `default` namespace because each uses different resource names, ports, and ingress paths.
+**Multiple applications, no conflicts.** Both applications coexist successfully in the same `default` namespace because the developers intentionally designed them with different resource names, ports, and ingress paths. When developers coordinate their application designs to avoid conflicts, multiple apps can share the same namespace.
 
 Within the `basic` app, you can see how **internal and external service communication paths** work—the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
 
