@@ -77,7 +77,7 @@ HostK8s queries Kubernetes for all resources with `hostk8s.app: simple`, giving 
 
 ## Multi‑Service Applications
 
-The simple app demonstrated the kustomization contract, but real applications rarely consist of a single service. Let's see how HostK8s handles multi-service architectures by deploying the `basic` app:
+The `simple` app demonstrated the kustomization contract, but real applications are typically multi-service and often need to coexist with other applications in the same namespace. Let's see how HostK8s handles this by deploying the `basic` app:
 
 ```bash
 # Deploy the basic application
