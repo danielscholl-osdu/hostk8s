@@ -71,7 +71,7 @@ labels:
 
 **The key insight:**
 
-HostK8s queries Kubernetes for all resources with `hostk8s.app: simple`, giving you unified status, deployment, and cleanup through a single application name, regardless of the application's internal complexity.
+HostK8s queries Kubernetes for all resources with `hostk8s.app: simple`, giving a unified status, deployment, and cleanup process from a single application name, regardless of the complexity.
 
 ---
 
@@ -101,9 +101,11 @@ You'll see:
    Ingress: sample-app -> http://localhost:8080/simple
 ```
 
-Notice both applications are running successfully in the same `default` namespace. You can see how **internal and external service communication paths** work — the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
+**Multiple applications, no conflicts.** Both applications coexist successfully in the same `default` namespace because each uses different resource names, ports, and ingress paths.
 
-**Why this works:** When different apps use different hard-coded values, no conflicts occur.
+Within the `basic` app, you can see how **internal and external service communication paths** work—the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
+
+**So far so good:** We've successfully deployed multiple applications in the same namespace. But what if we want to deploy the **same application** in different namespaces? This is a common need for team isolation, feature branch testing, or environment-specific deployments.
 
 ### HostK8s Namespace Convention
 
