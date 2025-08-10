@@ -160,7 +160,7 @@ resources:
 
 ### Understanding Kustomization's Namespace Capability
 
-**How it works:** Kustomize's `namespace` field overrides the namespace for all resources, even if they had hardcoded values. This is actually a powerful feature - you could edit `kustomization.yaml` to say `namespace: feature` and redeploy.
+**How it works:** Kustomize's `namespace` field overrides the namespace for all resources, even if they had hardcoded values. This is actually a powerful feature. You could edit `kustomization.yaml` to say `namespace: feature` and redeploy.
 
 **The real limitation:** Static configuration files can't respond to **dynamic deployment contexts**. HostK8s needs to support `make deploy basic feature` with the same static files, but the kustomization file can't adapt to command-line arguments.
 
