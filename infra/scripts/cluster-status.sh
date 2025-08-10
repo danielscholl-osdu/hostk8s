@@ -121,27 +121,39 @@ show_kustomizations() {
 }
 
 show_gitops_applications() {
-    local gitops_apps=$(kubectl get deployments -l hostk8s.application --all-namespaces -o jsonpath='{.items[*].metadata.labels.hostk8s\.application}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    local gitops_deployments=$(kubectl get deployments -l hostk8s.application --all-namespaces --no-headers 2>/dev/null)
 
-    if [ -z "$gitops_apps" ]; then
+    if [ -z "$gitops_deployments" ]; then
         return 0
     fi
 
     log_info "GitOps Applications"
     show_ingress_controller_status
 
-    for app in $gitops_apps; do
-        local namespaces=$(get_app_namespaces "$app" "application")
+    echo "$gitops_deployments" | while read -r ns deployment_name ready up total age; do
+        [ -z "$ns" ] && continue
+
+        # Use deployment name as primary identifier with namespace qualification
         local display_name
-        if [ "$namespaces" = "default" ]; then
-            display_name="$app"
+        if [ "$ns" = "default" ]; then
+            display_name="$deployment_name"
         else
-            display_name="$namespaces.$app"
+            display_name="$ns.$deployment_name"
         fi
-        echo "📱 $display_name (GitOps)"
-        show_app_deployments "$app" "application"
-        show_app_services "$app" "application"
-        show_app_ingress "$app" "application"
+
+        # Get the hostk8s.application label for services/ingress lookup
+        local app_label=$(kubectl get deployment "$deployment_name" -n "$ns" -o jsonpath='{.metadata.labels.hostk8s\.application}' 2>/dev/null)
+
+        echo "📱 $display_name"
+
+        # Show deployment status
+        echo "   Deployment: $deployment_name ($ready ready)"
+
+        # Show services and ingress for this app
+        if [ -n "$app_label" ]; then
+            show_app_services "$app_label" "application"
+            show_app_ingress "$app_label" "application"
+        fi
         echo
     done
 }
@@ -164,39 +176,82 @@ show_ingress_controller_status() {
 }
 
 show_manual_deployed_apps() {
-    local deployed_apps=$(kubectl get all -l hostk8s.app --all-namespaces -o jsonpath='{.items[*].metadata.labels.hostk8s\.app}' 2>/dev/null | tr ' ' '\n' | sort -u | tr '\n' ' ')
+    local deployed_deployments=$(kubectl get deployments -l hostk8s.app --all-namespaces --no-headers 2>/dev/null)
 
-    if [ -z "$deployed_apps" ]; then
+    if [ -z "$deployed_deployments" ]; then
         return 0
     fi
 
     log_info "Manual Deployed Apps"
 
-    for app in $deployed_apps; do
-        local namespaces=$(get_app_namespaces "$app" "app")
-        local display_name
-        if [ "$namespaces" = "default" ]; then
-            display_name="$app"
-        else
-            display_name="$namespaces.$app"
-        fi
+    # Get unique app identifiers using two-tier grouping strategy
+    local unique_apps=$(echo "$deployed_deployments" | while read -r ns deployment_name ready up total age; do
+        [ -z "$ns" ] && continue
 
-        if is_helm_managed_app "$app"; then
-            local helm_info=$(get_helm_chart_info "$app")
-            if [ -n "$helm_info" ]; then
-                local chart=$(echo "$helm_info" | cut -d',' -f1 | cut -d':' -f2)
-                local version=$(echo "$helm_info" | cut -d',' -f2 | cut -d':' -f2)
-                local release=$(echo "$helm_info" | cut -d',' -f3 | cut -d':' -f2)
-                echo "📱 $display_name (Helm Chart: $chart, App: $version, Release: $release)"
-            else
-                echo "📱 $display_name (Helm-managed)"
+        # Check if this is a Helm-managed app
+        local managed_by=$(kubectl get deployment "$deployment_name" -n "$ns" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/managed-by}' 2>/dev/null)
+
+        if [ "$managed_by" = "Helm" ]; then
+            # For Helm apps: use app.kubernetes.io/instance + namespace
+            local instance=$(kubectl get deployment "$deployment_name" -n "$ns" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/instance}' 2>/dev/null)
+            if [ -n "$instance" ]; then
+                if [ "$ns" = "default" ]; then
+                    echo "helm:$instance"
+                else
+                    echo "helm:$ns.$instance"
+                fi
             fi
         else
-            echo "📱 $display_name"
+            # For non-Helm apps: use hostk8s.app + namespace
+            local app_label=$(kubectl get deployment "$deployment_name" -n "$ns" -o jsonpath='{.metadata.labels.hostk8s\.app}' 2>/dev/null)
+            if [ -n "$app_label" ]; then
+                if [ "$ns" = "default" ]; then
+                    echo "app:$app_label"
+                else
+                    echo "app:$ns.$app_label"
+                fi
+            fi
         fi
-        show_app_deployments "$app" "app"
-        show_app_services "$app" "app"
-        show_app_ingress "$app" "app"
+    done | sort -u)
+
+    if [ -z "$unique_apps" ]; then
+        return 0
+    fi
+
+    echo "$unique_apps" | while read -r app_identifier; do
+        [ -z "$app_identifier" ] && continue
+
+        local app_type=$(echo "$app_identifier" | cut -d':' -f1)
+        local app_key=$(echo "$app_identifier" | cut -d':' -f2)
+
+        if [ "$app_type" = "helm" ]; then
+            # Handle Helm app
+            local display_name="$app_key"
+            echo "📱 $display_name"
+
+            # Show chart info for Helm apps
+            show_helm_chart_info_by_instance "$app_key"
+
+            # Show deployments, services, and ingress for this Helm instance
+            show_helm_app_resources "$app_key"
+        else
+            # Handle non-Helm app
+            local display_name="$app_key"
+            echo "📱 $display_name"
+
+            # Extract actual app name (remove namespace prefix if present)
+            local actual_app_name="$app_key"
+            if echo "$app_key" | grep -q '\.' ; then
+                actual_app_name=$(echo "$app_key" | sed 's/^[^.]*\.//')
+            fi
+
+            # Show all deployments for this app
+            show_app_deployments "$actual_app_name" "app"
+
+            # Show services and ingress for this app
+            show_app_services "$actual_app_name" "app"
+            show_app_ingress "$actual_app_name" "app"
+        fi
         echo
     done
 }
@@ -257,6 +312,85 @@ show_app_ingress() {
                 else
                     echo "   Ingress: $name -> $access"
                 fi
+            else
+                echo "   Ingress: $name (configured but controller not ready)"
+                echo "   Enable with: export INGRESS_ENABLED=true && make restart"
+            fi
+        else
+            echo "   Ingress: $name (hosts: $hosts)"
+        fi
+    done
+}
+
+# Helm-specific helper functions
+show_helm_chart_info_by_instance() {
+    local app_key="$1"
+
+    # Extract namespace and instance name
+    local namespace="default"
+    local instance="$app_key"
+    if echo "$app_key" | grep -q '\.'; then
+        namespace=$(echo "$app_key" | cut -d'.' -f1)
+        instance=$(echo "$app_key" | cut -d'.' -f2-)
+    fi
+
+    # Get chart info from any deployment with this instance label in the namespace
+    local first_deployment=$(kubectl get deployments -l "app.kubernetes.io/instance=$instance" -n "$namespace" --no-headers 2>/dev/null | head -1 | awk '{print $1}')
+    if [ -n "$first_deployment" ]; then
+        local chart_info=$(kubectl get deployment "$first_deployment" -n "$namespace" -o jsonpath='{.metadata.labels.helm\.sh/chart}' 2>/dev/null)
+        if [ -n "$chart_info" ]; then
+            echo "   Chart: $chart_info"
+        fi
+    fi
+}
+
+show_helm_app_resources() {
+    local app_key="$1"
+
+    # Extract namespace and instance name
+    local namespace="default"
+    local instance="$app_key"
+    if echo "$app_key" | grep -q '\.'; then
+        namespace=$(echo "$app_key" | cut -d'.' -f1)
+        instance=$(echo "$app_key" | cut -d'.' -f2-)
+    fi
+
+    # Show deployments for this Helm instance
+    kubectl get deployments -l "app.kubernetes.io/instance=$instance" -n "$namespace" --no-headers 2>/dev/null | while read -r name ready up total age; do
+        [ -z "$name" ] && continue
+        echo "   Deployment: $name ($ready ready)"
+    done
+
+    # Show services for this Helm instance
+    kubectl get services -l "app.kubernetes.io/instance=$instance" -n "$namespace" --no-headers 2>/dev/null | while read -r name type cluster_ip external_ip ports age; do
+        [ -z "$name" ] && continue
+
+        case "$type" in
+            "NodePort")
+                local nodeport=$(get_nodeport_access "$namespace $name $type $cluster_ip $external_ip $ports $age")
+                echo "   Service: $name (NodePort $nodeport)"
+                ;;
+            "LoadBalancer")
+                local access=$(get_loadbalancer_access "$namespace $name $type $cluster_ip $external_ip $ports $age")
+                echo "   Service: $name ($type, $access)"
+                ;;
+            "ClusterIP")
+                echo "   Service: $name (ClusterIP)"
+                ;;
+            *)
+                echo "   Service: $name ($type)"
+                ;;
+        esac
+    done
+
+    # Show ingress for this Helm instance
+    kubectl get ingress -l "app.kubernetes.io/instance=$instance" -n "$namespace" --no-headers 2>/dev/null | while read -r name class hosts address ports age; do
+        [ -z "$name" ] && continue
+
+        if [ "$hosts" = "localhost" ]; then
+            if is_ingress_controller_ready; then
+                local access=$(get_ingress_access "$instance" "$namespace $name $class $hosts $address $ports $age")
+                echo "   Access: $access ($name ingress)"
             else
                 echo "   Ingress: $name (configured but controller not ready)"
                 echo "   Enable with: export INGRESS_ENABLED=true && make restart"

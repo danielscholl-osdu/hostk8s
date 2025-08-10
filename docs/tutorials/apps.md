@@ -191,13 +191,14 @@ This becomes cumbersome when teams need isolation through separate namespaces, f
 
 Static YAML files can't adapt to different deployment contexts. When you need team isolation, feature branch testing, or environment-specific deployments, you need **dynamic configuration**.
 
-This is where Helm templates shine—they provide deployment-time flexibility while maintaining the same `make deploy` simplicity. You get the power of dynamic configuration without losing the ease of consistent commands.
+This is where Helm templates shine. They provide deployment-time flexibility while maintaining the same `make deploy` simplicity. You get the power of dynamic configuration without losing the ease of consistent commands.
 
 ### The Voting Application: Helm in Action
 
 ```bash
-make remove basic main-branch
-make remove basic feature-api-changes
+# Remove the basic app and deploy the helm app.
+
+make remove basic
 make deploy advanced
 make status
 ```

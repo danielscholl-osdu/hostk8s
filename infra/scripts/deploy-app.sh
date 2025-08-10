@@ -53,7 +53,6 @@ deploy_helm_app() {
     fi
 
     # Deploy using Helm
-    log_info "Deploying Helm chart: $app_dir to namespace: $namespace"
     if helm upgrade --install "$app_name" "$app_dir" "${helm_args[@]}"; then
         log_success "$app_name deployed successfully via Helm to $namespace"
         log_info "See software/apps/$app_name/README.md for access details"
@@ -76,22 +75,56 @@ remove_helm_app() {
         exit 1
     fi
 
-    # Check if release exists in the specified namespace
+    # First, try to find the release in the specified namespace
     if helm list -q -n "$namespace" | grep -q "^$app_name$"; then
-        log_info "Uninstalling Helm release: $app_name from namespace: $namespace"
         if helm uninstall "$app_name" -n "$namespace"; then
             log_success "$app_name removed successfully via Helm from $namespace"
+            return 0
         else
             log_error "Failed to remove $app_name via Helm from $namespace"
             exit 1
         fi
-    else
-        log_info "Helm release $app_name not found in $namespace, trying label-based removal..."
-        if kubectl delete all,ingress,configmap,secret -l "hostk8s.app=$app_name" -n "$namespace" 2>/dev/null; then
-            log_success "$app_name removed successfully (label-based) from $namespace"
+    fi
+
+    # If not found in specified namespace, search across all namespaces
+    local found_namespace=""
+    found_namespace=$(helm list -A | awk -v app="$app_name" '$1 == app {print $2}' | head -1)
+    if [ -n "$found_namespace" ]; then
+        log_info "Helm release $app_name not found in $namespace, but found in $found_namespace"
+        if helm uninstall "$app_name" -n "$found_namespace"; then
+            log_success "$app_name removed successfully via Helm from $found_namespace"
+            return 0
         else
-            log_warn "No resources found for app: $app_name in namespace: $namespace (may already be removed)"
+            log_error "Failed to remove $app_name via Helm from $found_namespace"
+            exit 1
         fi
+    fi
+
+    # If still not found, try label-based removal
+    log_info "Helm release $app_name not found, trying label-based removal across namespaces..."
+
+    # Try with app name as label first
+    local resources_removed=false
+    if kubectl delete all,ingress,configmap,secret -l "hostk8s.app=$app_name" -A 2>/dev/null && [ $? -eq 0 ]; then
+        resources_removed=true
+    fi
+
+    # Also try with the chart name as label (for cases where labels are inconsistent)
+    local app_dir="software/apps/$app_name"
+    if [ -f "$app_dir/Chart.yaml" ]; then
+        local chart_name
+        chart_name=$(grep '^name:' "$app_dir/Chart.yaml" | awk '{print $2}' || true)
+        if [ -n "$chart_name" ] && [ "$chart_name" != "$app_name" ]; then
+            if kubectl delete all,ingress,configmap,secret -l "hostk8s.app=$chart_name" -A 2>/dev/null && [ $? -eq 0 ]; then
+                resources_removed=true
+            fi
+        fi
+    fi
+
+    if [ "$resources_removed" = "true" ]; then
+        log_success "$app_name removed successfully (label-based)"
+    else
+        log_warn "No resources found for app: $app_name (may already be removed)"
     fi
 }
 
@@ -155,9 +188,6 @@ deploy_application() {
     local app_name="$1"
     local namespace="$2"
 
-    log_deploy "Deploying application..."
-    log_info "Deploying app: $app_name to namespace: $namespace"
-
     # Validate app exists
     if ! validate_app_exists "$app_name"; then
         exit 1
@@ -172,11 +202,11 @@ deploy_application() {
 
     case "$deployment_type" in
         "helm")
-            log_info "Using Helm chart deployment"
+            log_info "Deploying $app_name via Helm to namespace: $namespace"
             deploy_helm_app "$app_name" "$app_dir" "$namespace"
             ;;
         "kustomization")
-            log_info "Using Kustomization deployment (preferred)"
+            log_info "Deploying $app_name via Kustomization to namespace: $namespace"
             if kubectl apply -k "$app_dir" -n "$namespace"; then
                 log_success "$app_name deployed successfully via Kustomization to $namespace"
                 log_info "See software/apps/$app_name/README.md for access details"
@@ -186,7 +216,7 @@ deploy_application() {
             fi
             ;;
         "legacy")
-            log_info "Using legacy app.yaml deployment"
+            log_info "Deploying $app_name via app.yaml to namespace: $namespace"
             local app_file="$app_dir/app.yaml"
             if kubectl apply -f "$app_file" -n "$namespace"; then
                 log_success "$app_name deployed successfully via app.yaml to $namespace"
@@ -207,9 +237,6 @@ remove_application() {
     local app_name="$1"
     local namespace="$2"
 
-    log_deploy "Removing application..."
-    log_info "Removing app: $app_name from namespace: $namespace"
-
     # Validate app exists
     if ! validate_app_exists "$app_name"; then
         exit 1
@@ -221,11 +248,11 @@ remove_application() {
 
     case "$deployment_type" in
         "helm")
-            log_info "Removing Helm release"
+            log_info "Removing $app_name via Helm from namespace: $namespace"
             remove_helm_app "$app_name" "$namespace"
             ;;
         "kustomization")
-            log_info "Removing Kustomization deployment"
+            log_info "Removing $app_name via Kustomization from namespace: $namespace"
             if kubectl delete -k "$app_dir" -n "$namespace" 2>/dev/null; then
                 log_success "$app_name removed successfully via Kustomization from $namespace"
             else
@@ -239,7 +266,7 @@ remove_application() {
             fi
             ;;
         "legacy")
-            log_info "Removing legacy app.yaml deployment"
+            log_info "Removing $app_name via app.yaml from namespace: $namespace"
             local app_file="$app_dir/app.yaml"
             if kubectl delete -f "$app_file" -n "$namespace" 2>/dev/null; then
                 log_success "$app_name removed successfully via app.yaml from $namespace"

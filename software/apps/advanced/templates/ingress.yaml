@@ -29,7 +29,7 @@ spec:
       http:
         paths:
           {{- range .paths }}
-          - path: {{ .path }}
+          - path: {{ if ne $.Release.Namespace "default" }}/{{ $.Release.Namespace }}{{ end }}{{ .path }}
             pathType: {{ .pathType }}
             backend:
               service:
