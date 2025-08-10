@@ -122,6 +122,8 @@ For example:
 This enables isolation, parallel environments, and safe experimentation. Let's try it:
 
 ```bash
+# Deploy the basic app in the feature namespace
+
 make deploy basic feature
 ```
 
@@ -142,7 +144,7 @@ to perform this operation.
 ❌ Failed to deploy basic via Kustomization to feature
 ```
 
-**What happened:** HostK8s created the `feature` namespace and tried to deploy there, but the `basic` app's kustomization.yaml specifies `namespace: default`:
+**What happened:** HostK8s created the `feature` namespace and tried to deploy there, but the `basic` app's kustomization.yaml directly specified `namespace: default`:
 
 ```yaml
 # basic/kustomization.yaml - STATIC NAMESPACE
@@ -175,33 +177,13 @@ This is the core problem that leads teams to complex workarounds:
 
 For configuration capabilities, see the [Kustomization Guide](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
 
-What we need is **template-based configuration** that can adapt at deployment time, accepting parameters like namespace, environment, and release name without requiring file modifications.
+### Why Static YAML Hits a Wall
 
-**You'll hit this error:**
-```
-[15:00:35] Creating namespace: feature
-namespace/feature created
-[15:00:35] Using Kustomization deployment (preferred)
+**We just hit the fundamental limitation:** Static YAML can't adapt to deployment context. The kustomization file is locked to `namespace: default` and has no way to accept parameters like namespace, environment, or release name at deployment time.
 
-Error from server (BadRequest): the namespace from the provided object "default"
-does not match the namespace "feature". You must pass '--namespace=default'
-to perform this operation.
+This becomes a real problem when teams need isolation through separate namespaces, when you want feature branch preview deployments, or when the same app needs to run across dev, staging, and production environments. Static configuration forces you into workarounds—Kustomize overlays, manual file editing, or custom scripts—all of which make deployment complex and error-prone.
 
-❌ Failed to deploy basic via Kustomization to feature
-```
-
-**What happened:** HostK8s created the `feature` namespace and tried to deploy there, but every YAML file in the `basic` app has a hardcoded `namespace: default`:
-
-```yaml
-# basic/frontend-deployment.yaml - HARDCODED NAMESPACE
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: frontend
-  namespace: default  # ← Can't be changed!
-```
-
-**The fundamental limitation:** Static YAML files can't adapt to different deployment contexts. When you need team isolation, feature branch testing, or environment-specific deployments, kustomization-based apps hit an inflexibility wall.
+**What we need is template-based configuration** that accepts deployment-time parameters without modifying source files. Instead of static file juggling, we need a clean parameter contract.
 
 ---
 
