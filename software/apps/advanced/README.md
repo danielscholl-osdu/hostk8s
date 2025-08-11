@@ -33,7 +33,8 @@ make deploy advanced
 ```
 
 ### Access
-- **Voting Interface**: http://localhost:8080/
+- **Default namespace**: http://localhost:8080/
+- **Other namespaces**: http://NAMESPACE.localhost:8080/ (e.g., http://test.localhost:8080/)
 
 ### Custom Configuration
 ```bash
@@ -57,6 +58,8 @@ helm install my-vote software/apps/advanced/ \
 | `frontend.replicas` | Frontend service replicas | `1` |
 | `backend.replicas` | Redis replicas | `1` |
 | `ingress.enabled` | Enable ingress | `true` |
+
+**Note:** When deployed to non-default namespaces, the application uses host-based routing (e.g., `test.localhost:8080` for the `test` namespace). This ensures proper form submission handling and namespace isolation.
 
 ## Helm Commands
 

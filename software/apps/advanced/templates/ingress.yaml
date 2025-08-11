@@ -6,9 +6,6 @@ metadata:
   labels:
     {{- include "advanced.labels" . | nindent 4 }}
   annotations:
-    {{- if ne $.Release.Namespace "default" }}
-    nginx.ingress.kubernetes.io/rewrite-target: /
-    {{- end }}
     {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -28,11 +25,11 @@ spec:
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
-    - {{ if ne .host "*" }}host: {{ .host | quote }}{{ end }}
+    - {{ if eq $.Release.Namespace "default" }}{{ if ne .host "*" }}host: {{ .host | quote }}{{ end }}{{ else }}host: {{ $.Release.Namespace }}.localhost{{ end }}
       http:
         paths:
           {{- range .paths }}
-          - path: {{ if ne $.Release.Namespace "default" }}/{{ $.Release.Namespace }}{{ end }}{{ .path }}
+          - path: {{ .path }}
             pathType: {{ .pathType }}
             backend:
               service:

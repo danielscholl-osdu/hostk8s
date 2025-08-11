@@ -205,8 +205,6 @@ make deploy advanced
 make status
 ```
 
-Visit http://localhost:8080/vote — multi‑service, production‑ready.
-
 ---
 
 ## How Helm Fixes Ingress Conflicts
@@ -214,22 +212,28 @@ Visit http://localhost:8080/vote — multi‑service, production‑ready.
 Deploy multiple instances:
 
 ```bash
-make deploy advanced feature-new-architecture
-make deploy advanced main-stable
+make deploy advanced feature
+make deploy advanced test
 ```
 
-Check ingress paths:
-- http://localhost:8080/vote → original
-- http://localhost:8080/feature-new-architecture/vote → feature
-- http://localhost:8080/main-stable/vote → main
+Check access URLs:
+- http://localhost:8080/ → default namespace
+- http://feature.localhost:8080/ → feature namespace
+- http://test.localhost:8080/ → test namespace
 
-**Why unique?** The ingress template uses `{{ .Release.Name }}`:
+**Why unique?** The ingress template uses host-based routing:
 
 ```yaml
-- path: /{{ .Release.Name }}/vote(/|$)(.*)
+{{- if eq $.Release.Namespace "default" }}
+host: "*"  # Default catches all
+{{- else }}
+host: "{{ $.Release.Namespace }}.localhost"  # Namespace-specific
+{{- end }}
 ```
 
-→ Helm fills in `feature-new-architecture` or `main-stable`, producing unique routes. Same chart, different deployments.
+→ Each namespace gets its own hostname, eliminating path conflicts and ensuring clean form submissions work correctly. Same chart, different hosts.
+
+**Browser Access:** You can access namespace deployments directly by entering the full URL (e.g., `http://test.localhost:8080/`) in your browser address bar. The voting functionality works correctly within each namespace.
 
 ---
 

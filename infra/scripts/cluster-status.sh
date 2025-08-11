@@ -317,7 +317,21 @@ show_app_ingress() {
                 echo "   Enable with: export INGRESS_ENABLED=true && make restart"
             fi
         else
-            echo "   Ingress: $name (hosts: $hosts)"
+            # Handle namespace-based hostnames (e.g., test.localhost)
+            if is_ingress_controller_ready; then
+                if [ "$app_type" = "application" ] && [[ "$hosts" == *.localhost ]]; then
+                    local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                    if [ "$path" = "/" ]; then
+                        echo "   Access: http://$hosts:8080/ ($name ingress)"
+                    else
+                        echo "   Access: http://$hosts:8080$path ($name ingress)"
+                    fi
+                else
+                    echo "   Ingress: $name (hosts: $hosts)"
+                fi
+            else
+                echo "   Ingress: $name (configured but controller not ready)"
+            fi
         fi
     done
 }
@@ -400,7 +414,21 @@ show_helm_app_resources() {
                 echo "   Enable with: export INGRESS_ENABLED=true && make restart"
             fi
         else
-            echo "   Ingress: $name (hosts: $hosts)"
+            # Handle namespace-based hostnames (e.g., test.localhost)
+            if is_ingress_controller_ready; then
+                if [[ "$hosts" == *.localhost ]]; then
+                    local path=$(kubectl get ingress "$name" -n "$namespace" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                    if [ "$path" = "/" ]; then
+                        echo "   Access: http://$hosts:8080/ ($name ingress)"
+                    else
+                        echo "   Access: http://$hosts:8080$path ($name ingress)"
+                    fi
+                else
+                    echo "   Ingress: $name (hosts: $hosts)"
+                fi
+            else
+                echo "   Ingress: $name (configured but controller not ready)"
+            fi
         fi
     done
 }
