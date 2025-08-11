@@ -1,14 +1,16 @@
 apiVersion: v2
-name: helm-sample
-description: A Helm chart for the HostK8s voting application sample
+name: advanced
+description: A HostK8s Advanced Sample - Python Flask voting app with Redis backend
 type: application
 version: 0.1.0
-appVersion: ""
+appVersion: "v1"
 
 keywords:
   - voting
-  - microservices
-  - sample
+  - advanced
+  - redis
+  - python
+  - flask
   - hostk8s
 
 maintainers:
@@ -16,5 +18,5 @@ maintainers:
     email: hostk8s@example.com
 
 annotations:
-  hostk8s.app: helm-sample
+  hostk8s.app: advanced
   hostk8s.pattern: helm

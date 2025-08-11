@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.frontend.name }}
+  labels:
+    {{- include "advanced.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+    tier: frontend
+spec:
+  replicas: {{ .Values.frontend.replicas }}
+  selector:
+    matchLabels:
+      {{- include "advanced.frontendSelectorLabels" . | nindent 6 }}
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  minReadySeconds: 5
+  template:
+    metadata:
+      labels:
+        {{- include "advanced.frontendSelectorLabels" . | nindent 8 }}
+        tier: frontend
+    spec:
+      containers:
+      - name: advanced-front
+        image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}"
+        imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.frontend.service.targetPort }}
+        env:
+        - name: REDIS
+          value: {{ .Values.backend.name }}
+        - name: TITLE
+          value: {{ .Values.app.title | quote }}
+        - name: VOTE1VALUE
+          value: {{ .Values.app.vote1 | quote }}
+        - name: VOTE2VALUE
+          value: {{ .Values.app.vote2 | quote }}
+        - name: SHOWHOST
+          value: {{ .Values.app.showHost | quote }}
+        resources:
+          {{- toYaml .Values.frontend.resources | nindent 10 }}

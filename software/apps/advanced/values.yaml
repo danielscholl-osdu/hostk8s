@@ -1,19 +1,26 @@
-# Default values for helm-sample voting app
+# Default values for advanced
 # This is a YAML-formatted file.
 
 # Global settings
 global:
   labels:
     app: "{{ .Chart.Name }}"
-    hostk8s.app: helm-sample
+    hostk8s.app: advanced
 
-# Vote service configuration
-vote:
-  name: vote
-  replicas: 2
+# Application configuration
+app:
+  title: "HostK8s Advanced Sample"
+  vote1: "Kustomize"
+  vote2: "Helm"
+  showHost: false
+
+# Frontend (Python Flask) configuration
+frontend:
+  name: advanced-front
+  replicas: 1
   image:
-    repository: dockersamples/examplevotingapp_vote
-    tag: ""
+    repository: neilpeterson/azure-vote-front
+    tag: "v3"
     pullPolicy: IfNotPresent
 
   service:
@@ -21,21 +28,17 @@ vote:
     port: 80
     targetPort: 80
 
-  env:
-    optionA: "Cats"
-    optionB: "Dogs"
-
   resources:
     requests:
       memory: "64Mi"
-      cpu: "50m"
+      cpu: "100m"
     limits:
       memory: "128Mi"
-      cpu: "100m"
+      cpu: "200m"
 
-# Redis configuration
-redis:
-  name: redis
+# Backend (Redis) configuration
+backend:
+  name: advanced-back
   replicas: 1
   image:
     repository: redis
@@ -47,93 +50,26 @@ redis:
     port: 6379
     targetPort: 6379
 
+  env:
+    allowEmptyPassword: "yes"
+
   resources:
     requests:
       memory: "32Mi"
-      cpu: "25m"
-    limits:
-      memory: "64Mi"
-      cpu: "50m"
-
-# Worker configuration
-worker:
-  name: worker
-  replicas: 1
-  image:
-    repository: dockersamples/examplevotingapp_worker
-    tag: ""
-    pullPolicy: IfNotPresent
-
-  resources:
-    requests:
-      memory: "64Mi"
       cpu: "50m"
     limits:
-      memory: "128Mi"
-      cpu: "100m"
-
-# Database (PostgreSQL) configuration
-db:
-  name: db
-  replicas: 1
-  image:
-    repository: postgres
-    tag: "15-alpine"
-    pullPolicy: IfNotPresent
-
-  service:
-    type: ClusterIP
-    port: 5432
-    targetPort: 5432
-
-  env:
-    postgresPassword: "postgres"
-    postgresUser: "postgres"
-    postgresDb: "postgres"
-
-  resources:
-    requests:
       memory: "64Mi"
-      cpu: "50m"
-    limits:
-      memory: "128Mi"
-      cpu: "100m"
-
-# Result service configuration
-result:
-  name: result
-  replicas: 1
-  image:
-    repository: dockersamples/examplevotingapp_result
-    tag: ""
-    pullPolicy: IfNotPresent
-
-  service:
-    type: ClusterIP
-    port: 80
-    targetPort: 80
-
-  resources:
-    requests:
-      memory: "64Mi"
-      cpu: "50m"
-    limits:
-      memory: "128Mi"
       cpu: "100m"
 
 # Ingress configuration
 ingress:
   enabled: true
   className: "nginx"
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  annotations: {}
   hosts:
-    - host: localhost
+    - host: "*"
       paths:
-        - path: /vote(/|$)(.*)
-          pathType: ImplementationSpecific
-          service: vote
-        - path: /result(/|$)(.*)
-          pathType: ImplementationSpecific
-          service: result
+        - path: /
+          pathType: Prefix
+          service: advanced-front
   tls: []

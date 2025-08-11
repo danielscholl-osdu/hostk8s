@@ -299,9 +299,8 @@ show_app_ingress() {
     get_ingress_for_app "$app_name" "$app_type" | while read -r ns name class hosts address ports age; do
         [ -z "$ns" ] && continue
 
-        if [ "$hosts" = "localhost" ]; then
+        if [ "$hosts" = "localhost" ] || [ "$hosts" = "*" ]; then
             if is_ingress_controller_ready; then
-                local access=$(get_ingress_access "$app_name" "$ns $name $class $hosts $address $ports $age")
                 if [ "$app_type" = "application" ]; then
                     local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
                     if [ "$path" = "/" ]; then
@@ -310,6 +309,7 @@ show_app_ingress() {
                         echo "   Access: http://localhost:8080$path ($name ingress)"
                     fi
                 else
+                    local access=$(get_ingress_access "$app_name" "$ns $name $class $hosts $address $ports $age")
                     echo "   Ingress: $name -> $access"
                 fi
             else
@@ -387,10 +387,14 @@ show_helm_app_resources() {
     kubectl get ingress -l "app.kubernetes.io/instance=$instance" -n "$namespace" --no-headers 2>/dev/null | while read -r name class hosts address ports age; do
         [ -z "$name" ] && continue
 
-        if [ "$hosts" = "localhost" ]; then
+        if [ "$hosts" = "localhost" ] || [ "$hosts" = "*" ]; then
             if is_ingress_controller_ready; then
-                local access=$(get_ingress_access "$instance" "$namespace $name $class $hosts $address $ports $age")
-                echo "   Access: $access ($name ingress)"
+                local path=$(kubectl get ingress "$name" -n "$namespace" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                if [ "$path" = "/" ]; then
+                    echo "   Access: http://localhost:8080/ ($name ingress)"
+                else
+                    echo "   Access: http://localhost:8080$path ($name ingress)"
+                fi
             else
                 echo "   Ingress: $name (configured but controller not ready)"
                 echo "   Enable with: export INGRESS_ENABLED=true && make restart"

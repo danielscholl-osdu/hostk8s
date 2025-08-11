@@ -2,13 +2,16 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: {{ include "helm-sample.fullname" . }}
+  name: {{ include "advanced.fullname" . }}
   labels:
-    {{- include "helm-sample.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+    {{- include "advanced.labels" . | nindent 4 }}
   annotations:
+    {{- if ne $.Release.Namespace "default" }}
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    {{- end }}
+    {{- with .Values.ingress.annotations }}
     {{- toYaml . | nindent 4 }}
-  {{- end }}
+    {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}
@@ -25,7 +28,7 @@ spec:
   {{- end }}
   rules:
     {{- range .Values.ingress.hosts }}
-    - host: {{ .host | quote }}
+    - {{ if ne .host "*" }}host: {{ .host | quote }}{{ end }}
       http:
         paths:
           {{- range .paths }}
@@ -35,7 +38,7 @@ spec:
               service:
                 name: {{ .service }}
                 port:
-                  number: 80
+                  number: {{ if eq .service "advanced-front" }}{{ $.Values.frontend.service.port }}{{ else }}80{{ end }}
           {{- end }}
     {{- end }}
 {{- end }}

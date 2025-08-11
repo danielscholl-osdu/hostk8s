@@ -1,72 +1,48 @@
-# Helm Sample - Advanced Voting Application
+# Advanced Sample - Simple & Reliable Voting
 
-A complete Helm chart example demonstrating templating, values configuration, and environment-specific deployments using the classic Docker voting app architecture.
+A clean HostK8s Advanced Sample application built with Python Flask and Redis, demonstrating modern Kubernetes deployment patterns.
 
 ## Features
 
-- **Full Helm Chart**: Templates, values, and helpers
-- **Microservices Architecture**: Vote, Worker, Redis, PostgreSQL, Result services
-- **Environment-Specific Configs**: Development and production value overrides
-- **Resource Management**: Configurable CPU/memory limits and requests
-- **Ingress Support**: Conditional ingress with path-based routing
-- **Scalability**: Configurable replica counts per service
+- **Simple Architecture**: Just 2 services (Python Flask + Redis)
+- **Real-time Results**: Vote and immediately see updated counts on the same page
+- **Single Page App**: Voting interface and results in one clean UI
+- **Reliable**: No complex Socket.IO, database polling, or microservice coordination
+- **Configurable**: Customize title and voting options via environment variables
 
 ## Architecture
 
 ```
-┌─────────┐      ┌─────────┐      ┌──────────┐
-│  Vote   │────▶ │  Redis  │◀──── │  Worker  │
-│(Python) │      │ (Cache) │      │  (Java)  │
-└─────────┘      └─────────┘      └──────────┘
-     │                                   │
-     │           ┌─────────┐             │
-     └──────────▶│ Result  │◀────────────┘
-                 │(Node.js)│
-                 └─────────┘
-                      │
-                 ┌──────────┐
-                 │PostgreSQL│
-                 │   (DB)   │
-                 └──────────┘
+┌─────────────────┐      ┌─────────────┐
+│  Advanced       │────▶ │    Redis    │
+│  Frontend       │      │  (Counter)  │
+│  (Python Flask)│      │             │
+└─────────────────┘      └─────────────┘
 ```
 
 ## Services
 
-- **Vote**: Frontend voting interface (Python/Flask)
-- **Redis**: In-memory data store for votes
-- **Worker**: Vote processor (Java) - moves votes from Redis to PostgreSQL
-- **DB**: PostgreSQL database for vote storage
-- **Result**: Results display interface (Node.js)
+- **Frontend**: Python Flask web application with voting interface and results
+- **Backend**: Redis for simple vote counting (increments counters)
 
 ## Deployment
 
 ### Basic Deployment
 ```bash
-make deploy helm-sample
+make deploy advanced
 ```
 
-### Environment-Specific Deployment
+### Access
+- **Voting Interface**: http://localhost:8080/
+
+### Custom Configuration
 ```bash
-# Development (lower resources)
-helm install voting-app software/apps/helm-sample/ -f software/apps/helm-sample/values/development.yaml
-
-# Production (higher resources, scaling)
-helm install voting-app software/apps/helm-sample/ -f software/apps/helm-sample/values/production.yaml
+# Override voting options
+helm install my-vote software/apps/advanced/ \
+  --set app.title="My Custom Vote" \
+  --set app.vote1="Pizza" \
+  --set app.vote2="Burgers"
 ```
-
-### Custom Values
-```bash
-# Override specific values
-helm install voting-app software/apps/helm-sample/ \
-  --set vote.replicas=5 \
-  --set vote.env.optionA="Pizza" \
-  --set vote.env.optionB="Burgers"
-```
-
-## Access
-
-- **Vote Interface**: http://localhost/vote
-- **Results Interface**: http://localhost/result
 
 ## Configuration
 
@@ -74,47 +50,55 @@ helm install voting-app software/apps/helm-sample/ \
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `vote.replicas` | Vote service replicas | `2` |
-| `vote.env.optionA` | First voting option | `"Cats"` |
-| `vote.env.optionB` | Second voting option | `"Dogs"` |
-| `worker.replicas` | Worker service replicas | `1` |
+| `app.title` | Application title | `"HostK8s Advanced Sample"` |
+| `app.vote1` | First voting option | `"Kustomize"` |
+| `app.vote2` | Second voting option | `"Helm"` |
+| `app.showHost` | Show hostname in title | `false` |
+| `frontend.replicas` | Frontend service replicas | `1` |
+| `backend.replicas` | Redis replicas | `1` |
 | `ingress.enabled` | Enable ingress | `true` |
-
-### Environment Files
-
-- `values/development.yaml`: Reduced resources for local development
-- `values/production.yaml`: Production-ready scaling and resources
 
 ## Helm Commands
 
 ```bash
 # Install
-helm install voting-app software/apps/helm-sample/
+helm install advanced software/apps/advanced/
 
 # Upgrade
-helm upgrade voting-app software/apps/helm-sample/
+helm upgrade advanced software/apps/advanced/
 
 # Uninstall
-helm uninstall voting-app
+helm uninstall advanced
 
 # Check status
-helm status voting-app
+helm status advanced
 
 # Get values
-helm get values voting-app
+helm get values advanced
 ```
 
 ## Requirements
 
-- Helm 3.0+
-- Ingress controller (NGINX recommended)
 - Kubernetes 1.19+
+- Ingress controller (NGINX recommended)
+- Helm 3.0+
 
 ## Use Case
 
 Perfect for demonstrating:
-- Helm chart development and templating
-- Multi-service application deployment
-- Environment-specific configuration management
-- Microservices architecture patterns
-- Resource management and scaling strategies
+- Simple, reliable voting applications
+- Single-page web applications with immediate feedback
+- Python Flask + Redis architecture patterns
+- HostK8s Helm chart patterns and conventions
+- Modern Kubernetes deployment strategies
+
+## Advantages
+
+- ✅ **Clean dependencies**: Working code with no missing imports
+- ✅ **No complex polling**: Direct Redis operations, no database polling loops
+- ✅ **Simple networking**: Server-side rendering with immediate results
+- ✅ **Single ingress endpoint**: Simple `/` path routing
+- ✅ **Immediate results**: Vote and see counts update on same page
+- ✅ **Production patterns**: Demonstrates real-world Kubernetes deployment patterns
+
+This Advanced Sample eliminates complexity while providing a clear demonstration of modern application deployment using HostK8s patterns and conventions!

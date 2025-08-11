@@ -103,9 +103,9 @@ You'll see:
 
 **Multiple applications, no conflicts.** Both applications coexist successfully in the same `default` namespace because the developers intentionally designed them with different resource names, ports, and ingress paths. When developers coordinate their application designs to avoid conflicts, multiple apps can share the same namespace.
 
-Within the `basic` app, you can see how **internal and external service communication paths** work—the frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
+Within the `basic` app, you can see how internal and external service communication paths work. The frontend calls the API service internally using Kubernetes DNS (`api.<namespace>.svc.cluster.local`), while only the frontend is exposed externally through the ingress.
 
-**So far so good:** We've successfully deployed multiple applications in the same namespace. But what if we want to deploy the **same application** in different namespaces? This is a common need for team isolation, feature branch testing, or environment-specific deployments.
+**So far so good:** We've successfully deployed multiple applications in the same namespace. But what if we want to deploy the same application in different namespaces? This is a common need for team isolation, feature branch testing, or environment-specific deployments.
 
 ### HostK8s Namespace Convention
 
@@ -179,7 +179,7 @@ For configuration capabilities, see the [Kustomization Guide](https://kubernetes
 
 ### Why Static YAML Hits a Wall
 
-**We just hit the complexity wall:** While Kustomize offers overlays, patches, and cross-cutting fields to handle deployment-time parameters like namespace, environment, or replica counts (1 replica to prove functionality, 2 replicas to prove scale), it requires complex directory structures, patch files, and careful configuration management.
+**We just hit the complexity wall:** While Kustomize offers overlays, patches, and cross-cutting fields to handle deployment-time parameters like namespace, environment, or replica counts, it requires complex directory structures, patch files, and careful configuration management.
 
 This becomes cumbersome when teams need isolation through separate namespaces, feature branch preview deployments, or different configurations across dev, staging, and production environments. Kustomize solutions require overlay directories, strategic merge patches, and structured file hierarchies that make deployment management complex compared to simpler approaches.
 
@@ -196,9 +196,11 @@ This is where Helm templates shine. They provide deployment-time flexibility whi
 ### The Voting Application: Helm in Action
 
 ```bash
-# Remove the basic app and deploy the helm app.
+# Restart the Cluster and enable both AddOns
+export INGRESS_ENABLED=true
+export METALLB_ENABLED=true
 
-make remove basic
+make restart
 make deploy advanced
 make status
 ```
