@@ -1,176 +1,168 @@
 # Software Stacks
 
-*Understanding how coordinated service deployment eliminates the operational chaos of managing individual applications*
+*Building complete development environments that eliminate service coordination chaos*
 
-## The Multi-Service Development Challenge
+## The Multi-Service Reality
 
-In the previous tutorial, you deployed individual applications successfully. But real development environments need multiple services working together - databases, caches, certificates, monitoring, and applications all coordinating as a system.
+In the previous tutorial, you successfully deployed individual applications. But here's what happens when you try to build a real development environment.
 
-Let's see what happens when you try to manage these services individually.
+You've written a web application and want to deploy it to your local Kubernetes cluster. Simple enough, right? But your application needs more than just itself to function properly:
 
-### The Shared Services Coordination Problem
+- **A place to store Docker images** - you can't keep pushing to Docker Hub for every development change
+- **HTTPS certificates** - your application should use proper TLS, even locally
+- **Basic monitoring** - you need to know if your application is healthy
+- **Your custom application** - the actual code you wrote
 
-You're building applications that need shared services to function properly:
-- **Container registry** (to store and deploy your custom images)
-- **Certificate management** (for HTTPS security)
-- **Monitoring** (to track application performance)
-- **Your applications** (your actual business logic)
+So you start setting up these foundation services one by one.
 
-The challenge isn't deploying individual applications - it's coordinating the foundation services with your applications.
+### Experiencing the Coordination Wall
 
-**Manual Service Management Chaos:**
-Without stacks, you have to set up foundation services manually before applications can work:
+Let's see what this manual approach actually looks like. Start with a fresh cluster:
 
 ```bash
-# Set up foundation services manually, in correct order
-kubectl apply -f certificate-manager-setup/
-helm install monitoring prometheus/kube-prometheus-stack
-kubectl apply -f container-registry-setup/
-# Wait for everything to be ready...
-# Debug connectivity issues...
-# Then finally deploy your applications
-make deploy my-app-1
-make deploy my-app-2
-```
-
-**Problems:**
-- **Foundation services setup required** before any apps work properly
-- **No guidance on service dependencies** (certs need CA, registry needs certs)
-- **Inconsistent environments** (teammate forgot monitoring? Apps work but no visibility)
-- **Manual coordination** between foundation services and your applications
-- **Different setup methods** (kubectl, helm, make deploy) for different pieces
-
-
-
-### The Manual Approach Reality
-
-Let's see this coordination challenge in action. In HostK8s, you could theoretically deploy shared service components individually:
-
-```bash
-# Make sure you have a cluster
 make start
+```
 
-# Try to set up foundation services manually (various methods)
-kubectl apply -f software/components/certs/
+Now try to set up your foundation services manually:
+
+```bash
+# Try to deploy a container registry first
 kubectl apply -f software/components/registry/
-helm install metrics-server software/components/metrics-server/
-# Debug why things aren't working...
-# Figure out dependency order...
-# Wait for things to be ready...
+# Error: registry needs certificates to run securely
 
-# Finally deploy applications
-make deploy my-app
+# Okay, deploy certificates first
+kubectl apply -f software/components/certs/
+# Error: cert-manager CRDs don't exist yet
+
+# Fine, install cert-manager
+helm repo add jetstack https://charts.jetstack.io
+helm install cert-manager jetstack/cert-manager --create-namespace --namespace cert-manager --set installCRDs=true
+# Wait 2 minutes for it to be ready...
+
+# Now try certificates again
+kubectl apply -f software/components/certs/
+# Still failing - certificates need a certificate authority first
+
+# Deploy certificate authority
+kubectl apply -f software/components/certs-ca/
+# Failing - CA needs the basic certificate setup to exist
 ```
 
-**What you'll discover:**
-- Foundation services fail because dependencies aren't ready
-- No clear setup order guidance (certs before registry? metrics-server when?)
-- Inconsistent state when things go wrong
-- Time spent on service coordination instead of application development
-- Different team members set up services differently
+**Stop right there.** This is the coordination wall that software stacks eliminate.
 
-This manual approach forces you to become an expert in service dependencies and deployment timing - time that should be spent building your applications.
+**What you're experiencing:**
+- **Dependency guessing** - Which service needs to be deployed before others?
+- **Tool juggling** - kubectl for some things, helm for others, make for applications
+- **Timing mysteries** - How long do you wait between deployments?
+- **Failure debugging** - When something doesn't work, which dependency is missing?
+- **State inconsistency** - Your environment is half-deployed and broken
 
----
+This is exactly why individual application deployment (from the apps tutorial) worked smoothly, but multi-service environments become chaotic. You're not just deploying applications anymore - you're orchestrating an entire system.
 
-## How Software Stacks Solve This
+And this is with just 4 services. Real development environments often need 10-15 foundation services working together.
 
-**Software Stacks** eliminate coordination chaos through automated orchestration. Instead of managing individual services manually, you declare the complete environment you want and let GitOps automation handle the coordination.
+## The Stack Solution
 
-Think of it like **Lego blocks** and instruction booklets:
+Software stacks solve this coordination chaos through a simple insight: instead of managing individual services manually, you declare the complete environment you want and let automation handle all the timing and dependencies.
 
-- **Individual services** = Lego blocks (useful pieces but limited alone)
-- **Software stack** = Instruction booklet (tells you which blocks to use and how to connect them)
-- **GitOps automation** = Following the instructions step-by-step automatically
-- **Development environment** = The finished model that actually works
+**Think of it like building with Lego blocks:**
 
-Just like Lego sets, HostK8s has different types of pieces that work together:
+- **Manual approach** - You have a pile of Lego blocks and try to figure out what to build and in what order
+- **Stack approach** - You have the same blocks plus an instruction booklet that shows exactly what to build and step-by-step how to connect everything
 
-| Lego World | HostK8s World |
-|------------|---------------|
-| **Individual blocks** | **Components** (Redis, databases, certificates) |
-| **Specialized pieces** | **Applications** (your web services, APIs) |
-| **Instruction booklet** | **Software Stack** (defines what to build and in what order) |
-| **Following instructions** | **GitOps automation** (Flux builds it for you) |
-| **Finished model** | **Complete development environment** |
+With Lego instructions, you don't worry about which piece goes where or what order to attach them. You just follow the numbered steps, and at the end you have a working spaceship. Software stacks work the same way.
 
-### Stack Components vs Applications
+### How Stacks Eliminate the Chaos
 
-```
-Software Stack (The Instructions)
-         ↓
-    ┌─────────┐    ┌──────────────┐
-    │Components│ + │ Applications │
-    └─────────┘    └──────────────┘
-   Foundation        Your Code
-```
+Remember the manual deployment wall you just hit? Here's how a stack would handle the same scenario:
 
-**Components** provide the shared service foundation:
-- **Certificates** (HTTPS security)
-- **Databases** (PostgreSQL, Redis)
-- **Monitoring** (metrics collection)
-- **Container Registry** (for your custom images)
-
-**Applications** are your business logic:
-- **Web services** (your APIs)
-- **User interfaces** (frontend applications)
-- **Data processors** (background jobs)
-
-**Software Stack** coordinates both:
-- Deploys components first (foundation)
-- Then deploys applications (which use the foundation)
-- Handles all the timing and dependencies automatically
-
-### The Stack Advantage
-
-**Manual coordination** (what you experienced):
 ```bash
-make deploy certificates  # Hope it works
-make deploy database      # Hope dependencies are ready
-make deploy app          # Hope everything connects
-# Repeat when things fail...
+# The stack "instruction booklet" defines:
+# Step 1: Install cert-manager (foundation)
+# Step 2: Deploy basic certificates (depends on Step 1)
+# Step 3: Create certificate authority (depends on Step 2)
+# Step 4: Create certificate issuer (depends on Step 3)
+# Step 5: Deploy container registry (depends on Step 4)
+
+# You just run:
+make up my-stack
+
+# GitOps automation reads the instructions and:
+# - Deploys cert-manager first
+# - Waits for it to be ready
+# - Deploys certificates
+# - Waits for them to be ready
+# - Deploys certificate authority
+# - Waits for it to be ready
+# - Deploys certificate issuer
+# - Waits for it to be ready
+# - Deploys registry
+# - Everything works together
 ```
 
-**Stack coordination** (what you're about to learn):
-```bash
-make up my-stack         # Everything deploys in correct order automatically
+**The magic:** You get the exact same result as the manual coordination you were struggling with, but with zero guesswork, zero timing issues, and zero dependency debugging.
+
+### Components and Applications Working Together
+
+A software stack coordinates two types of services:
+
+**Components** (foundation services your applications use):
+- **Container registry** - stores your custom Docker images
+- **Certificate management** - provides HTTPS security
+- **Databases** - PostgreSQL, Redis, etc.
+- **Monitoring** - tracks application health
+
+**Applications** (your actual business logic):
+- **Web services** - your APIs and frontends
+- **Background processors** - data pipelines, workers
+- **Custom applications** - the code you write
+
+The stack ensures components are deployed first and healthy before applications try to use them. No more connection failures because the database isn't ready yet.
+
+## Building Your Development Environment
+
+Let's create the complete development environment you were trying to build manually. You'll see how the stack "instruction booklet" approach eliminates all the coordination chaos you just experienced.
+
+### Your Development Environment Stack
+
+We'll build a stack that provides everything you need for custom application development:
+
+- **Container Registry** - so you can build and store your own Docker images locally
+- **Certificate Management** - automated HTTPS certificates for all your services
+- **Monitoring** - basic health monitoring for your applications
+- **GitOps Foundation** - the automation system that orchestrates everything
+
+This is the foundation that supports the typical development workflow: write code → build image → deploy application → iterate.
+
+### From Chaos to Order
+
+Remember the dependency nightmare you experienced manually? Here's how the stack handles those exact same dependencies automatically:
+
+**Manual approach** (what you experienced):
+```
+❌ Try registry → fails (needs certificates)
+❌ Try certificates → fails (needs cert-manager)
+❌ Install cert-manager → wait and guess when ready
+❌ Try certificates → fails (needs CA setup)
+❌ Try CA → fails (needs certificates first)
+🤯 Circular dependencies and confusion
 ```
 
-Same result, zero coordination effort.
-
----
-
-## Building Your First Stack
-
-Let's build a complete development environment using a software stack. You'll see how the "instruction booklet" approach eliminates the coordination chaos you experienced earlier.
-
-### The Tutorial Stack
-
-We'll build a stack that includes:
-- **Container Registry** (for your custom images)
-- **Certificate Management** (HTTPS security)
-- **Monitoring** (cluster metrics)
-- **GitOps Automation** (Flux coordination)
-
-This creates a foundation for building and deploying custom applications - the typical needs of a development environment.
-
-### Stack Dependencies Made Simple
-
-Remember the manual deployment chaos? Here's how the stack handles dependencies automatically:
-
+**Stack approach** (what you're about to experience):
 ```
-Step 1: GitOps foundation (enables automation)
-Step 2: Certificates + Monitoring (foundation services)
-Step 3: Certificate Authority (builds on certificates)
-Step 4: Certificate Issuer (builds on CA)
-Step 5: Container Registry (uses certificates for security)
+✅ Step 1: GitOps foundation (enables all automation)
+✅ Step 2: Install cert-manager + monitoring (in parallel)
+✅ Step 3: Create certificate authority (waits for cert-manager)
+✅ Step 4: Create certificate issuer (waits for CA)
+✅ Step 5: Deploy container registry (waits for certificates)
+🎉 Complete working environment
 ```
 
-The stack "instruction booklet" ensures each step waits for its dependencies. No more guessing the deployment order or debugging timing issues.
+Same services, same final result, zero coordination headaches.
 
-### Creating the Stack Definition
+### Creating Your Stack "Instruction Booklet"
 
-A software stack is defined by three simple files that tell HostK8s what to build. Let's create them:
+A software stack is defined by three files that act as the instruction booklet. Let's create them and see how they eliminate the coordination chaos:
 
 ```bash
 # Create your stack extension directory
@@ -178,18 +170,18 @@ mkdir -p software/stack/extension/tutorial-stack
 cd software/stack/extension/tutorial-stack
 ```
 
-**Create these three files:**
+**The three files every stack needs:**
 
-**kustomization.yaml** - Table of contents:
+**kustomization.yaml** - The table of contents:
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - repository.yaml
-  - stack.yaml
+  - repository.yaml    # Where to find the components
+  - stack.yaml         # The step-by-step instructions
 ```
 
-**repository.yaml** - Where to find components:
+**repository.yaml** - Where to find the components:
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -208,10 +200,11 @@ spec:
     !/software/components/
 ```
 
-**stack.yaml** - The step-by-step instructions (create the complete file):
+**stack.yaml** - The actual assembly instructions that solve your coordination problems:
 ```yaml
 ######################
 ## Tutorial Stack - Complete Development Environment
+## Solves the manual coordination chaos with automated dependencies
 ######################
 ---
 # Step 1: GitOps foundation (enables all automation)
@@ -227,16 +220,16 @@ spec:
     name: flux-system
   path: ./software/components/flux-resources
   prune: true
-  wait: true
+  wait: true  # Don't proceed until this is healthy
 ---
-# Step 2: Foundation services (monitoring and certificates)
+# Step 2: Foundation services (deploy in parallel after Step 1)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-metrics-server
   namespace: flux-system
 spec:
-  dependsOn:
+  dependsOn:  # Wait for Step 1 to complete
     - name: component-flux-resources
   interval: 1h
   sourceRef:
@@ -252,24 +245,24 @@ metadata:
   name: component-certs
   namespace: flux-system
 spec:
-  dependsOn:
+  dependsOn:  # Also waits for Step 1 (can deploy parallel with metrics)
     - name: component-flux-resources
   interval: 1h
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/certs
+  path: ./software/components/certs  # This installs cert-manager
   prune: true
   wait: true
 ---
-# Step 3: Certificate authority (builds on certificates)
+# Step 3: Certificate authority (depends on cert-manager from Step 2)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-certs-ca
   namespace: flux-system
 spec:
-  dependsOn:
+  dependsOn:  # Wait for cert-manager to be ready
     - name: component-certs
   interval: 1h
   sourceRef:
@@ -279,14 +272,14 @@ spec:
   prune: true
   wait: true
 ---
-# Step 4: Certificate issuer (builds on CA)
+# Step 4: Certificate issuer (depends on CA from Step 3)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-certs-issuer
   namespace: flux-system
 spec:
-  dependsOn:
+  dependsOn:  # Wait for CA to exist
     - name: component-certs-ca
   interval: 1h
   sourceRef:
@@ -296,14 +289,14 @@ spec:
   prune: true
   wait: true
 ---
-# Step 5: Container registry (uses certificates)
+# Step 5: Container registry (uses certificates from Step 4)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: component-registry
   namespace: flux-system
 spec:
-  dependsOn:
+  dependsOn:  # Wait for certificate issuer to be ready
     - name: component-certs-issuer
   interval: 1h
   sourceRef:
@@ -314,126 +307,183 @@ spec:
   wait: true
 ```
 
-**What these files do:**
-- **kustomization.yaml** tells HostK8s what files to read
-- **repository.yaml** points to where HostK8s components are stored
-- **stack.yaml** defines the deployment steps and dependencies
+**How this solves your coordination problems:**
 
-### Deploy Your Stack
+Each `dependsOn` section tells GitOps automation "don't start this step until the listed steps are completely healthy." The `wait: true` means "don't consider this step done until all its resources are running."
 
-Now let's see the stack in action and compare it to the manual chaos you experienced:
+This eliminates all the guesswork, timing issues, and circular dependency problems you experienced with manual deployment.
+
+### Experience the Stack Solution
+
+Now let's see the stack eliminate the coordination chaos you experienced earlier:
 
 ```bash
 # Deploy your complete development environment
 make up extension/tutorial-stack
 
-# Watch the automated deployment
+# Watch the automated orchestration
 make status
 ```
 
-**What happens automatically:**
-1. **GitOps foundation** deploys first
-2. **Certificates and monitoring** deploy in parallel (both depend on step 1)
-3. **Certificate authority** deploys (waits for certificates)
-4. **Certificate issuer** deploys (waits for CA)
-5. **Container registry** deploys last (waits for issuer)
+**What happens automatically (compare to your manual experience):**
 
-Same services as the manual approach, but zero coordination effort. The stack "instruction booklet" handles all the timing and dependencies.
+1. **GitOps foundation deploys first** - Sets up the automation system
+2. **cert-manager and monitoring deploy in parallel** - Both wait for step 1, then start together
+3. **Certificate authority deploys** - Waits for cert-manager to be completely ready
+4. **Certificate issuer deploys** - Waits for CA to exist
+5. **Container registry deploys** - Waits for certificate issuer to be ready
 
----
+**The key insight:** This is exactly the same set of services you were trying to deploy manually, but now:
+- No guessing about deployment order
+- No "wait 2 minutes and hope it's ready" delays
+- No circular dependency confusion
+- No half-broken environments
+- No debugging why things aren't connecting
 
-## Custom Application Development
+The stack instruction booklet handles all the coordination you were struggling with.
 
-Your stack creates a complete development environment. Let's use it to build and deploy a custom application - the typical development workflow.
+## The Development Workflow Payoff
 
-### The Development Scenario
+Now for the payoff - your stack creates a complete development environment that supports the full custom application development workflow. This is why you needed all that coordination in the first place.
 
-The stack provides a private container registry. This enables the full development cycle:
-1. **Build** your application into a Docker image
-2. **Push** to your private registry
-3. **Deploy** from your registry to the cluster
+### Your Development Environment in Action
 
-### Complete Development Workflow
+The stack you just deployed provides everything needed for end-to-end application development:
+
+- **Private container registry** - Store your custom Docker images locally
+- **Automatic HTTPS certificates** - Secure connections without manual certificate management
+- **Health monitoring** - Track your applications and infrastructure
+- **GitOps orchestration** - Automated deployment and lifecycle management
+
+### Complete Custom Application Workflow
+
+Here's the development cycle your stack enables:
 
 ```bash
 # Your development environment is already running
-# make up extension/tutorial-stack (from previous step)
+# (from make up extension/tutorial-stack)
 
-# Build a custom application
+# Build your custom application into a Docker image
 make build src/registry-demo
 
-# Deploy the application (pulls from your private registry)
+# Deploy your application (it pulls from your private registry)
 make deploy registry-demo
 
-# Access your running application
+# Check your running application
 make status
 ```
 
-**Key insight:** Your custom application pulls from `localhost:5443/registry-demo:latest` - your own private registry that the stack provided. No external dependencies or Docker Hub requirements.
+**What just happened:**
 
-## Understanding GitOps Coordination
+1. `make build` compiled your application code into a Docker image and pushed it to your private registry
+2. `make deploy` deployed your application, pulling the image from your own registry (not Docker Hub)
+3. Your application is now running with proper certificates and monitoring
 
-Now that you've seen the stack in action, let's understand how GitOps automation eliminates the coordination chaos.
+**The key insight:** Your application configuration points to `localhost:5443/registry-demo:latest` - your own private registry that the stack provided. This is a complete, self-contained development environment with no external dependencies.
 
-### How the "Instruction Booklet" Works
+This is the workflow that justifies all the coordination complexity. Without the registry, certificates, and monitoring working together, you can't have this streamlined development experience.
 
-Each step in your stack.yaml is a GitOps instruction:
+## Understanding What Just Happened
+
+You've gone from manual coordination chaos to a working development environment in minutes. Let's understand how the stack automation eliminated all the problems you experienced.
+
+### How GitOps Eliminates Coordination Problems
+
+Remember trying to figure out deployment order manually? Here's how the stack instruction booklet works:
 
 ```yaml
-# Wait for certificates to be ready
+# Each component declares its dependencies
 dependsOn:
-  - name: component-certs
-# Then deploy certificate authority
-path: ./software/components/certs-ca
-# Don't continue until it's healthy
-wait: true
+  - name: component-certs        # "Don't start until this is ready"
+path: ./software/components/certs-ca  # "Deploy this component"
+wait: true                           # "Don't continue until healthy"
 ```
 
-**GitOps automation** (Flux) reads these instructions and:
-- Monitors component health continuously
-- Only proceeds when dependencies are satisfied
-- Retries failed deployments automatically
-- Maintains desired state over time
+**GitOps automation (Flux) becomes your deployment assistant:**
+- **Monitors everything continuously** - knows when each component is actually ready
+- **Respects dependencies automatically** - won't start anything until prerequisites are healthy
+- **Handles failures gracefully** - retries failed deployments without breaking the whole process
+- **Maintains consistency** - keeps everything running in the desired state
 
-### Stack vs Manual Comparison
+### The Transformation
 
-| Approach | Coordination | Environment Consistency | Failure Recovery |
-|----------|-------------|-------------------------|------------------|
-| **Manual** | You manage timing | Different every time | Manual debugging |
-| **Stack** | Automated dependencies | Identical deployments | Automatic retries |
+| **Manual Approach** (what you experienced) | **Stack Approach** (what you just used) |
+|-------------------------------------------|------------------------------------------|
+| Guess deployment order | Automated dependency resolution |
+| Wait and hope things are ready | Continuous health monitoring |
+| Debug why things aren't connecting | Dependencies guaranteed before proceeding |
+| Different results every time | Identical deployments every time |
+| Manual recovery from failures | Automatic retry and healing |
+| Become expert in service coordination | Focus on application development |
 
-### Troubleshooting Your Stack
+### Validation and Troubleshooting
 
-**If components aren't deploying:**
+Your stack should be running smoothly, but if something isn't working:
+
+**Check overall stack status:**
 ```bash
-# Check GitOps status
-kubectl get kustomizations -n flux-system
+# See all components and their health
+make status
 
-# Debug specific component
+# Check GitOps automation status
+kubectl get kustomizations -n flux-system
+```
+
+**If a component is stuck:**
+```bash
+# Debug specific component (e.g., registry)
 kubectl describe kustomization component-registry -n flux-system
 ```
 
-**If custom app won't deploy:**
+**Verify the registry is working:**
 ```bash
-# Verify registry is accessible
+# Test registry access
 kubectl port-forward -n registry service/registry 5000:5000
-curl http://localhost:5000/v2/
+curl http://localhost:5000/v2/    # Should return {}
 
-# Check if image was pushed
+# Check if your custom image was stored
 curl http://localhost:5000/v2/_catalog
 ```
 
----
+The troubleshooting is much simpler because the stack guarantees that dependencies are met before anything tries to use them.
 
-## What Comes Next
+## What You've Accomplished
 
-You've experienced the power of software stack coordination - how GitOps automation eliminates the operational chaos of managing individual services. The same `make up` command works regardless of stack complexity, giving you consistent environments for any development scenario.
+You've transformed from manual service coordination chaos to automated orchestration mastery. More importantly, you've experienced the fundamental shift that makes complex development environments manageable.
 
-These software stacks create the foundation for component-based development. In the next tutorial, you'll:
-- Connect applications to shared service components
-- Learn consumption patterns for databases, caches, and services
-- Understand when to build new components vs. use existing ones
+**The coordination problem you experienced:**
+- Manual dependency guessing and timing mysteries
+- Tool juggling between kubectl, helm, and make
+- Half-broken environments and debugging nightmares
+- Time spent on service coordination instead of application development
 
-The coordinated deployment patterns you've learned here will support the shared component architectures you'll explore next.
+**The stack solution you built:**
+- Complete development environment deployed with `make up extension/tutorial-stack`
+- Automatic dependency resolution and health monitoring
+- End-to-end custom application workflow (build → registry → deploy)
+- Zero coordination overhead - focus on your applications, not infrastructure
 
-👉 **Continue to:** [Using Components](shared-components.md)
+**The key insight:** Software stacks transform multi-service environments from coordination nightmares into simple, reliable development platforms. The same pattern works whether you need 5 services or 50.
+
+### Beyond Tutorial Stacks
+
+Your tutorial stack is just the beginning. The same stack pattern supports any development environment:
+
+- **Database-heavy applications** - PostgreSQL, Redis, Elasticsearch with connection management
+- **Microservice platforms** - Service mesh, API gateways, monitoring, and tracing
+- **Data platforms** - Airflow, Kafka, data lakes with processing pipelines
+- **Enterprise environments** - Security, compliance, audit logging, and RBAC systems
+
+The coordination principles are identical - declare what you want, define dependencies, let GitOps automation handle the orchestration.
+
+### Building Production-Ready Stacks
+
+As you build more sophisticated stacks, you'll extend the patterns you learned here:
+- **Multi-environment stacks** - dev, staging, prod variants with different configurations
+- **External integration** - connecting to cloud services and existing infrastructure
+- **Team collaboration** - shared stacks with personal customization overlays
+- **Advanced dependencies** - complex service meshes and data pipeline orchestration
+
+But the core pattern remains the same: eliminate manual coordination through declarative orchestration.
+
+👉 **Continue to:** [Shared Components](shared-components.md) - *Learn how applications connect to and consume the foundation services your stacks provide*
