@@ -188,7 +188,7 @@ Static YAML files can't adapt to different deployment contexts. When you need te
 
 This is where Helm templates shine. They provide deployment-time flexibility while maintaining the same `make deploy` simplicity. You get the power of dynamic configuration without losing the ease of consistent commands.
 
-### The Voting Application: Helm in Action
+### Helm in Action
 
 ```bash
 # Restart the Cluster and enable both AddOns
@@ -201,7 +201,7 @@ make deploy advanced feature
 make status
 ```
 
-Two isolated environments from the same chart - exactly what failed with static YAML. The Helm templates adapt automatically, giving you a default environment at http://localhost:8080/ and a feature environment at http://feature.localhost:8080/. Same chart, same commands, different environments working seamlessly together.
+Two isolated environments from the same chart - exactly what failed with static YAML. The Helm templates adapt automatically, creating separate access points for each namespace. Same chart, same commands, different environments working seamlessly together.
 
 ### Anatomy of a Helm Application Contract
 
