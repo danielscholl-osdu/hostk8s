@@ -43,7 +43,7 @@ simple
     └── service.yaml            # Internal networking and discovery
 ```
 
-The critical file is the `kustomization.yaml` file which creates an Application Contract around four HostK8s capabilities that enable `make deploy`.
+The critical file is the `kustomization.yaml` file which creates an application contract around four HostK8s capabilities that enable `make deploy`.
 
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
@@ -205,10 +205,12 @@ Two isolated environments from the same chart - exactly what failed with static 
 
 ### Anatomy of a Helm Application Contract
 
-Just like Kustomization apps need a specific structure to work with `make deploy`, Helm charts must follow an Application Contract. Explore the [`advanced`](../../software/apps/advanced/) app structure:
+Just like Kustomization apps need a specific structure to work with `make deploy`, Helm charts must follow an Application Contract.
+
+Explore the files of the [`advanced`](../../software/apps/advanced/) app:
 
 ```
-advanced/
+advanced
 ├── Chart.yaml              # Helm chart metadata and version
 ├── values.yaml             # Default configuration values
 ├── templates/              # Dynamic Kubernetes manifests
