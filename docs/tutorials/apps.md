@@ -254,116 +254,31 @@ hostk8s.app: advanced
 
 Every template then uses `{{ include "advanced.labels" . }}` to ensure consistent labeling across all resources. HostK8s handles the deployment mechanics while the chart controls its own resource structure and labeling strategy.
 
-### Chart Values Hierarchy
+### Custom Values Support
 
-HostK8s Helm charts support a flexible values hierarchy that allows user-specific and environment-specific customization:
+HostK8s automatically looks for a `custom_values.yaml` file in your chart directory for local customization:
 
 ```
 advanced/
-├── values.yaml              # Base values (always used)
-├── custom_values.yaml       # User overrides (optional, gitignored)
-└── values/
-    └── development.yaml     # Environment overrides (optional)
+├── values.yaml              # Default chart values
+├── custom_values.yaml       # Your local overrides (gitignored)
 ```
 
-**Values loading order:**
-1. **Base values**: `values.yaml` - Default chart configuration
-2. **Custom values**: `custom_values.yaml` - User-specific overrides (if present)
-3. **Environment values**: `values/development.yaml` - Environment overrides (if present)
+If present, HostK8s loads custom_values.yaml after the base values, letting you override any configuration locally without modifying the original chart. This file is gitignored, so your personal customizations stay private while the chart remains shareable.
 
-This hierarchy allows developers to:
-- **Customize locally**: Create `custom_values.yaml` for personal testing configurations
-- **Override per environment**: Use `values/development.yaml` for consistent dev settings
-- **Maintain defaults**: Keep `values.yaml` as the baseline configuration
+Charts can also use standard Helm patterns like `values/development.yaml` for environment-specific settings, but that's independent of HostK8s - it's just how the individual chart chooses to organize its configuration.
 
 ---
 
-## Environment-Specific Configuration
+## What Comes Next
 
-Helm supports **per-environment configuration overrides** via values files:
+You've experienced HostK8s application deployment patterns - from static YAML limitations to Helm template flexibility. The same `make deploy` interface works regardless of application complexity, giving you consistent commands for any deployment scenario.
 
-```bash
-make deploy advanced feature-new-architecture dev
-make deploy advanced main-stable staging
-```
+These application contracts form the foundation for more sophisticated deployments. In the next tutorial, you'll:
+- Share infrastructure components (databases, caches) across multiple applications
+- Eliminate resource waste through component reuse
+- Maintain environment isolation while reducing operational overhead
 
-`values/development.yaml`:
-
-```yaml
-vote:
-  replicas: 1
-  resources:
-    requests:
-      memory: "128Mi"  # More memory in dev
-```
-
-Overrides apply per release without hard‑coding.
-
----
-
-## Interface Consistency
-
-Regardless of complexity:
-
-```bash
-make deploy simple
-make deploy basic alice
-make deploy advanced staging
-```
-
-📌 **Same commands, any complexity**: that's the HostK8s abstraction.
-
----
-
-## The Hidden Cost of Isolation
-
-While Helm solves configuration flexibility, it reveals another challenge. Run this command to see what's happening with shared infrastructure:
-
-```bash
-kubectl get deployments --all-namespaces | grep -E "(redis|db)"
-```
-
-Notice anything? Each voting app deployment runs its own Redis and database instances—that's resource waste and operational overhead multiplied by every environment.
-
----
-
-## Building from Source Code
-
-Beyond deploying pre-built applications, HostK8s also handles the complete source-to-deployment workflow:
-
-```bash
-make build src/registry-demo
-make deploy registry-demo
-make status
-```
-
-1. Source → image in registry
-2. Deploy → app in Kubernetes
-
----
-
-## Application Architecture Progression
-
-```
-Static YAML → Multi-Service YAML → Helm Templates
-```
-
-- Static: simple, limited flexibility
-- Multi‑Service: introduces service interaction patterns but creates configuration conflicts
-- Helm: fixes config conflicts, enables environments, but duplicates infra
-
----
-
-## Key Takeaways
-
-You've experienced the evolution of Kubernetes application deployment:
-
-- **Static YAML**: Simple but inflexible—breaks when you need multiple environments
-- **Helm Templates**: Solves configuration conflicts and enables per-environment customization
-- **The Trade-off**: Flexibility comes at the cost of infrastructure duplication
-
-The Application Contract Pattern ensures consistent deployment commands regardless of underlying complexity, but shared infrastructure remains a challenge.
-
-**Next**: Learn how to share infrastructure components (like Redis) across applications while maintaining environment isolation.
+The deployment patterns you've learned here will directly support the shared infrastructure architectures you'll build next.
 
 👉 **Continue to:** [Using Components](shared-components.md)
