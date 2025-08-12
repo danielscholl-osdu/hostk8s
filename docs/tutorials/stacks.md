@@ -97,11 +97,11 @@ Think about what you actually need for a complete application stack. Your web AP
 
 This creates a natural two-layer architecture. **Components** provide the shared foundation: the container registry, certificate management, databases, and monitoring that multiple applications can use. **Applications** contain your actual business logic: the web services, APIs, and custom code that make your product unique.
 
-The key insight is sequencing: components must be healthy before applications try to use them. The stack handles this automatically, so no more debugging connection failures because services aren't ready.
+The key insight is managing dependencies: components must be healthy before applications try to use them. Instead of guessing the order, each component declares what it depends on, and the stack handles this automatically, so no more debugging connection failures because services aren't ready.
 
 ## Building Your Development Environment
 
-Let's create the complete development environment you were trying to build manually. You'll see how the stack "instruction booklet" approach eliminates all the coordination chaos you just experienced.
+Let's create the complete software solution you were trying to deploy manually. You'll see how the stack "instruction booklet" approach eliminates all the coordination chaos you just experienced.
 
 ### Your Development Environment Stack
 
@@ -121,7 +121,7 @@ mkdir -p software/stack/extension/tutorial-stack
 cd software/stack/extension/tutorial-stack
 ```
 
-**Every stack needs these three files to work:**
+**Every stack needs these files to work:**
 
 **kustomization.yaml** acts as the table of contents:
 ```yaml
