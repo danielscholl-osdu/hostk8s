@@ -26,15 +26,16 @@ The registry component seems straightforward enough. Let's try deploying it:
 kubectl apply -f software/components/registry/
 ```
 
-**You'll see a mix of success and failure** because some resources create fine (namespace, storage, services) while others fail with errors about missing Certificate resources and namespace dependency issues. The registry component assumes cert-manager is already installed and expects things to be deployed in a specific order.
+**You'll see a mixture of results** because some resources create fine (namespace, storage, services) while others fail with errors about missing certificate resources and namespace dependency issues. The registry component assumes cert-manager is already installed and expects things to be deployed in a specific order.
 
-This is the coordination problem in miniature. The component assumes other services are already there and configured correctly.
+This is a typical coordination problem. The component assumes other services are already there and configured correctly.
 
-Now imagine this same experience multiplied across 10-15 foundation services, each with their own assumptions about what should already be running. You'd spend more time figuring out deployment order and debugging cryptic errors than actually building applications.
+Now imagine this same experience multiplied across 5-10 foundational components, each with their own assumptions about what should already be running. You'd spend more time figuring out deployment order and debugging cryptic errors than actually building applications.
 
 ### The Natural Response: DIY Orchestration
 
-When teams hit this coordination wall, they naturally start creating their own orchestration. You've probably seen this before: **'Magic README' files** with step-by-step procedures that say 'wait 2 minutes here,' **bash scripts** with sleep commands and crossed fingers, or **Makefiles** trying to enforce order while hoping services are actually ready.
+When projects hit this coordination wall, they naturally start creating their own orchestration. You've probably seen this before: **'Magic README' files** with step-by-step procedures that say "run this command, verify the output shows 'Ready', then copy-paste the next block and wait for completion," **bash scripts** with sleep commands and crossed fingers hoping services are actually ready.
+
 
 These DIY solutions work sometimes, but create a bigger architectural problem: **tight coupling**. Your setup script becomes a monolithic sequence bound to your specific environment. Want to work on just the monitoring component? You can't because you have to run through the entire certificate chain first. This tight coupling makes development painful because you can't isolate your work.
 
