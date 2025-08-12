@@ -163,7 +163,7 @@ metadata:
   namespace: flux-system
 spec:
   path: ./software/components/certs
-  wait: true  # Must be healthy before continuing
+  wait: true                                 # Must be healthy before continuing
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -172,18 +172,26 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: component-certs  # Wait for certs first
+    - name: component-certs                  # Wait for certs before starting
   path: ./software/components/registry
-  wait: true
+  wait: true                                 # Must be healthy before continuing
 ```
 
-**The Stack Recipe**
+### The Stack Recipe
 
-The `stack.yaml` file is where the orchestration magic happens. Each component gets its own section that declares two critical things: where to find the component (`path: ./software/components/registry`) and what it depends on (`dependsOn: component-certs-issuer`).
+The `stack.yaml` file is where the orchestration magic happens. Each component gets its own section that declares two critical things:
 
-The beauty is in the dependency declarations. Flux reads these configurations and creates an execution plan: start with components that have no dependencies, wait for them to be healthy, then start the next tier. The registry waits for certificate issuer, which waits for certificate authority, which waits for basic certificates, which waits for cert-manager installation.
+| Property | Purpose | Example |
+|----------|---------|---------|
+| `path` | Where to find the component | `./software/components/registry` |
+| `dependsOn` | What it depends on | `component-certs-issuer` |
 
-This declarative approach eliminates all the timing guesswork you experienced manually. Each component simply declares "I need these other components to be healthy first" and Flux figures out the rest.
+The beauty is in the dependency declarations - this declarative approach eliminates all the timing guesswork you experienced manually. Each component simply declares "I need these other components to be healthy first" and Flux figures out the rest.
+
+Flux reads these configurations and creates an execution plan: start with components that have no dependencies, wait for them to be healthy, then start the next tier.
+
+The dependency chain flows like this:
+`cert-manager` → `basic certificates` → `certificate authority` → `certificate issuer` → `registry`
 
 Here's what a simple stack.yaml looks like with just two components:
 
