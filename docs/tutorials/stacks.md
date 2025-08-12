@@ -67,8 +67,6 @@ The manual approach is like a model airplane kit with custom pieces that only fi
 
 The stack approach is like Lego blocks with instruction booklets. The same modular components can build a spaceship, a castle, or a race car, it all depends on which instruction booklet you follow.
 
-With your DIY orchestration script, you're stuck with that specific sequence for that specific setup. With software stacks, you get modular components that can be combined in different ways to build different application stacks.
-
 ### How Stacks Eliminate the Chaos
 
 Remember the manual deployment wall you just hit? Here's how a stack would handle the same scenario:
@@ -95,9 +93,9 @@ Step 5: container registry (depends on Step 4)
 
 ### The Two-Layer Architecture
 
-Think about what you actually need for a production application stack. Your web API is just one piece, but it also needs somewhere to store data, certificates for HTTPS, a way to track if it's healthy, and probably a dozen other supporting services.
+Think about what you actually need for a complete application stack. Your web API is just one piece, but it also needs somewhere to store data, certificates for HTTPS, a way to track if it's healthy, and probably a dozen other supporting services.
 
-This creates a natural two-layer architecture. **Components** provide the shared infrastructure foundation: the container registry, certificate management, databases, and monitoring that multiple applications can use. **Applications** contain your actual business logic: the web services, APIs, and custom code that make your product unique.
+This creates a natural two-layer architecture. **Components** provide the shared foundation: the container registry, certificate management, databases, and monitoring that multiple applications can use. **Applications** contain your actual business logic: the web services, APIs, and custom code that make your product unique.
 
 The key insight is sequencing: components must be healthy before applications try to use them. The stack handles this automatically, so no more debugging connection failures because services aren't ready.
 
