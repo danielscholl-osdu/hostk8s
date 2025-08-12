@@ -3,35 +3,44 @@
 Learn HostK8s through a progressive tutorial series that builds from cluster configuration to complete software stacks.
 
 #### [Cluster Configuration](cluster.md)
-*Beginner | 20-30 minutes*
 
-Learn when and why to customize Kind cluster configurations. Master the key decisions between single-node and multi-node development clusters through practical examples.
+Learn configurable cluster architecture patterns that let you version control your development environment alongside your application code. Experience the development workflow trade-offs that drive configuration decisions.
 
 **Key Topics:**
-- Development workflow trade-offs (speed vs realism)
-- Single-node vs multi-node architecture patterns
-- Node roles, taints, and workload scheduling
-- 3-tier configuration system (named, personal, system fallback)
+- Configuration-as-code patterns for development environments
+- Single-node vs multi-node cluster architecture choices
+- Custom Kind configurations for specific development needs
+- 3-tier configuration fallback system (named, personal, system defaults)
 
 ---
 
-#### [Deploying Apps](apps.md)
-*Beginner | 30-45 minutes*
+#### [Deploying Applications](apps.md)
 
-Deploy individual applications using HostK8s patterns. This tutorial uses the Docker Voting App as an example to demonstrate fundamental deployment concepts and why individual application deployments don't scale effectively.
+Deploy individual applications using HostK8s patterns. Experience the evolution from static YAML limitations to dynamic Helm templates and understand the application contract requirements.
 
 **Key Topics:**
-- HostK8s application patterns
-- Service-to-service communication
-- Resource allocation per application
-- Limitations of single-app deployments
+- Application contracts (Kustomization vs Helm chart requirements)
+- Multi-namespace deployment with dynamic configuration
+- Static YAML limitations vs template flexibility
+- Custom values support for local development overrides
+
+---
+
+#### [Software Stacks](stacks.md)
+
+Build complete development environments using GitOps automation. Learn how software stacks eliminate the operational overhead of individual deployments through coordinated component management.
+
+**Key Topics:**
+- Stack composition and dependency management
+- GitOps deployment automation with Flux
+- Component vs application coordination
+- Environment consistency and reproducibility
 
 ---
 
 #### [Using Components](shared-components.md)
-*Beginner | 20-30 minutes*
 
-Connect applications to pre-built infrastructure components. Learn consumption patterns and service discovery by connecting the voting application to a shared Redis instance.
+Connect applications to reusable infrastructure components. Learn consumption patterns and service discovery by connecting applications to shared services like Redis and databases.
 
 **Key Topics:**
 - Component consumption patterns
@@ -40,36 +49,11 @@ Connect applications to pre-built infrastructure components. Learn consumption p
 - When to use vs. build components
 
 #### [Building Components](components.md)
-*Intermediate | 30-40 minutes*
 
-Design and customize reusable infrastructure services. Explore the Redis Infrastructure Component architecture to understand component patterns and customization options.
+Design and customize reusable infrastructure services. Explore component architecture patterns and understand how to create shareable infrastructure building blocks.
 
 **Key Topics:**
 - Component design patterns
 - Configuration and customization
 - Component lifecycle management
 - Best practices for reusability
-
----
-
-#### [Stack Fundamentals](gitops-fundamentals.md)
-*Intermediate | 25-35 minutes*
-
-Implement GitOps automation patterns for component orchestration. Build a simple multi-component stack with automated dependency management.
-
-**Key Topics:**
-- GitOps principles and benefits
-- Dependency management
-- Automated deployment workflows
-- Configuration as code
-
-#### [Advanced Stacks](stacks.md)
-*Advanced | 40-50 minutes*
-
-Compose complete development environments with multiple components and applications. Create a full development stack including container registry and custom applications.
-
-**Key Topics:**
-- Stack composition patterns
-- Build and deployment workflows
-- Environment management
-- Production-like development setups

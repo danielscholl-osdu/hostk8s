@@ -272,11 +272,11 @@ If present, HostK8s loads custom_values.yaml after the base values, letting you 
 
 You've experienced HostK8s application deployment patterns, from static YAML limitations to Helm template flexibility. The same `make deploy` interface works regardless of application complexity, giving you consistent commands for any deployment scenario.
 
-These application contracts form the foundation for more sophisticated deployments. In the next tutorial, you'll:
-- Share infrastructure components (databases, caches) across multiple applications
-- Eliminate resource waste through component reuse
-- Maintain environment isolation while reducing operational overhead
+These application contracts form the foundation for software stack deployments. In the next tutorial, you'll:
+- Build complete development environments using GitOps automation
+- Coordinate multiple applications and infrastructure components
+- Eliminate the operational overhead of managing individual deployments
 
-The deployment patterns you've learned here will directly support the shared infrastructure architectures you'll build next.
+The deployment patterns you've learned here will directly support the software stacks you'll compose next.
 
-👉 **Continue to:** [Using Components](shared-components.md)
+👉 **Continue to:** [Software Stacks](stacks.md)
