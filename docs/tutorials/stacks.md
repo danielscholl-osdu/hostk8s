@@ -1,260 +1,195 @@
 # Software Stacks
 
-*Learn to compose existing HostK8s components into custom development environments*
+*Understanding how coordinated service deployment eliminates the operational chaos of managing individual applications*
 
-| **Time** | **Level** | **Prerequisites** |
-|----------|-----------|-------------------|
-| ~60 minutes | 300 (Advanced) | Apps tutorial, Components tutorial, GitOps concepts |
+## The Multi-Service Development Challenge
 
-## Overview
+In the previous tutorial, you deployed individual applications successfully. But real development environments need multiple services working together - databases, caches, certificates, monitoring, and applications all coordinating as a system.
 
-In the [Apps tutorial](apps.md), you learned to deploy individual applications. In the [Components tutorial](components.md), you learned to build shared infrastructure services like Redis that multiple applications can use.
+Let's see what happens when you try to manage these services individually.
 
-**Software Stacks** are the final level - complete development environments that combine multiple components and applications into cohesive, production-like systems managed through GitOps automation.
+### The Shared Services Coordination Problem
 
-Think of components like **Lego blocks** - each one does something useful (Redis, database, certificates), but by themselves they're just individual pieces. A **software stack** is like the instruction booklet that tells you which blocks to use and how to snap them together to build something amazing - a complete microservice platform.
+You're building applications that need shared services to function properly:
+- **Container registry** (to store and deploy your custom images)
+- **Certificate management** (for HTTPS security)
+- **Monitoring** (to track application performance)
+- **Your applications** (your actual business logic)
 
-In this tutorial, you'll create a custom **software stack** that demonstrates how the Redis component you built in the Components tutorial can be combined with applications and other infrastructure into a complete development environment.
+The challenge isn't deploying individual applications - it's coordinating the foundation services with your applications.
 
-**What You'll Build:**
-- Custom software stack using existing HostK8s components
-- Complete registry-based development workflow
-- Custom application deployment through your stack
+**Manual Service Management Chaos:**
+Without stacks, you have to set up foundation services manually before applications can work:
 
-**Prerequisites:**
-- **Completed [Apps tutorial](apps.md)** - Understanding of HostK8s applications
-- **Completed [Components tutorial](components.md)** - Experience with shared infrastructure services
-- **Basic GitOps concepts** - Understanding of declarative deployments
-- **Familiarity with Flux** (covered in this tutorial)
-
-
-
-### Tutorial Workflow
+```bash
+# Set up foundation services manually, in correct order
+kubectl apply -f certificate-manager-setup/
+helm install monitoring prometheus/kube-prometheus-stack
+kubectl apply -f container-registry-setup/
+# Wait for everything to be ready...
+# Debug connectivity issues...
+# Then finally deploy your applications
+make deploy my-app-1
+make deploy my-app-2
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   1. Deploy     │    │   2. Build      │    │   3. Deploy     │
-│  Tutorial Stack │───▶│  Custom Image   │───▶│  Custom App     │
-│                 │    │                 │    │                 │
-│  Components +   │    │ src/registry-   │    │ Pulls from      │
-│  Registry       │    │ demo → Registry │    │ Registry        │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-   GitOps deploys           Docker builds            App runs using
-   infrastructure           & pushes to             custom image
-                           local registry
+
+**Problems:**
+- **Foundation services setup required** before any apps work properly
+- **No guidance on service dependencies** (certs need CA, registry needs certs)
+- **Inconsistent environments** (teammate forgot monitoring? Apps work but no visibility)
+- **Manual coordination** between foundation services and your applications
+- **Different setup methods** (kubectl, helm, make deploy) for different pieces
+
+
+
+### The Manual Approach Reality
+
+Let's see this coordination challenge in action. In HostK8s, you could theoretically deploy shared service components individually:
+
+```bash
+# Make sure you have a cluster
+make start
+
+# Try to set up foundation services manually (various methods)
+kubectl apply -f software/components/certs/
+kubectl apply -f software/components/registry/
+helm install metrics-server software/components/metrics-server/
+# Debug why things aren't working...
+# Figure out dependency order...
+# Wait for things to be ready...
+
+# Finally deploy applications
+make deploy my-app
 ```
+
+**What you'll discover:**
+- Foundation services fail because dependencies aren't ready
+- No clear setup order guidance (certs before registry? metrics-server when?)
+- Inconsistent state when things go wrong
+- Time spent on service coordination instead of application development
+- Different team members set up services differently
+
+This manual approach forces you to become an expert in service dependencies and deployment timing - time that should be spent building your applications.
 
 ---
 
-## Part 1: Understanding Software Stacks
+## How Software Stacks Solve This
 
-### The Learning Progression
+**Software Stacks** eliminate coordination chaos through automated orchestration. Instead of managing individual services manually, you declare the complete environment you want and let GitOps automation handle the coordination.
 
-You've now completed a full learning journey through HostK8s:
+Think of it like **Lego blocks** and instruction booklets:
 
-**Level 100 - Apps:** Built individual applications (voting app with 5 services)
-**Level 200 - Components:** Created shared infrastructure (Redis component with Commander UI)
-**Level 300 - Stacks:** Combine components + applications into complete environments
+- **Individual services** = Lego blocks (useful pieces but limited alone)
+- **Software stack** = Instruction booklet (tells you which blocks to use and how to connect them)
+- **GitOps automation** = Following the instructions step-by-step automatically
+- **Development environment** = The finished model that actually works
 
-```
-Apps Tutorial          →  Components Tutorial     →  Stacks Tutorial
-
-┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
-│   Voting App    │       │     Redis       │       │   Complete      │
-│                 │       │   Component     │       │  Development    │
-│ • Vote Service  │   +   │                 │   =   │  Environment    │
-│ • Redis (own)   │       │ • Redis Server  │       │                 │
-│ • Worker        │       │ • Commander UI  │       │ GitOps-managed  │
-│ • Database      │       │ • Persistence   │       │ Multi-app stack │
-│ • Results       │       └─────────────────┘       └─────────────────┘
-└─────────────────┘                                           │
-                                                              │
-                                                    ┌─────────▼─────────┐
-                                                    │   Stack Benefits   │
-                                                    │                   │
-                                                    │ • Shared Redis    │
-                                                    │ • Multiple Apps   │
-                                                    │ • GitOps Auto     │
-                                                    │ • Environment     │
-                                                    │   Consistency     │
-                                                    └───────────────────┘
-```
-
-### The Lego Block Concept
-
-Just like Lego blocks, HostK8s has:
+Just like Lego sets, HostK8s has different types of pieces that work together:
 
 | Lego World | HostK8s World |
 |------------|---------------|
-| **Foundation blocks** | **Components** (Redis Infrastructure, cert-manager, databases) |
-| **Feature blocks** | **Applications** (voting app, web services, APIs) |
-| **Instruction booklet** | **Software Stack** (tells you which blocks to use and how to connect them) |
-| **Finished model** | **Running development environment** |
-| **Following instructions** | **GitOps/Flux** (automatically assembles everything) |
+| **Individual blocks** | **Components** (Redis, databases, certificates) |
+| **Specialized pieces** | **Applications** (your web services, APIs) |
+| **Instruction booklet** | **Software Stack** (defines what to build and in what order) |
+| **Following instructions** | **GitOps automation** (Flux builds it for you) |
+| **Finished model** | **Complete development environment** |
 
-### Three Types of "Blocks"
+### Stack Components vs Applications
 
 ```
 Software Stack (The Instructions)
-  ↙️        ↘️
-Components     Applications
-(Infrastructure/Middleware)  (Business Logic/Services)
+         ↓
+    ┌─────────┐    ┌──────────────┐
+    │Components│ + │ Applications │
+    └─────────┘    └──────────────┘
+   Foundation        Your Code
 ```
 
-**Components** - Infrastructure and middleware "blocks" you've learned to build:
-- **From Components Tutorial**: Redis Infrastructure (Redis + Commander UI)
-- **Built-in HostK8s**: cert-manager, Istio, metrics-server, databases
-- **Data Layer**: PostgreSQL, Redis, Elasticsearch
-- **Platform Services**: Airflow, observability, service mesh
-- **Security**: Certificate management, RBAC systems
+**Components** provide the shared service foundation:
+- **Certificates** (HTTPS security)
+- **Databases** (PostgreSQL, Redis)
+- **Monitoring** (metrics collection)
+- **Container Registry** (for your custom images)
 
-**Applications** - Business logic and service "blocks" (installed via Helm charts):
-- **Microservices**: API services, web services, data processors
-- **Service Groups**: Related microservices that form a complete platform layer
-- **User-Facing Services**: Web UIs, mobile backends, customer APIs
+**Applications** are your business logic:
+- **Web services** (your APIs)
+- **User interfaces** (frontend applications)
+- **Data processors** (background jobs)
 
-**Software Stack** - The "instruction booklet" that defines:
-- Which components and applications to deploy
-- Dependency order (components typically before applications)
-- How they connect and communicate
-- Configuration and environment settings
+**Software Stack** coordinates both:
+- Deploys components first (foundation)
+- Then deploys applications (which use the foundation)
+- Handles all the timing and dependencies automatically
 
-### Why Stacks Matter
+### The Stack Advantage
 
-Without a stack, you have:
-- Loose components that don't work together
-- Manual setup every time
-- Inconsistent environments
-- Deployment chaos
-
-With a stack, you get:
-- Components that snap together perfectly
-- One command deployment (`make up my-stack`)
-- Consistent, reproducible environments
-- GitOps automation
-
----
-
-## Part 2: Your Lego Block Collection
-
-Let's examine the existing HostK8s components (your "block collection") we'll use to build our tutorial stack.
-
-### Available Components
-
-**Platform Add-ons** (Kubernetes platform extensions):
-- **flux-resources**: GitOps automation system - like the Lego building table that enables construction
-
-**Components** (Infrastructure "blocks" installed via Helm):
-
-| Component | Type | Purpose | Like a Lego... |
-|-----------|------|---------|----------------|
-| **metrics-server** | Platform Service | Cluster monitoring | Sensor block - tells you what's happening |
-| **certs** | Security | Certificate management (cert-manager) | Safety block - keeps things secure |
-| **certs-ca** | Security | Root certificate authority | Master key block |
-| **certs-issuer** | Security | Certificate issuer | Key maker block |
-| **registry** | Platform Service | Docker image storage | Storage block - holds your custom pieces |
-
-**Complex Components** (from complex HostK8s stacks):
-- **platform-system**: Istio service mesh, Redis cluster, PostgreSQL operator, Elastic operator
-- **elastic-search**: Elasticsearch cluster for search and analytics
-- **airflow**: Workflow orchestration and data pipeline management
-- **observability**: Prometheus, Grafana, Jaeger for monitoring and tracing
-
-### Component Dependencies
-
-Just like Lego instructions show "Step 1, then Step 2", components have dependencies:
-
-```
-Step 0: flux-resources (platform add-on - enables GitOps automation)
-Step 1: metrics-server, certs (foundation components)
-Step 2: certs-ca (builds on certs)
-Step 3: certs-issuer (builds on certs-ca)
-Step 4: registry (builds on certs-issuer)
-```
-
-**Why This Order Matters:**
-- flux-resources is the platform add-on that enables GitOps - like having a proper building table
-- certs must be installed before you can create certificates
-- certs-ca must exist before certs-issuer can issue certificates
-- registry needs certificates to run securely
-
-### Understanding Stack Complexity
-
-Complex stacks can have multiple layers with many interdependent components:
-
-```
-Complex Stack Example:
-┌─────────────────────────────────────────────────────────────┐
-│ Applications (Business Logic)                               │
-│ • Capability Group 1: service-1, service-2 (auth)         │
-│ • Capability Group 2: service-3, service-4 (user mgmt)    │
-│ • Capability Group 3: service-5, service-6 (data proc)    │
-└─────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│ Components (Installed by Flux)                            │
-│ • Security: cert-manager, certificate authorities         │
-│ • Networking: Istio service mesh, ingress controllers     │
-│ • Databases: PostgreSQL, Elasticsearch                    │
-│ • Cache & Messaging: Redis cluster, message queues        │
-│ • Platform Services: Airflow, observability, monitoring   │
-└─────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────┐
-│ Foundation (Pre-installed)                                │
-│ • Kubernetes: etcd, DNS, API server, scheduler            │
-│ • Storage: Persistent volumes, storage classes            │
-│ • Container Runtime: containerd, kubelet                  │
-│ • Add-ons: Flux (kubectl apply), metrics-server (kubectl) │
-└─────────────────────────────────────────────────────────────┘
-```
-
-Our tutorial stack is intentionally simple, focusing on the registry development workflow.
-
-### The Registry Component Deep Dive
-
-Since our stack will include a registry for custom images, let's examine this "block":
-
-The registry component includes:
-- **Namespace**: Isolates the registry in its own space
-- **PV/PVC**: Persistent storage (data survives restarts)
-- **Deployment**: The actual Docker registry container
-- **Service**: Network access (internal + external)
-
-**What It Does:**
-- Stores custom Docker images you build
-- Provides HTTP API for push/pull operations
-- Persists images in host storage (`data/registry/`)
-- See Quick Reference section for endpoints and ports
-
----
-
-## Part 3: Creating Your Tutorial Stack
-
-### Step 1: Create Local Stack Files
-
-First, create your tutorial stack locally as a HostK8s extension. This follows the standard HostK8s extension pattern and makes it easy to test and iterate.
-
-**Create the extension directory:**
+**Manual coordination** (what you experienced):
 ```bash
+make deploy certificates  # Hope it works
+make deploy database      # Hope dependencies are ready
+make deploy app          # Hope everything connects
+# Repeat when things fail...
+```
+
+**Stack coordination** (what you're about to learn):
+```bash
+make up my-stack         # Everything deploys in correct order automatically
+```
+
+Same result, zero coordination effort.
+
+---
+
+## Building Your First Stack
+
+Let's build a complete development environment using a software stack. You'll see how the "instruction booklet" approach eliminates the coordination chaos you experienced earlier.
+
+### The Tutorial Stack
+
+We'll build a stack that includes:
+- **Container Registry** (for your custom images)
+- **Certificate Management** (HTTPS security)
+- **Monitoring** (cluster metrics)
+- **GitOps Automation** (Flux coordination)
+
+This creates a foundation for building and deploying custom applications - the typical needs of a development environment.
+
+### Stack Dependencies Made Simple
+
+Remember the manual deployment chaos? Here's how the stack handles dependencies automatically:
+
+```
+Step 1: GitOps foundation (enables automation)
+Step 2: Certificates + Monitoring (foundation services)
+Step 3: Certificate Authority (builds on certificates)
+Step 4: Certificate Issuer (builds on CA)
+Step 5: Container Registry (uses certificates for security)
+```
+
+The stack "instruction booklet" ensures each step waits for its dependencies. No more guessing the deployment order or debugging timing issues.
+
+### Creating the Stack Definition
+
+A software stack is defined by three simple files that tell HostK8s what to build. Let's create them:
+
+```bash
+# Create your stack extension directory
 mkdir -p software/stack/extension/tutorial-stack
 cd software/stack/extension/tutorial-stack
 ```
 
-### Step 2: Define Your Stack
+**Create these three files:**
 
-Every software stack needs three files in the extension directory:
-
-#### kustomization.yaml
+**kustomization.yaml** - Table of contents:
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
-
 resources:
   - repository.yaml
   - stack.yaml
 ```
 
-#### repository.yaml
+**repository.yaml** - Where to find components:
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -273,14 +208,13 @@ spec:
     !/software/components/
 ```
 
-#### stack.yaml (first part)
+**stack.yaml** - The step-by-step instructions (create the complete file):
 ```yaml
 ######################
-## Tutorial Stack
-## Development stack for tutorial: includes registry, certs, and monitoring
+## Tutorial Stack - Complete Development Environment
 ######################
 ---
-# Flux foundation - always required first
+# Step 1: GitOps foundation (enables all automation)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -288,420 +222,218 @@ metadata:
   namespace: flux-system
 spec:
   interval: 1h
-  retryInterval: 1m
-  timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
   path: ./software/components/flux-resources
   prune: true
   wait: true
-  healthChecks:
-    - kind: Deployment
-      name: helm-controller
-      namespace: flux-system
-    - kind: Deployment
-      name: kustomize-controller
-      namespace: flux-system
-    - kind: Deployment
-      name: source-controller
-      namespace: flux-system
-```
-
-*(The stack.yaml file continues with metrics-server, certs, certs-ca, certs-issuer, and registry - see the full file in your tutorial-stack directory)*
-
-### Understanding the Files
-
-Now that you've seen the complete structure, let's understand what each file does:
-
-**kustomization.yaml** - Table of contents
-- Tells Kustomize: "Read the repository configuration, then follow the stack assembly instructions"
-
-**repository.yaml** - Where to find the HostK8s components
-- **url**: Points to the main HostK8s repo to get the shared components
-- **branch**: Which version to use (`main` for latest)
-- **ignore**: Only sync the shared components directory (efficiency)
-- **Note**: This references the HostK8s components, while your stack lives in your separate repo
-
-**stack.yaml** - Assembly instructions
-- Defines the dependency sequence (see Part 2 for details)
-- **dependsOn**: "Don't start this block until these blocks are ready"
-- **healthChecks**: "This block is ready when these specific things are running"
-- **wait: true**: "Don't continue to next block until this one is healthy"
-
-### Step 3: Initialize as Git Repository
-
-Once you've created your stack files, initialize the extension as a Git repository to make it shareable and version-controlled:
-
-```bash
-# From the tutorial-stack directory
-git init
-git add .
-git commit -m "Initial tutorial stack configuration"
-
-# Create a new repository on GitHub/GitLab named 'tutorial-stack'
-# Then push your local repository:
-git remote add origin https://github.com/your-username/tutorial-stack.git
-git push -u origin main
-```
-
-**Why This Step Matters:**
-- Version control for your stack configuration
-- Easy sharing with team members
-- Backup of your custom stack design
-- Foundation for collaborative development
-
-### Understanding the Instructions
-
-Each component definition is like a step in your Lego instructions:
-
-```yaml
+---
+# Step 2: Foundation services (monitoring and certificates)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-registry          # Step name
+  name: component-metrics-server
+  namespace: flux-system
 spec:
-  dependsOn:                        # Wait for these steps first
+  dependsOn:
+    - name: component-flux-resources
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/metrics-server
+  prune: true
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-flux-resources
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs
+  prune: true
+  wait: true
+---
+# Step 3: Certificate authority (builds on certificates)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs-ca
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-certs
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs-ca
+  prune: true
+  wait: true
+---
+# Step 4: Certificate issuer (builds on CA)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs-issuer
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-certs-ca
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs-issuer
+  prune: true
+  wait: true
+---
+# Step 5: Container registry (uses certificates)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-registry
+  namespace: flux-system
+spec:
+  dependsOn:
     - name: component-certs-issuer
-  path: ./software/components/registry  # Which block to use
-  healthChecks:                     # How to know it's working
-    - kind: Deployment
-      name: registry
-      namespace: registry
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/registry
+  prune: true
+  wait: true
 ```
 
-This tells Flux: "Deploy the registry component, but only after certs-issuer is ready, and don't consider it done until the registry deployment is healthy."
+**What these files do:**
+- **kustomization.yaml** tells HostK8s what files to read
+- **repository.yaml** points to where HostK8s components are stored
+- **stack.yaml** defines the deployment steps and dependencies
+
+### Deploy Your Stack
+
+Now let's see the stack in action and compare it to the manual chaos you experienced:
+
+```bash
+# Deploy your complete development environment
+make up extension/tutorial-stack
+
+# Watch the automated deployment
+make status
+```
+
+**What happens automatically:**
+1. **GitOps foundation** deploys first
+2. **Certificates and monitoring** deploy in parallel (both depend on step 1)
+3. **Certificate authority** deploys (waits for certificates)
+4. **Certificate issuer** deploys (waits for CA)
+5. **Container registry** deploys last (waits for issuer)
+
+Same services as the manual approach, but zero coordination effort. The stack "instruction booklet" handles all the timing and dependencies.
 
 ---
 
-## Part 4: Custom Application Workflow
+## Custom Application Development
 
-Now that we understand our stack, let's use it for a complete custom application workflow.
+Your stack creates a complete development environment. Let's use it to build and deploy a custom application - the typical development workflow.
 
 ### The Development Scenario
 
-You've built a custom web application and want to:
-1. **Build** it into a Docker image
-2. **Push** it to your private registry (in the stack)
-3. **Deploy** it to run in your development environment
+The stack provides a private container registry. This enables the full development cycle:
+1. **Build** your application into a Docker image
+2. **Push** to your private registry
+3. **Deploy** from your registry to the cluster
 
-### Your Custom Application
-
-HostK8s includes a sample application called `registry-demo` specifically for this workflow:
-
-This is a simple web application that demonstrates the registry workflow. It's designed to show build metadata and registry integration.
-
-### The Workflow Commands
-
-Once your tutorial stack is running, the workflow is:
+### Complete Development Workflow
 
 ```bash
-# 1. Deploy your tutorial stack (local extension)
-make up extension/tutorial-stack
+# Your development environment is already running
+# make up extension/tutorial-stack (from previous step)
 
-# 2. Build your custom application
+# Build a custom application
 make build src/registry-demo
 
-# 3. Deploy your application (pulls from your registry)
-make deploy registry-demo
-```
-
-Let's understand what each step does:
-
-#### Step 1: Deploy Tutorial Stack
-`make up extension/tutorial-stack` tells HostK8s:
-- Use the local extension stack in `software/stack/extension/tutorial-stack/`
-- Read the tutorial-stack instructions from your extension directory
-- Deploy components in dependency order
-- Wait for each component to be healthy
-- Result: Complete development environment with private registry
-
-#### Step 2: Build Custom Application
-`make build src/registry-demo` tells HostK8s:
-- Find the application source code
-- Build it into a Docker image
-- Tag it with your registry address
-- Push it to your private registry
-- Result: Custom image available for deployment
-
-#### Step 3: Deploy Application
-`make deploy registry-demo` tells HostK8s:
-- Find the application deployment configuration
-- Pull the image from your private registry
-- Deploy it to your cluster
-- Result: Custom application running and accessible
-
-### Application Deployment Configuration
-
-Your custom application also needs an "instruction" for how to deploy. The key part is:
-
-```yaml
-containers:
-- name: registry-demo
-  image: localhost:5443/registry-demo:latest  # Pulls from your private registry
-```
-
-This tells Kubernetes: "Pull this container image from localhost:5443 (your private registry) instead of Docker Hub."
-
----
-
-## Part 5: Testing Your Stack
-
-Let's deploy and test your custom tutorial stack.
-
-### Deployment
-
-```bash
-# Deploy your custom tutorial stack (local extension)
-make up extension/tutorial-stack
-```
-
-**What happens:**
-1. HostK8s reads your stack "instructions"
-2. Flux deploys components in dependency order
-3. Each component waits for its dependencies to be healthy
-4. Result: Complete development environment with registry
-
-### Monitor Progress
-
-```bash
-# Watch the deployment happen
-make status
-```
-
-You'll see components deploy in order:
-- flux-resources (first)
-- metrics-server, certs (parallel)
-- certs-ca (after certs)
-- certs-issuer (after certs-ca)
-- registry (after certs-issuer)
-
----
-
-## Part 6: Testing Your Stack
-
-Now let's test the complete development workflow your tutorial stack enables.
-
-### Test Registry Access
-
-First, verify your private registry is working:
-
-```bash
-# Test registry API (may need port-forward if NodePort not accessible)
-kubectl port-forward -n registry service/registry 5000:5000 &
-curl http://localhost:5000/v2/
-
-# Should return: {}
-```
-
-### Build Custom Application
-
-The tutorial stack enables the full build → push → deploy workflow:
-
-```bash
-# Build your custom application and push to private registry
-make build src/registry-demo
-```
-
-**What happens:**
-- HostK8s finds the `src/registry-demo` application source
-- Builds Docker image from the source code
-- Tags image for your private registry (`localhost:5045/registry-demo:latest`)
-- Pushes to your tutorial stack's registry
-- Image is now available for deployment
-
-### Deploy Custom Application
-
-```bash
 # Deploy the application (pulls from your private registry)
 make deploy registry-demo
 
-# Check deployment status
-kubectl get pods -l app=registry-demo
-```
-
-**What happens:**
-- HostK8s reads the `registry-demo` deployment configuration
-- Kubernetes pulls the image from your private registry
-- Application starts using your custom-built image
-- Result: Your code running in your development environment
-
-### Access Your Application
-
-```bash
-# Check if application is accessible
-kubectl port-forward service/registry-demo 8080:80 &
-curl http://localhost:8080
-
-# Or check pod logs
-kubectl logs -l app=registry-demo
-```
-
-### Validation Checklist
-
-Your tutorial stack is working when:
-
-- **Registry API responds**: `curl http://localhost:30500/v2/` returns `{}`
-- **Custom image builds**: `make build src/registry-demo` succeeds
-- **Image in registry**: `curl http://localhost:30500/v2/_catalog` shows `{"repositories":["registry-demo"]}`
-- **App deploys**: `kubectl get pods -l app=registry-demo` shows running pods
-- **App accessible**: `curl http://localhost:30510` returns HTML
-
-### Troubleshooting
-
-**Component stuck deploying?**
-```bash
-kubectl describe kustomization component-name -n flux-system
-```
-
-**Registry not accessible?**
-```bash
-kubectl get pods -n registry
-kubectl logs -n registry deployment/registry
-```
-
-**Application won't start?**
-```bash
-kubectl describe pods -l app=registry-demo
-kubectl logs -l app=registry-demo
-```
-
----
-
-## Advanced Patterns
-
-### Mixed Installation Patterns
-
-While this tutorial focuses on GitOps-managed stacks, HostK8s stacks also serve as excellent foundations for manually installed applications:
-
-```
-┌─────────────────────────────────────────┐
-│ Manual Applications (helm/kubectl)     │  ← Added manually
-│ • dev-tools, monitoring dashboards     │
-│ • experimental apps, personal tools    │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│ Stack Applications (GitOps-managed)    │  ← From stack.yaml
-│ • Capability groups and microservices  │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│ Stack Components (GitOps-managed)      │  ← Shared foundation
-│ • Databases, networking, monitoring    │
-└─────────────────────────────────────────┘
-```
-
-**Example Workflow:**
-```bash
-# Deploy your stack foundation (local extension)
-make up extension/tutorial-stack
-
-# Stack provides PostgreSQL, Redis, service mesh, monitoring...
-
-# Then manually add development tools
-helm install pgadmin postgresql/pgadmin4
-kubectl apply -f my-debug-pod.yaml
-```
-
-This approach leverages stack-provided infrastructure while maintaining development flexibility. The manually installed applications can use the databases, networking, and monitoring that your stack provides.
-
----
-
----
-
-## Part 7: Summary and Next Steps
-
-### What You Accomplished
-
-Congratulations! You've successfully created your first custom HostK8s software stack and tested the complete development workflow:
-
-**Core Concepts Mastered:**
-- **Lego Block Analogy** - Components as building blocks, stacks as instructions
-- **Component Dependencies** - Understanding build order and health checks
-- **GitOps Automation** - How Flux orchestrates deployments
-- **Extension Pattern** - Creating reusable, shareable stacks
-
-**Technical Skills Gained:**
-- **Stack Creation** - Built complete `tutorial-stack` with 5 components
-- **Git Integration** - Version-controlled your stack design
-- **Local Extension Workflow** - `make up extension/tutorial-stack`
-- **Custom Application Pipeline** - Build → Push → Deploy cycle
-- **Infrastructure Validation** - Verified all components working together
-
-**Infrastructure You Built:**
-- **Private Docker Registry** - For storing your custom images
-- **Certificate Management** - Automated TLS certificates via cert-manager
-- **Cluster Monitoring** - Metrics collection with metrics-server
-- **GitOps Foundation** - Flux controllers for automated deployments
-- **Complete Development Environment** - Ready for real application development
-
-### Your Development Workflow
-
-You now have a complete development environment that supports:
-
-```bash
-# 1. Deploy your development infrastructure
-make up extension/tutorial-stack
-
-# 2. Build your application
-make build src/my-app
-
-# 3. Deploy your application
-make deploy my-app
-
-# 4. Iterate and develop
-# (make changes, rebuild, redeploy)
-```
-
-### Next Steps
-
-**Immediate:**
-1. **Experiment** - Try modifying component versions or adding new components
-2. **Build Real Apps** - Use this stack for actual application development
-3. **Share Your Stack** - Team members can clone and use your tutorial-stack
-
-**Advanced:**
-1. **Create Specialized Stacks** - Build web-stack, api-stack, or data-stack variants
-2. **Add Complex Components** - Include databases, message queues, or monitoring
-3. **Production Considerations** - Add backup, security, and scaling configurations
-4. **Multi-Environment** - Create dev/staging/prod variants of your stack
-
-### Key Principles Learned
-
-- **Composability** - Small, focused components combine into powerful systems
-- **Dependency Management** - Proper ordering ensures reliable deployments
-- **GitOps Workflow** - Infrastructure as code with automatic reconciliation
-- **Extension Pattern** - Local development with easy sharing and collaboration
-- **End-to-End Pipeline** - From source code to running application
-
-### Troubleshooting Quick Reference
-
-**Stack won't deploy?**
-```bash
+# Access your running application
 make status
-kubectl get kustomizations -n flux-system
-kubectl describe kustomization <failing-component> -n flux-system
 ```
 
-**Registry not accessible?**
+**Key insight:** Your custom application pulls from `localhost:5443/registry-demo:latest` - your own private registry that the stack provided. No external dependencies or Docker Hub requirements.
+
+## Understanding GitOps Coordination
+
+Now that you've seen the stack in action, let's understand how GitOps automation eliminates the coordination chaos.
+
+### How the "Instruction Booklet" Works
+
+Each step in your stack.yaml is a GitOps instruction:
+
+```yaml
+# Wait for certificates to be ready
+dependsOn:
+  - name: component-certs
+# Then deploy certificate authority
+path: ./software/components/certs-ca
+# Don't continue until it's healthy
+wait: true
+```
+
+**GitOps automation** (Flux) reads these instructions and:
+- Monitors component health continuously
+- Only proceeds when dependencies are satisfied
+- Retries failed deployments automatically
+- Maintains desired state over time
+
+### Stack vs Manual Comparison
+
+| Approach | Coordination | Environment Consistency | Failure Recovery |
+|----------|-------------|-------------------------|------------------|
+| **Manual** | You manage timing | Different every time | Manual debugging |
+| **Stack** | Automated dependencies | Identical deployments | Automatic retries |
+
+### Troubleshooting Your Stack
+
+**If components aren't deploying:**
 ```bash
+# Check GitOps status
+kubectl get kustomizations -n flux-system
+
+# Debug specific component
+kubectl describe kustomization component-registry -n flux-system
+```
+
+**If custom app won't deploy:**
+```bash
+# Verify registry is accessible
 kubectl port-forward -n registry service/registry 5000:5000
 curl http://localhost:5000/v2/
+
+# Check if image was pushed
+curl http://localhost:5000/v2/_catalog
 ```
-
-**Application won't start?**
-```bash
-kubectl get pods -l app=<app-name>
-kubectl logs -l app=<app-name>
-kubectl describe pods -l app=<app-name>
-```
-
-### Additional Resources
-
-- [HostK8s Architecture Guide](../architecture.md) - Deep dive into HostK8s design
-- [Available Components](../../software/components/) - All built-in components
-- [Example Stacks](../../software/stack/) - More stack examples
-- [Extension Patterns](../adr/004-extension-system-architecture.md) - Advanced extension techniques
 
 ---
 
-**Congratulations!** You've mastered HostK8s software stack creation. You now have the foundation to build any development environment you need, from simple applications to complex distributed systems. The same patterns and principles apply whether you're building a personal project or enterprise infrastructure.
+## What Comes Next
+
+You've experienced the power of software stack coordination - how GitOps automation eliminates the operational chaos of managing individual services. The same `make up` command works regardless of stack complexity, giving you consistent environments for any development scenario.
+
+These software stacks create the foundation for component-based development. In the next tutorial, you'll:
+- Connect applications to shared service components
+- Learn consumption patterns for databases, caches, and services
+- Understand when to build new components vs. use existing ones
+
+The coordinated deployment patterns you've learned here will support the shared component architectures you'll explore next.
+
+👉 **Continue to:** [Using Components](shared-components.md)
