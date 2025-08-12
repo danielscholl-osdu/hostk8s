@@ -162,9 +162,15 @@ resources:
 
 Kustomize's `namespace` field can override the namespace for all resources, even if they had hardcoded values. You could edit the `basic` app's `kustomization.yaml` to change `namespace: default` to `namespace: feature` and redeploy successfully.
 
-The limitation isn't Kustomize itself - it's that static configuration files can't respond to dynamic deployment contexts. HostK8s needs to support `make deploy basic feature` with the same static files, but the kustomization file can't adapt to command-line arguments.
+**The limitation:** Static configuration files can't respond to dynamic deployment contexts. HostK8s needs to support `make deploy basic feature` with the same static files, but the kustomization file can't adapt to command-line arguments.
 
-This forces teams into complex workarounds: creating Kustomize overlays with separate directories for each environment, maintaining multiple copies of applications, building custom scripts to modify files before deployment, or simply avoiding namespace isolation altogether. While Kustomize provides powerful capabilities through overlays, patches, and cross-cutting fields, these solutions require complex directory structures and careful configuration management that make simple deployments unnecessarily complicated.
+**The workarounds:** This forces teams into complex solutions:
+- Kustomize overlays with separate directories for each environment
+- Multiple copies of applications for different contexts
+- Custom scripts to modify files before deployment
+- Avoiding namespace isolation altogether
+
+While Kustomize provides powerful capabilities, these solutions require complex directory structures that make simple deployments unnecessarily complicated.
 
 ### Why Static YAML Hits a Wall
 
