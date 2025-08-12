@@ -13,7 +13,7 @@ You've written a web application and want to deploy it to your local Kubernetes 
 - **Basic monitoring** - you need to know if your application is healthy
 - **Your custom application** - the actual code you wrote
 
-So you start setting up these foundation services one by one.
+So you start setting up these foundational components one by one.
 
 ### Experiencing the Coordination Wall
 
