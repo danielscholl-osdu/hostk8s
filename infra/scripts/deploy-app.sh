@@ -39,7 +39,6 @@ deploy_helm_app() {
     local helm_args=(
         --namespace "$namespace"
         --create-namespace
-        --set "global.labels.hostk8s\.app=$app_name"
     )
 
     # Add custom values if they exist

@@ -11,7 +11,6 @@
 global:
   labels:
     app: "{{ .Chart.Name }}"
-    hostk8s.app: advanced
 
 ################################################################################
 # Application Configuration

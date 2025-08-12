@@ -202,7 +202,7 @@ export METALLB_ENABLED=true
 
 make restart
 make deploy advanced
-make deploy advanced feature  # Same chart, different namespace
+make deploy advanced feature
 make status
 ```
 
@@ -224,43 +224,44 @@ advanced/
 │   └── ...
 ```
 
-The critical integration points that enable `make deploy` with Helm:
+### Making Helm Charts Work with HostK8s
 
-**Chart.yaml** - Helm chart identification:
+For a Helm chart to work with `make deploy` and `make status`, the chart developer must follow the **HostK8s Helm Contract**:
+
+#### Required: Chart Structure
 ```yaml
+# Chart.yaml (tells HostK8s to use Helm)
 apiVersion: v2
 name: advanced
 description: A HostK8s Advanced Sample
 type: application
 version: 0.1.0
-annotations:
-  hostk8s.app: advanced      # HostK8s app identity
-  hostk8s.pattern: helm     # Deployment pattern
 ```
 
-**values.yaml** - Global label structure:
+#### Required: Resource Labels
+Every Kubernetes resource must have the `hostk8s.app` label for `make status` to find them:
+
 ```yaml
-global:
+# In your templates (deployment.yaml, service.yaml, etc.)
+metadata:
   labels:
-    hostk8s.app: advanced    # HostK8s discovery label
+    hostk8s.app: advanced    # Must match your chart name
 ```
 
-**templates/_helpers.tpl** - Label injection:
+#### Implementation Example
+The `advanced` chart implements this through a common labels helper:
+
 ```yaml
+# templates/_helpers.tpl
 {{- define "advanced.labels" -}}
-helm.sh/chart: {{ include "advanced.chart" . }}
-{{ include "advanced.selectorLabels" . }}
-app.kubernetes.io/managed-by: {{ .Release.Service }}
 hostk8s.app: advanced
+# ... other standard labels
 {{- end }}
 ```
 
-| Capability | How It Works | Why It Matters |
-|------------|--------------|----------------|
-| **Chart Detection** | `Chart.yaml` present | `make deploy` knows to use Helm |
-| **Dynamic Configuration** | Templates + values | Supports namespaces and environments |
-| **Label Injection** | `--set global.labels.hostk8s.app=$app_name` | `make status` finds all resources |
-| **Environment Support** | Optional `values/development.yaml` | Per-environment overrides |
+Then every template uses `{{ include "advanced.labels" . }}` to apply the labels consistently.
+
+**That's it.** Two requirements: Chart.yaml for detection, hostk8s.app labels for discovery. The chart handles everything else - HostK8s just provides the consistent `make deploy` interface.
 
 ### Chart Values Hierarchy
 
@@ -278,16 +279,11 @@ advanced/
 1. **Base values**: `values.yaml` - Default chart configuration
 2. **Custom values**: `custom_values.yaml` - User-specific overrides (if present)
 3. **Environment values**: `values/development.yaml` - Environment overrides (if present)
-4. **Runtime injection**: `--set global.labels.hostk8s.app=$app_name` - Dynamic label assignment
 
 This hierarchy allows developers to:
 - **Customize locally**: Create `custom_values.yaml` for personal testing configurations
 - **Override per environment**: Use `values/development.yaml` for consistent dev settings
 - **Maintain defaults**: Keep `values.yaml` as the baseline configuration
-
-**The key insight:**
-
-The deploy script automatically injects `--set global.labels.hostk8s.app=$app_name` when deploying. This dynamic label injection, combined with the values hierarchy, ensures consistent HostK8s discovery while allowing environment-specific customization.
 
 ---
 
