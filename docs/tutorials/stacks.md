@@ -29,15 +29,45 @@ The registry component seems straightforward enough. Let's try deploying it:
 kubectl apply -f software/components/registry/
 ```
 
-**You'll get an error** - the registry fails to start because it expects certificates that don't exist yet. This is the coordination problem in miniature. The registry component assumes cert-manager is already running and has created the certificate resources it needs.
+**You'll see a mix of success and failure** - some resources create fine (namespace, storage, services) while others fail with errors about missing Certificate resources and namespace dependency issues. The registry component assumes cert-manager is already installed and expects things to be deployed in a specific order.
 
-This is exactly what happens when you scale this up to real development environments. Every service assumes other services are already there and configured correctly. Without coordination, you end up playing a guessing game about which service to deploy first, waiting and hoping things are ready, and debugging why things aren't connecting.
+This is the coordination problem in miniature - the component assumes other services are already there and configured correctly.
 
-And this was just trying to add ONE additional service to your cluster. Imagine coordinating 10-15 foundation services that all have different dependencies on each other. This coordination chaos is exactly why individual application deployment worked smoothly in the previous tutorial, but multi-service environments become nightmares to manage manually.
+Now imagine this same experience multiplied across 10-15 foundation services, each with their own assumptions about what should already be running. You'd spend more time figuring out deployment order and debugging cryptic errors than actually building applications.
+
+### The Natural Response: DIY Orchestration
+
+When teams hit this coordination wall, they naturally start creating their own orchestration. You've probably seen this before:
+
+**The "Magic README" approach** - a step-by-step document that says "First install cert-manager, wait 2 minutes, then run these three kubectl commands, then check if the pods are ready before proceeding..."
+
+**The "Setup Script" approach** - a bash script that tries to sequence everything with sleep commands and basic error checking, hoping the timing works out.
+
+**The "Makefile Dependencies" approach** - using Make targets with dependencies to try to enforce order, but still relying on manual timing and hoping services are actually ready.
+
+These DIY solutions work... sometimes. But they create a bigger architectural problem: **tight coupling**. Your setup script becomes a monolithic sequence that's bound to your specific environment. Want to work on just the monitoring component? You can't - you have to run through the entire certificate chain first. Need to reuse the database setup for a different project? Good luck extracting it from the middle of your 200-line script.
+
+This tight coupling makes development painful. If you're working on something that happens toward the end of the sequence, you can't isolate your work. You're forced to deploy and debug the entire dependency chain every time you want to test a change.
+
+This coordination chaos is exactly why individual application deployment worked smoothly in the previous tutorial, but multi-service environments become nightmares to manage manually.
+
+### Enter: Composable Components
+
+Software stacks solve this by flipping the approach. Instead of tightly-coupled orchestration scripts, you get **composable components** - think Lego blocks that snap together cleanly.
+
+That registry component you just tried to deploy? It's actually well-designed - it handles its own storage, networking, and service configuration. It just expects certain foundation pieces to exist first (like certificate management). This is exactly how components should work: self-contained but composable.
+
+**Components vs Applications:**
+- **Components** provide shared infrastructure that multiple applications can use - databases, certificate management, monitoring, container registries
+- **Applications** are your business logic - the web services, APIs, and custom code you're actually building
+
+Components are the foundation blocks that make your applications possible. Need to work on just one component? Deploy it in isolation. Want to reuse a component in a different environment? Drop it right into a new stack. This modularity eliminates the tight coupling problem while still handling coordination properly.
 
 ## The Stack Solution
 
-Software stacks solve this coordination chaos through a simple insight: instead of managing individual services manually, you declare the complete environment you want and let automation handle all the timing and dependencies.
+Software stacks are like Lego instruction booklets - they tell you which components to use and how they snap together. Instead of writing fragile scripts that manage timing and order manually, you declare what components and applications you want, define their dependencies, and let GitOps automation handle all the sequencing, health checking, and retry logic.
+
+Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable development environments.
 
 **Think of it like building with Lego blocks:**
 
