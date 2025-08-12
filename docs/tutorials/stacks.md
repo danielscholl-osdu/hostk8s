@@ -121,9 +121,9 @@ mkdir -p software/stack/extension/tutorial-stack
 cd software/stack/extension/tutorial-stack
 ```
 
-**Every stack needs these files to work:**
+To understand how stacks work, let's look at the three files that make them possible.
 
-**kustomization.yaml** acts as the table of contents:
+First, `kustomization.yaml` acts as the table of contents:
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -132,7 +132,7 @@ resources:
   - stack.yaml         # The step-by-step instructions
 ```
 
-**repository.yaml** tells GitOps where to find the components:
+Second, `repository.yaml` tells GitOps where to find components:
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -151,7 +151,7 @@ spec:
     !/software/components/
 ```
 
-**stack.yaml** defines the orchestration dependencies:
+Finally, `stack.yaml` defines how components depend on each other:
 ```yaml
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
