@@ -123,7 +123,7 @@ cd software/stack/extension/tutorial-stack
 
 To understand how stacks work, let's look at the three files that make them possible.
 
-First, `kustomization.yaml` acts as the table of contents (similar to the kustomization files from the apps tutorial, but this coordinates GitOps manifests instead of application manifests):
+First, `kustomization.yaml` acts as the table of contents:
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -193,7 +193,7 @@ Flux reads these configurations and creates an execution plan: start with compon
 The dependency chain flows like this:
 `cert-manager` → `basic certificates` → `certificate authority` → `certificate issuer` → `registry`
 
-Here's what a simple stack.yaml looks like with just two components:
+Here's what a simple `stack.yaml` looks like with two components:
 
 ```yaml
 ---
