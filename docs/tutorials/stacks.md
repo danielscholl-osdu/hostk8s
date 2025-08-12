@@ -151,6 +151,30 @@ spec:
     !/software/components/
 ```
 
+**stack.yaml** defines the orchestration dependencies:
+```yaml
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs
+  namespace: flux-system
+spec:
+  path: ./software/components/certs
+  wait: true  # Must be healthy before continuing
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-registry
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-certs  # Wait for certs first
+  path: ./software/components/registry
+  wait: true
+```
+
 **The Stack Recipe**
 
 The `stack.yaml` file is where the orchestration magic happens. Each component gets its own section that declares two critical things: where to find the component (`path: ./software/components/registry`) and what it depends on (`dependsOn: component-certs-issuer`).
