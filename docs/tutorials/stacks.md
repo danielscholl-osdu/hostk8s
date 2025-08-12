@@ -37,7 +37,7 @@ Now imagine this same experience multiplied across 5-10 foundational components,
 When projects hit this coordination wall, they naturally start creating their own orchestration. You've probably seen this before: **'Magic README' files** with step-by-step procedures that say "run this command, verify the output shows 'Ready', then copy-paste the next block and wait for completion," or **bash scripts** with sleep commands, excessive or not enough logging and crossed fingers hoping services are actually ready before continuation.
 
 
-These DIY solutions work sometimes, but create a bigger architectural problem: **tight coupling**. Your setup script becomes a monolithic sequence bound to your specific environment. Want to work on just the monitoring component? You can't because you have to run through the entire certificate chain first. This tight coupling makes development painful because you can't isolate your work.
+These DIY solutions work sometimes, but create a bigger architectural problem: **tight coupling**. Your setup script becomes a monolithic sequence bound to your specific environment. Want to work on just the monitoring component? You can't because you have to run through the entire process first. This tight coupling makes development painful because you can't isolate your work.
 
 This coordination chaos is exactly why individual application deployment worked smoothly in the previous tutorial, but multi-service environments become nightmares to manage manually.
 
@@ -45,17 +45,17 @@ This coordination chaos is exactly why individual application deployment worked 
 
 Software stacks solve this by flipping the approach. Instead of tightly-coupled orchestration scripts, you get **composable components** that work like Lego blocks snapping together cleanly.
 
-That registry component you just tried to deploy? It's actually well-designed because it handles its own storage, networking, and service configuration. It just expects certain foundation pieces to exist first (like certificate management). This is exactly how components should work: self-contained but composable.
+That registry component you just tried to deploy? It's actually well-designed because it handles its own storage, networking, and service configuration. It just expects certain foundation pieces to exist first. This is exactly how components should work: self-contained but composable.
 
 **Components vs Applications:**
 
-Components provide shared infrastructure that multiple applications can use. Think databases, certificate management, monitoring, and container registries. Applications contain your business logic: the web services, APIs, and custom code you're actually building.
+Components provide shared capabilities that multiple applications can use. Think databases, certificate management, monitoring, and container registries. Applications contain your business logic: the web services, APIs, and custom code you're actually building.
 
 Components are the foundation blocks that make your applications possible. Need to work on just one component? Deploy it in isolation. Want to reuse a component in a different environment? Drop it right into a new stack. This modularity eliminates the tight coupling problem while still handling coordination properly.
 
 ## The Stack Solution
 
-Software stacks are like Lego instruction booklets that tell you which components to use and how they snap together. Instead of writing fragile scripts that manage timing and order manually, you declare what components and applications you want, define their dependencies, and let GitOps automation handle all the sequencing, health checking, and retry logic.
+Software stacks are like Lego instruction booklets that tell you which components to use and how they snap together. Instead of writing fragile scripts that manage timing and order manually, you declare what components and applications you want, define their dependencies, and let an automated orchestration framework handle all the sequencing, health checking, and retry logic.
 
 Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable development environments.
 
