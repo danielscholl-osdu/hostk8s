@@ -57,6 +57,8 @@ Components are the foundation blocks that make your applications possible. Need 
 
 Software stacks are like Lego instruction booklets that tell you which components to use and how they snap together. Instead of writing fragile scripts that manage timing and order manually, you declare what components and applications you want, define their dependencies, and let an automated orchestration framework handle all the sequencing, health checking, and retry logic.
 
+This automated orchestration is called **GitOps** - it continuously monitors your desired state configuration and automatically works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
+
 Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable development environments.
 
 **Think of the difference like this:**
@@ -113,7 +115,7 @@ Together, these components create a platform supporting the complete build, stor
 
 Now let's build a stack that solves the coordination problem you just experienced. We'll create the same development environment you tried to build manually, but this time with proper orchestration that handles all the dependencies automatically.
 
-The stack will use **GitOps** (implemented by Flux), which you can think of as a robot assistant that watches your desired state and continuously works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
+The stack will use **Flux** to implement GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
 
 ```bash
 # Create your stack extension directory
