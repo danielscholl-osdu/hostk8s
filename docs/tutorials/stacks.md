@@ -10,7 +10,7 @@ You've written a web application and want to deploy it to your local Kubernetes 
 
 You need a place to store Docker images because you can't keep pushing to Docker Hub for every development change. HTTPS certificates are essential since your application should use proper TLS, even locally. Basic monitoring lets you know if your application is healthy. And of course, you need to deploy your actual custom application code.
 
-So you start setting up these foundational components one by one.
+So you start setting up these **foundational components** one by one.
 
 ### Experiencing the Coordination Wall
 
@@ -26,7 +26,7 @@ The registry component seems straightforward enough. Let's try deploying it:
 kubectl apply -f software/components/registry/
 ```
 
-**You'll see a mixture of results** because some resources create fine (namespace, storage, services) while others fail with errors about missing certificate resources and namespace dependency issues. The registry component assumes cert-manager is already installed and expects things to be deployed in a specific order.
+**You'll see a mixture of results** because some resources create fine while others fail with errors about missing certificate resources and namespace dependency issues. The registry component assumes cert-manager is already installed and expects things to be deployed in a specific order.
 
 This is a typical coordination problem. The component assumes other services are already there and configured correctly.
 
