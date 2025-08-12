@@ -34,7 +34,7 @@ Now imagine this same experience multiplied across 5-10 foundational components,
 
 ### The Natural Response: DIY Orchestration
 
-When projects hit this coordination wall, they naturally start creating their own orchestration. You've probably seen this before: **'Magic README' files** with step-by-step procedures that say "run this command, verify the output shows 'Ready', then copy-paste the next block and wait for completion," **bash scripts** with sleep commands and crossed fingers hoping services are actually ready.
+When projects hit this coordination wall, they naturally start creating their own orchestration. You've probably seen this before: **'Magic README' files** with step-by-step procedures that say "run this command, verify the output shows 'Ready', then copy-paste the next block and wait for completion," or **bash scripts** with sleep commands, excessive or not enough logging and crossed fingers hoping services are actually ready before continuation.
 
 
 These DIY solutions work sometimes, but create a bigger architectural problem: **tight coupling**. Your setup script becomes a monolithic sequence bound to your specific environment. Want to work on just the monitoring component? You can't because you have to run through the entire certificate chain first. This tight coupling makes development painful because you can't isolate your work.
