@@ -29,6 +29,9 @@ deploy_helm_app() {
     # Default values file
     local values_file="$app_dir/values.yaml"
 
+    # Custom values file (user-specific overrides)
+    local custom_values="$app_dir/custom_values.yaml"
+
     # Environment-specific values (development by default for HostK8s)
     local env_values="$app_dir/values/development.yaml"
 
@@ -38,6 +41,12 @@ deploy_helm_app() {
         --create-namespace
         --set "global.labels.hostk8s\.app=$app_name"
     )
+
+    # Add custom values if they exist
+    if [ -f "$custom_values" ]; then
+        helm_args+=(-f "$custom_values")
+        log_info "Using custom values: $custom_values"
+    fi
 
     # Add environment-specific values if they exist
     if [ -f "$env_values" ]; then

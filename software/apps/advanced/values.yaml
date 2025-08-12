@@ -1,75 +1,126 @@
-# Default values for advanced
+# Default values for HostK8s Advanced Sample
 # This is a YAML-formatted file.
+#
+# This chart deploys a Python Flask voting application with Redis backend
+# demonstrating modern Kubernetes deployment patterns with HostK8s
 
-# Global settings
+################################################################################
+# Global Settings
+# These values are used across all components for consistency
+#
 global:
   labels:
     app: "{{ .Chart.Name }}"
     hostk8s.app: advanced
 
-# Application configuration
+################################################################################
+# Application Configuration
+# Customize the voting application appearance and behavior
+#
 app:
+  # Application title displayed in the web interface
   title: "HostK8s Advanced Sample"
+
+  # First voting option button text
   vote1: "Kustomize"
+
+  # Second voting option button text
   vote2: "Helm"
+
+  # Show hostname in the title (useful for debugging multi-replica deployments)
   showHost: false
 
-# Frontend (Python Flask) configuration
+################################################################################
+# Frontend Service Configuration (Python Flask)
+# The web interface that users interact with
+#
 frontend:
+  # Kubernetes service name (used for internal networking)
   name: advanced-front
+
+  # Number of replicas to run (scale horizontally for high availability)
   replicas: 1
+
+  # Container image configuration
   image:
     repository: neilpeterson/azure-vote-front
     tag: "v3"
     pullPolicy: IfNotPresent
 
+  # Kubernetes service configuration
   service:
     type: ClusterIP
-    port: 80
-    targetPort: 80
+    port: 80          # Service port (internal cluster access)
+    targetPort: 80    # Container port the app listens on
 
+  # Resource allocation (adjust based on load requirements)
   resources:
     requests:
-      memory: "64Mi"
-      cpu: "100m"
+      memory: "64Mi"   # Minimum memory allocation
+      cpu: "100m"      # Minimum CPU allocation (0.1 CPU cores)
     limits:
-      memory: "128Mi"
-      cpu: "200m"
+      memory: "128Mi"  # Maximum memory allowed
+      cpu: "200m"      # Maximum CPU allowed (0.2 CPU cores)
 
-# Backend (Redis) configuration
+################################################################################
+# Backend Service Configuration (Redis)
+# Data storage for vote counting
+#
 backend:
+  # Kubernetes service name (used by frontend to connect)
   name: advanced-back
+
+  # Number of replicas (typically 1 for Redis)
   replicas: 1
+
+  # Container image configuration
   image:
     repository: redis
     tag: "alpine"
     pullPolicy: IfNotPresent
 
+  # Kubernetes service configuration
   service:
     type: ClusterIP
-    port: 6379
-    targetPort: 6379
+    port: 6379        # Standard Redis port
+    targetPort: 6379  # Container port Redis listens on
 
+  # Redis environment configuration
   env:
+    # Allow Redis to start without authentication (development only)
     allowEmptyPassword: "yes"
 
+  # Resource allocation (Redis is lightweight)
   resources:
     requests:
-      memory: "32Mi"
-      cpu: "50m"
+      memory: "32Mi"   # Minimum memory for Redis
+      cpu: "50m"       # Minimum CPU (0.05 CPU cores)
     limits:
-      memory: "64Mi"
-      cpu: "100m"
+      memory: "64Mi"   # Maximum memory allowed
+      cpu: "100m"      # Maximum CPU allowed (0.1 CPU cores)
 
-# Ingress configuration
+################################################################################
+# Ingress Configuration
+# External access and routing configuration
+#
 ingress:
+  # Enable/disable ingress creation
   enabled: true
+
+  # Ingress controller class (nginx for HostK8s)
   className: "nginx"
+
+  # Additional annotations for ingress behavior
+  # Example: nginx.ingress.kubernetes.io/ssl-redirect: "false"
   annotations: {}
+
+  # Host and path configuration
   hosts:
-    - host: "*"
+    - host: "*"       # Wildcard host (accepts all hostnames)
       paths:
-        - path: /
+        - path: /     # Root path routing
           pathType: Prefix
           service: advanced-front
+
+  # TLS configuration (empty for HTTP-only)
   tls: []

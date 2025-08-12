@@ -63,6 +63,7 @@ helm install my-vote software/apps/advanced/ \
 
 ## Helm Commands
 
+### Basic Commands
 ```bash
 # Install
 helm install advanced software/apps/advanced/
@@ -80,28 +81,45 @@ helm status advanced
 helm get values advanced
 ```
 
+### Create a Custom Values File
+
+Create a custom values file to override default settings. See `values.yaml` for all available configuration options with detailed comments.
+
+```bash
+# Copy and customize the values file
+cp values.yaml custom_values.yaml
+
+# Edit custom_values.yaml with your preferences
+# Example: Change app title, voting options, scaling, resources
+```
+
+### Install Helm Chart
+
+Install the helm chart with custom configuration.
+
+```bash
+# Install with custom values
+helm upgrade --install advanced . -f custom_values.yaml
+
+# Install to specific namespace
+NAMESPACE=test
+helm upgrade --install advanced . -n $NAMESPACE --create-namespace -f custom_values.yaml
+```
+
+### Template Preview
+
+Preview the generated manifests before installation.
+
+```bash
+# Preview with custom values
+helm template advanced . -f custom_values.yaml
+
+# Preview with inline overrides
+helm template advanced . --set app.title="Quick Test Vote"
+```
+
 ## Requirements
 
 - Kubernetes 1.19+
 - Ingress controller (NGINX recommended)
 - Helm 3.0+
-
-## Use Case
-
-Perfect for demonstrating:
-- Simple, reliable voting applications
-- Single-page web applications with immediate feedback
-- Python Flask + Redis architecture patterns
-- HostK8s Helm chart patterns and conventions
-- Modern Kubernetes deployment strategies
-
-## Advantages
-
-- ✅ **Clean dependencies**: Working code with no missing imports
-- ✅ **No complex polling**: Direct Redis operations, no database polling loops
-- ✅ **Simple networking**: Server-side rendering with immediate results
-- ✅ **Single ingress endpoint**: Simple `/` path routing
-- ✅ **Immediate results**: Vote and see counts update on same page
-- ✅ **Production patterns**: Demonstrates real-world Kubernetes deployment patterns
-
-This Advanced Sample eliminates complexity while providing a clear demonstration of modern application deployment using HostK8s patterns and conventions!
