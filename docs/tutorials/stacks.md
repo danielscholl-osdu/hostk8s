@@ -212,7 +212,7 @@ spec:
 
 The complete tutorial-stack follows this same pattern with a full dependency chain:
 
-**First**, the GitOps foundation (`component-flux-resources`) starts everything. **Then**, monitoring (`component-metrics-server`) and certificates (`component-certs`) deploy in parallel since they both just need the foundation. **Next**, the certificate authority (`component-certs-ca`) waits for basic certificates. **After that**, the certificate issuer (`component-certs-issuer`) waits for the CA. **Finally**, the container registry (`component-registry`) deploys once certificates are available.
+First, the GitOps foundation starts everything. Then, monitoring and certificates deploy in parallel since they both just need the foundation. Next, the certificate authority waits for basic certificates. After that, the certificate issuer waits for the CA. Finally, the container registry deploys once certificates are available.
 
 This creates the exact dependency sequence that eliminates the coordination chaos you experienced manually.
 
