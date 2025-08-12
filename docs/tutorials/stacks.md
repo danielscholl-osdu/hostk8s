@@ -17,49 +17,23 @@ So you start setting up these foundation services one by one.
 
 ### Experiencing the Coordination Wall
 
-Let's see what this manual approach actually looks like. Start with a fresh cluster:
+Let's see this coordination challenge in action. You have a cluster running, and you want to add a private container registry for your custom applications.
 
 ```bash
 make start
 ```
 
-Now try to set up your foundation services manually:
+The registry component seems straightforward enough. Let's try deploying it:
 
 ```bash
-# Try to deploy a container registry first
 kubectl apply -f software/components/registry/
-# Error: registry needs certificates to run securely
-
-# Okay, deploy certificates first
-kubectl apply -f software/components/certs/
-# Error: cert-manager CRDs don't exist yet
-
-# Fine, install cert-manager
-helm repo add jetstack https://charts.jetstack.io
-helm install cert-manager jetstack/cert-manager --create-namespace --namespace cert-manager --set installCRDs=true
-# Wait 2 minutes for it to be ready...
-
-# Now try certificates again
-kubectl apply -f software/components/certs/
-# Still failing - certificates need a certificate authority first
-
-# Deploy certificate authority
-kubectl apply -f software/components/certs-ca/
-# Failing - CA needs the basic certificate setup to exist
 ```
 
-**Stop right there.** This is the coordination wall that software stacks eliminate.
+**You'll get an error** - the registry fails to start because it expects certificates that don't exist yet. This is the coordination problem in miniature. The registry component assumes cert-manager is already running and has created the certificate resources it needs.
 
-**What you're experiencing:**
-- **Dependency guessing** - Which service needs to be deployed before others?
-- **Tool juggling** - kubectl for some things, helm for others, make for applications
-- **Timing mysteries** - How long do you wait between deployments?
-- **Failure debugging** - When something doesn't work, which dependency is missing?
-- **State inconsistency** - Your environment is half-deployed and broken
+This is exactly what happens when you scale this up to real development environments. Every service assumes other services are already there and configured correctly. Without coordination, you end up playing a guessing game about which service to deploy first, waiting and hoping things are ready, and debugging why things aren't connecting.
 
-This is exactly why individual application deployment (from the apps tutorial) worked smoothly, but multi-service environments become chaotic. You're not just deploying applications anymore - you're orchestrating an entire system.
-
-And this is with just 4 services. Real development environments often need 10-15 foundation services working together.
+And this was just trying to add ONE additional service to your cluster. Imagine coordinating 10-15 foundation services that all have different dependencies on each other. This coordination chaos is exactly why individual application deployment worked smoothly in the previous tutorial, but multi-service environments become nightmares to manage manually.
 
 ## The Stack Solution
 
