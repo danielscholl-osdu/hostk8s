@@ -266,13 +266,11 @@ advanced/
 
 If present, HostK8s loads custom_values.yaml after the base values, letting you override any configuration locally without modifying the original chart. This file is gitignored, so your personal customizations stay private while the chart remains shareable.
 
-Charts can also use standard Helm patterns like `values/development.yaml` for environment-specific settings, but that's independent of HostK8s - it's just how the individual chart chooses to organize its configuration.
-
 ---
 
 ## What Comes Next
 
-You've experienced HostK8s application deployment patterns - from static YAML limitations to Helm template flexibility. The same `make deploy` interface works regardless of application complexity, giving you consistent commands for any deployment scenario.
+You've experienced HostK8s application deployment patterns, from static YAML limitations to Helm template flexibility. The same `make deploy` interface works regardless of application complexity, giving you consistent commands for any deployment scenario.
 
 These application contracts form the foundation for more sophisticated deployments. In the next tutorial, you'll:
 - Share infrastructure components (databases, caches) across multiple applications
