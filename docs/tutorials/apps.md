@@ -160,22 +160,11 @@ resources:
 
 ### Understanding Kustomization's Namespace Capability
 
-**How it works:** Kustomize's `namespace` field overrides the namespace for all resources, even if they had hardcoded values. This is actually a powerful feature. You could edit `kustomization.yaml` to say `namespace: feature` and redeploy.
+Kustomize's `namespace` field can override the namespace for all resources, even if they had hardcoded values. You could edit the `basic` app's `kustomization.yaml` to change `namespace: default` to `namespace: feature` and redeploy successfully.
 
-**The real limitation:** Static configuration files can't respond to **dynamic deployment contexts**. HostK8s needs to support `make deploy basic feature` with the same static files, but the kustomization file can't adapt to command-line arguments.
+The limitation isn't Kustomize itself - it's that static configuration files can't respond to dynamic deployment contexts. HostK8s needs to support `make deploy basic feature` with the same static files, but the kustomization file can't adapt to command-line arguments.
 
-To deploy to different namespaces, you'd need to:
-1. Edit `kustomization.yaml` to change `namespace: default` → `namespace: feature`
-2. Deploy the modified version
-
-This is the core problem that leads teams to complex workarounds:
-- **Kustomize overlays** - Create `overlays/feature/kustomization.yaml` that sets different namespaces
-- **Manual file editing** - Change kustomization files for each deployment
-- **Separate app copies** - Maintain different versions for different environments
-- **Custom scripts** - Build deployment automation to modify files
-- **Avoiding isolation** - Just deploy everything to default and accept conflicts
-
-For configuration capabilities, see the [Kustomization Guide](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kustomization/).
+This forces teams into complex workarounds: creating Kustomize overlays with separate directories for each environment, maintaining multiple copies of applications, building custom scripts to modify files before deployment, or simply avoiding namespace isolation altogether. While Kustomize provides powerful capabilities through overlays, patches, and cross-cutting fields, these solutions require complex directory structures and careful configuration management that make simple deployments unnecessarily complicated.
 
 ### Why Static YAML Hits a Wall
 
