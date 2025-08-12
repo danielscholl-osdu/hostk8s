@@ -111,9 +111,9 @@ Together, these components create a platform supporting the complete build, stor
 
 ## Building Your Solution
 
-Now let's build a stack that solves the coordination problem you just experienced. We'll create the same development environment you tried to build manually, but this time with proper orchestration that handles all the dependencies automatically.
+Now let's break down a stack that solves the coordination problem you just experienced. We'll examine the same development environment you tried to build manually, but this time with proper orchestration that handles all the dependencies automatically.
 
-The stack will use **Flux** to implement GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
+The stack will use **Flux** as the tool to implement the GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; flux figures out how to get there and keep it there.
 
 ```bash
 # Create your stack extension directory
@@ -123,7 +123,7 @@ cd software/stack/extension/tutorial-stack
 
 To understand how stacks work, let's look at the three files that make them possible.
 
-First, `kustomization.yaml` acts as the table of contents:
+First, `kustomization.yaml` acts as the table of contents (similar to the kustomization files from the apps tutorial, but this coordinates GitOps manifests instead of application manifests):
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
@@ -132,7 +132,9 @@ resources:
   - stack.yaml         # The step-by-step instructions
 ```
 
-Second, `repository.yaml` tells GitOps where to find components:
+The next two files are GitOps configurations that the Flux tool uses as part of the GitOps automation process.
+
+Second, `repository.yaml` tells Flux where to find components:
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -179,9 +181,9 @@ spec:
 
 The `stack.yaml` file is where the orchestration magic happens. Each component gets its own section that declares two critical things: where to find the component (`path: ./software/components/registry`) and what it depends on (`dependsOn: component-certs-issuer`).
 
-The beauty is in the dependency declarations. GitOps reads these and creates an execution plan: start with components that have no dependencies, wait for them to be healthy, then start the next tier. The registry waits for certificate issuer, which waits for certificate authority, which waits for basic certificates, which waits for cert-manager installation.
+The beauty is in the dependency declarations. Flux reads these configurations and creates an execution plan: start with components that have no dependencies, wait for them to be healthy, then start the next tier. The registry waits for certificate issuer, which waits for certificate authority, which waits for basic certificates, which waits for cert-manager installation.
 
-This declarative approach eliminates all the timing guesswork you experienced manually. Each component simply declares "I need these other components to be healthy first" and GitOps figures out the rest.
+This declarative approach eliminates all the timing guesswork you experienced manually. Each component simply declares "I need these other components to be healthy first" and Flux figures out the rest.
 
 Here's what a simple stack.yaml looks like with just two components:
 
@@ -263,7 +265,7 @@ Now for the payoff - your stack creates a complete development environment that 
 
 ### Your Complete Development Platform
 
-The stack you just deployed gives you everything needed for end-to-end application development. You now have a private container registry to store your custom Docker images locally, automatic HTTPS certificates without manual certificate management, health monitoring to track your applications and infrastructure, and GitOps orchestration managing the entire lifecycle automatically.
+The stack you just deployed gives you everything needed for end-to-end application development. You now have a private container registry to store your custom Docker images locally, automatic HTTPS certificates without manual certificate management, health monitoring to track your applications and infrastructure, and GitOps automation managing the entire lifecycle automatically.
 
 ### The Complete Development Cycle
 
@@ -309,13 +311,13 @@ You've gone from manual coordination chaos to a working development environment 
 
 Remember playing dependency detective manually? The stack flips this completely. Each component declares its dependencies explicitly: "don't start until component-certs is ready," "deploy this specific component," "don't continue until everything is healthy."
 
-The GitOps automation continuously monitors when each component is actually ready, respects dependencies automatically, handles failures gracefully with retries, and maintains consistency by keeping everything running in the desired state.
+Flux continuously monitors when each component is actually ready, respects dependencies automatically, handles failures gracefully with retries, and maintains consistency by keeping everything running in the desired state.
 
 **The transformation:** coordination intelligence moves from your head into the automation system.
 
 ### The Coordination Intelligence Transfer
 
-You've experienced a fundamental shift in where coordination intelligence lives. Before, you were the dependency detective, manually figuring out what needed to happen when. Now, the stack declarations contain that intelligence, and GitOps automation executes it reliably every time.
+You've experienced a fundamental shift in where coordination intelligence lives. Before, you were the dependency detective, manually figuring out what needed to happen when. Now, the stack declarations contain that intelligence, and Flux executes it reliably every time.
 
 This intelligence transfer is what makes complex multi-service environments manageable.
 
