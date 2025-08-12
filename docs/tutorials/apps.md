@@ -176,9 +176,9 @@ While Kustomize provides powerful capabilities, these solutions require complex 
 
 **We just hit the complexity wall:** While Kustomize offers overlays, patches, and cross-cutting fields to handle deployment-time parameters like namespace, environment, or replica counts, it requires complex directory structures, patch files, and careful configuration management.
 
-This becomes cumbersome when teams need isolation through separate namespaces, feature branch preview deployments, or different configurations across dev, staging, and production environments. Kustomize solutions require overlay directories, strategic merge patches, and structured file hierarchies that make deployment management complex compared to simpler approaches.
+**The real-world impact:** Teams need isolation through separate namespaces, feature branch preview deployments, and different configurations across environments. Kustomize solutions require overlay directories, strategic merge patches, and structured file hierarchies that make deployment management complex compared to simpler approaches.
 
-**What we need is template-based configuration** that accepts deployment-time parameters without modifying source files. Instead of static file juggling, we need a clean parameter contract.
+What we need is template-based configuration that accepts deployment-time parameters without modifying source files. Instead of static file juggling, we need a clean parameter contract.
 
 ---
 
