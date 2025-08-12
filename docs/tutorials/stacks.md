@@ -53,7 +53,7 @@ Components provide shared capabilities that multiple applications can use. Think
 
 Components are the foundation blocks that make your applications possible. Need to work on just one component? Deploy it in isolation. Want to reuse a component in a different environment? Drop it right into a new stack. This modularity eliminates the tight coupling problem while still handling coordination properly.
 
-## The Stack Solution
+## How Stacks Eliminate Chaos
 
 Software stacks are like Lego instruction booklets that tell you which components to use and how they snap together. Instead of writing fragile scripts that manage timing and order manually, you declare what components and applications you want, define their dependencies, and let an automated orchestration framework handle all the sequencing, health checking, and retry logic.
 
@@ -67,7 +67,7 @@ The manual approach is like a model airplane kit with custom pieces that only fi
 
 The stack approach is like Lego blocks with instruction booklets. The same modular components can build a spaceship, a castle, or a race car, it all depends on which instruction booklet you follow.
 
-### How Stacks Eliminate the Chaos
+### Stack Solution in Action
 
 Remember the manual deployment wall you just hit? Here's how a stack would handle the same scenario:
 
@@ -99,17 +99,17 @@ This creates a natural two-layer architecture. **Components** provide the shared
 
 The key insight is managing dependencies: components must be healthy before applications try to use them. Instead of guessing the order, each component declares what it depends on, and the stack handles this automatically, so no more debugging connection failures because services aren't ready.
 
-## Building Your Development Environment
+## Building Your Software Stack
 
 Let's create the complete software solution you were trying to deploy manually. You'll see how the stack "instruction booklet" approach eliminates all the coordination chaos you just experienced.
 
-### Your Development Environment Stack
+### Your Software Stack Components
 
 We'll build a stack with four essential components. A container registry stores your Docker images locally instead of pushing every change to Docker Hub. Certificate management provides HTTPS even in development, which many modern frameworks now require. Basic monitoring lets you know when things break. The GitOps foundation acts as the automation engine that orchestrates everything.
 
 Together, these components create a platform supporting the complete build, store, deploy, and monitor cycle that real development workflows need.
 
-## Building Your Solution
+## Understanding Stack Structure
 
 Now let's break down a stack that solves the coordination problem you just experienced. We'll examine the same development environment you tried to build manually, but this time with proper orchestration that handles all the dependencies automatically.
 
@@ -211,15 +211,8 @@ spec:
 ```
 
 The complete tutorial-stack follows this same pattern with a full dependency chain:
-```yaml
-# The complete tutorial-stack.yaml dependency flow:
-# component-flux-resources     (no dependencies - starts first)
-# component-metrics-server     (depends on flux-resources)
-# component-certs             (depends on flux-resources)
-# component-certs-ca          (depends on certs)
-# component-certs-issuer      (depends on certs-ca)
-# component-registry          (depends on certs-issuer - deploys last)
-```
+
+**First**, the GitOps foundation (`component-flux-resources`) starts everything. **Then**, monitoring (`component-metrics-server`) and certificates (`component-certs`) deploy in parallel since they both just need the foundation. **Next**, the certificate authority (`component-certs-ca`) waits for basic certificates. **After that**, the certificate issuer (`component-certs-issuer`) waits for the CA. **Finally**, the container registry (`component-registry`) deploys once certificates are available.
 
 This creates the exact dependency sequence that eliminates the coordination chaos you experienced manually.
 
