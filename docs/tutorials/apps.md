@@ -202,8 +202,11 @@ export METALLB_ENABLED=true
 
 make restart
 make deploy advanced
+make deploy advanced feature  # Same chart, different namespace
 make status
 ```
+
+Two isolated environments from the same chart - exactly what failed with static YAML. The Helm templates adapt automatically, giving you a default environment at http://localhost:8080/ and a feature environment at http://feature.localhost:8080/. Same chart, same commands, different environments working seamlessly together.
 
 ### Anatomy of a Helm Application Contract
 
@@ -285,36 +288,6 @@ This hierarchy allows developers to:
 **The key insight:**
 
 The deploy script automatically injects `--set global.labels.hostk8s.app=$app_name` when deploying. This dynamic label injection, combined with the values hierarchy, ensures consistent HostK8s discovery while allowing environment-specific customization.
-
----
-
-## How Helm Fixes Ingress Conflicts
-
-Deploy multiple instances:
-
-```bash
-make deploy advanced feature
-make deploy advanced test
-```
-
-Check access URLs:
-- http://localhost:8080/ → default namespace
-- http://feature.localhost:8080/ → feature namespace
-- http://test.localhost:8080/ → test namespace
-
-**Why unique?** The ingress template uses host-based routing:
-
-```yaml
-{{- if eq $.Release.Namespace "default" }}
-host: "*"  # Default catches all
-{{- else }}
-host: "{{ $.Release.Namespace }}.localhost"  # Namespace-specific
-{{- end }}
-```
-
-→ Each namespace gets its own hostname, eliminating path conflicts and ensuring clean form submissions work correctly. Same chart, different hosts.
-
-**Browser Access:** You can access namespace deployments directly by entering the full URL (e.g., `http://test.localhost:8080/`) in your browser address bar. The voting functionality works correctly within each namespace.
 
 ---
 
