@@ -223,11 +223,10 @@ advanced
 
 ### Making Helm Charts Work with HostK8s
 
-For a Helm chart to work with `make deploy` and `make status`, the chart developer must follow the **HostK8s Helm Contract**:
+For a Helm chart to work with `make deploy` and `make status`, the chart developer needs just two things:
 
-#### Required: Chart Structure
+**Chart.yaml file** - tells HostK8s to use Helm:
 ```yaml
-# Chart.yaml (tells HostK8s to use Helm)
 apiVersion: v2
 name: advanced
 description: A HostK8s Advanced Sample
@@ -235,9 +234,7 @@ type: application
 version: 0.1.0
 ```
 
-#### Required: Resource Labels
-Every Kubernetes resource must have the `hostk8s.app` label for `make status` to find them:
-
+**hostk8s.app labels** - applied to all Kubernetes resources for discovery:
 ```yaml
 # In your templates (deployment.yaml, service.yaml, etc.)
 metadata:
@@ -245,8 +242,7 @@ metadata:
     hostk8s.app: advanced    # Must match your chart name
 ```
 
-#### Implementation Example
-The `advanced` chart implements this through a common labels helper:
+The `advanced` chart implements this through a common helper template:
 
 ```yaml
 # templates/_helpers.tpl
@@ -256,9 +252,7 @@ hostk8s.app: advanced
 {{- end }}
 ```
 
-Then every template uses `{{ include "advanced.labels" . }}` to apply the labels consistently.
-
-**That's it.** Two requirements: Chart.yaml for detection, hostk8s.app labels for discovery. The chart handles everything else - HostK8s just provides the consistent `make deploy` interface.
+Every template then uses `{{ include "advanced.labels" . }}` to ensure consistent labeling across all resources. HostK8s handles the deployment mechanics while the chart controls its own resource structure and labeling strategy.
 
 ### Chart Values Hierarchy
 
