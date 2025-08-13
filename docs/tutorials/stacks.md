@@ -264,59 +264,40 @@ The output shows the dependency orchestration in action:
 | [WAITING] | Blocked by dependencies | Component waits for its dependencies to become ready |
 | [...] | Reconciliation in progress | Flux is actively deploying or updating the component |
 
-**What you're witnessing:** This is the exact dependency sequence we defined (`certs → certs-ca → certs-issuer`) being automatically enforced by Flux. Instead of the coordination chaos you experienced manually - guessing deployment order, waiting and hoping things are ready, debugging circular dependencies - the stack handles all that intelligence automatically.
+**What you're witnessing:** This is the exact dependency sequence we defined being automatically enforced by Flux. Instead of the coordination chaos you experienced manually - guessing deployment order, waiting and hoping things are ready, debugging circular dependencies - the stack handles all that intelligence automatically.
 
-## Cleaning Up Your Stack
+## Stack Lifecycle Management
 
-Now that you've seen the stack in action, let's learn how to manage its lifecycle. One of the key benefits of stacks is clean removal:
+Stacks provide complete lifecycle management with the same dependency intelligence:
 
 ```bash
-# Remove the entire stack cleanly
+# Deploy a stack
+make up sample
+
+# Remove a stack (respects dependencies in reverse order)
 make down sample
+
+# Deploy multiple stacks
+make up sample
+make up extension/my-custom-stack
 ```
 
-Watch as GitOps automation removes components in reverse dependency order, ensuring clean teardown without orphaned resources. This is the same coordination intelligence working in reverse - dependencies are respected during removal just like they were during deployment.
-
-## Understanding What Just Happened
-
-You've gone from manual coordination chaos to automated environment deployment in minutes. The key insight is where the coordination intelligence lives.
-
-### From Human Detective to Automated Assistant
-
-Remember playing dependency detective manually? The stack flips this completely. Each component declares its dependencies explicitly: "don't start until component-certs is ready," "deploy this specific component," "don't continue until everything is healthy."
-
-Flux continuously monitors when each component is actually ready, respects dependencies automatically, handles failures gracefully with retries, and maintains consistency by keeping everything running in the desired state.
-
-**The transformation:** coordination intelligence moves from your head into the automation system.
-
-### When Things Go Wrong
-
-Troubleshooting is much simpler now because the stack guarantees dependencies are met before anything tries to use them. Most issues are component-specific rather than coordination problems.
-
-**Start with the big picture:** `make status` shows all components and their health.
-
-**Drill down to specifics:** If a component is stuck, `kubectl describe kustomization component-registry -n flux-system` will show exactly what's happening.
-
-The key difference from manual coordination debugging: you're debugging individual component behavior, not trying to figure out why services can't find each other.
+The same dependency coordination that handles deployment also manages clean removal - components are removed in reverse dependency order to prevent orphaned resources or broken references.
 
 ## What Just Changed for You
 
-You've experienced the fundamental shift that makes complex development environments manageable. Remember that registry deployment failure at the beginning? That coordination chaos is now completely eliminated.
+You've experienced the fundamental shift from coordination chaos to automated orchestration. Remember that registry deployment failure at the beginning? That coordination nightmare is now completely eliminated.
 
-**Before this tutorial:** You were stuck playing dependency detective, guessing what needed to be deployed first, juggling different tools, debugging half-broken environments, and spending more time on service coordination than actual development work.
+**Before this tutorial:** You were playing dependency detective, guessing deployment order, and spending more time debugging service connections than building applications.
 
-**After this tutorial:** You can deploy complete development environments with one command, automatic dependency resolution handles all the complexity, clean removal respects dependencies in reverse order, and you have zero coordination overhead so you can focus on building instead of infrastructure.
+**After this tutorial:** You deploy complete development environments with `make up`, while GitOps handles all coordination automatically. The same pattern scales whether you need 5 components or 50.
 
-**The transformation:** Software stacks move multi-service environments from coordination nightmares into simple, reliable platforms. The same pattern scales whether you need 5 services or 50.
+**The transformation:** Coordination intelligence moved from your head into declarative automation.
 
 ### Understanding the Building Blocks
 
-You've been using pre-built components throughout this tutorial - the certificate manager, container registry, and ingress controller that make up your stack's foundation. These components are the building blocks that eliminate coordination chaos.
+You've been using pre-built components throughout this tutorial - certificate managers, ingress controllers, and container registries that eliminate coordination chaos. But what if you need different components or want to understand how these building blocks actually work?
 
-But what if you need different components? What if you want to understand how these building blocks actually work, or need to create custom ones for your specific requirements?
+The components you've been deploying follow specific patterns that make them composable and reusable. Understanding these patterns is the key to building sophisticated environments beyond the tutorial examples.
 
-The components you've been deploying follow specific patterns and conventions that make them composable and reusable. Understanding these patterns is the key to building sophisticated development environments that go beyond the tutorial examples.
-
-**The next step:** Learning to build and customize the components that power your stacks.
-
-👉 **Continue to:** [Building Components](components.md) - *Learn how to create the reusable building blocks that power software stacks*
+👉 **Continue to:** [Building Components](components.md) - *Learn to create the reusable building blocks that power software stacks*
