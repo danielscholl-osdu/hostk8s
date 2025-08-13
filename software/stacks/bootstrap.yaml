@@ -15,7 +15,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stack/sample
+  path: ./software/stacks/sample
   targetNamespace: flux-system
   prune: true
   wait: false

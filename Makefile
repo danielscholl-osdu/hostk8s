@@ -88,7 +88,7 @@ up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample'
 	else \
 		echo "Unknown stack: $$STACK_NAME"; \
 		echo "Available stacks:"; \
-		find software/stack -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' || true; \
+		find software/stacks -mindepth 1 -maxdepth 1 -type d | sed 's|software/stacks/||' || true; \
 		exit 1; \
 	fi
 

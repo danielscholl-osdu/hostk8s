@@ -129,7 +129,7 @@ if [ -n "$SOFTWARE_STACK" ]; then
     export REPO_NAME GITOPS_REPO GITOPS_BRANCH SOFTWARE_STACK
 
     # Apply stack GitRepository first
-    apply_stamp_yaml "software/stack/$SOFTWARE_STACK/repository.yaml" "Configuring GitOps repository for stack: ${CYAN}$SOFTWARE_STACK${NC}"
+    apply_stamp_yaml "software/stacks/$SOFTWARE_STACK/repository.yaml" "Configuring GitOps repository for stack: ${CYAN}$SOFTWARE_STACK${NC}"
 
     # Apply bootstrap kustomization - different for extension vs local stacks
     if [[ "$SOFTWARE_STACK" == extension/* ]]; then
@@ -148,13 +148,13 @@ spec:
   sourceRef:
     kind: GitRepository
     name: extension-stack-system
-  path: ./software/stack/${SOFTWARE_STACK}
+  path: ./software/stacks/${SOFTWARE_STACK}
   targetNamespace: flux-system
   prune: true
   wait: false
 EOF
     else
-        apply_stamp_yaml "software/stack/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
+        apply_stamp_yaml "software/stacks/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
     fi
 else
     log_info "No stack specified - Flux installed without GitOps configuration"
@@ -171,5 +171,5 @@ if [ -n "$SOFTWARE_STACK" ]; then
     log_debug "  Repository: ${CYAN}$GITOPS_REPO${NC}"
     log_debug "  Branch: ${CYAN}$GITOPS_BRANCH${NC}"
     log_debug "  Stack: ${CYAN}$SOFTWARE_STACK${NC}"
-    log_debug "  Path: ${CYAN}./software/stack/$SOFTWARE_STACK${NC}"
+    log_debug "  Path: ${CYAN}./software/stacks/$SOFTWARE_STACK${NC}"
 fi

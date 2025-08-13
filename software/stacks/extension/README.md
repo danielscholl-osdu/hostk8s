@@ -58,7 +58,7 @@ spec:
     # exclude all
     /*
     # include this extension stack
-    !/software/stack/extension/your-stack-name/
+    !/software/stacks/extension/your-stack-name/
 ```
 
 #### `stack.yaml` - Infrastructure and Application Definitions

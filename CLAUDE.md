@@ -70,7 +70,7 @@ hostk8s/
 **Key Files**:
 - `.env` - Runtime configuration
 - `scripts/common.sh` - Shared utilities
-- `software/stack/*/kustomization.yaml` - Stack definitions
+- `software/stacks/*/kustomization.yaml` - Stack definitions
 
 ## Working Principles
 

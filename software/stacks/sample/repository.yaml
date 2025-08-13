@@ -13,4 +13,4 @@ spec:
     /*
     # include shared components and this stack
     !/software/components/
-    !/software/stack/sample/
+    !/software/stacks/sample/

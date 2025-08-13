@@ -103,22 +103,74 @@ Together, these components create a complete web application platform that elimi
 
 ## Understanding Stack Structure
 
-Now let's break down a stack that solves the coordination problem you just experienced. The stack will use **Flux** as the tool to implement the GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; Flux figures out how to get there and keep it there.
+Let's examine a working stack to understand how it eliminates the coordination chaos you just experienced:
 
-To understand how stacks work, lets example the sample stack and look at the three files that make them possible.
+```bash
+# Deploy the sample stack and explore its structure
+make up sample
+make status
+```
 
-First, `kustomization.yaml` acts as the table of contents:
+### Anatomy of a Software Stack
+
+Just like we explored the anatomy of HostK8s applications, let's examine what makes a stack work. Explore the files of the sample stack:
+
+```
+sample/
+├── kustomization.yaml          # Stack contract (table of contents)
+├── repository.yaml             # Where to find shared components
+├── stack.yaml                  # Orchestration dependencies
+├── components/                 # Stack-specific components
+│   ├── database/              # Custom PostgreSQL config for this stack
+│   └── ingress-nginx/         # Stack-specific ingress customization
+└── applications/              # Stack-specific applications
+    ├── api/                   # Backend API service
+    └── website/               # Frontend web application
+```
+
+### The Stack Contract
+
+Just like applications need a `kustomization.yaml` to work with `make deploy`, stacks need a specific structure to work with `make up`. The stack contract consists of three core files:
+
+| File | Purpose | What It Enables |
+|------|---------|-----------------|
+| `kustomization.yaml` | Table of contents | Stack discovery and deployment |
+| `repository.yaml` | Component sources | Access to shared and external components |
+| `stack.yaml` | Dependency orchestration | Automated sequencing and health checks |
+
+### Component Flexibility
+
+The key insight is that stacks can mix components from multiple sources:
+
+**Shared Components** (from `software/components/`):
+- Certificate management, container registry, monitoring
+- Maintained centrally, reused across multiple stacks
+- Located in the main HostK8s repository
+
+**External Components** (from other repositories):
+- Specialized databases, custom monitoring, third-party services
+- Teams can maintain component libraries in separate repositories
+- Referenced via `repository.yaml` configurations
+
+**Stack-Specific Components** (in `components/`):
+- Custom configurations that don't belong in shared libraries
+- Stack-specific tweaks to standard components
+- Specialized components unique to this environment
+
+This flexibility means your stack can pull the PostgreSQL component from your team's database repository, the monitoring from a shared infrastructure repository, and include a custom authentication component specific to this application.
+
+Let's examine how these pieces work together:
+
+**1. Stack Table of Contents (`kustomization.yaml`):**
 ```yaml
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - repository.yaml    # Where to find the components
-  - stack.yaml         # The step-by-step instructions
+  - repository.yaml    # Component source configuration
+  - stack.yaml         # Orchestration dependencies
 ```
 
-The next files are GitOps configurations that the Flux tool uses as part of the GitOps automation process.
-
-Second, `repository.yaml` tells Flux where to find components:
+**2. Component Source Configuration (`repository.yaml`):**
 ```yaml
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
@@ -127,7 +179,7 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: https://community.opengroup.org/danielscholl/hostk8s
+  url: https://community.opengroup.org/danielscholl/hostk8s  # Can be any Git repo
   ref:
     branch: main
   ignore: |
@@ -137,7 +189,7 @@ spec:
     !/software/components/
 ```
 
-Finally, `stack.yaml` defines how components depend on each other:
+**3. Orchestration Dependencies (`stack.yaml`):**
 ```yaml
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1

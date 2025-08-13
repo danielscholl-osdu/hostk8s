@@ -94,7 +94,7 @@ When invoked, follow these steps systematically:
 - **Custom Stacks**: Git-based external repository stacks via `GITOPS_REPO`
 
 **Key Locations:**
-- `software/stack/*/` - Stack definitions and Kustomizations
+- `software/stacks/*/` - Stack definitions and Kustomizations
 - `software/apps/*/` - Individual application specifications
 - `data/kubeconfig/` - Cluster access configurations
 - `.env` - Stack deployment configuration

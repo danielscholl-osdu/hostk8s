@@ -160,13 +160,13 @@ apply_stack_yaml() {
     else
         log_error "Stack configuration not found: $yaml_file"
         log_error "Available stacks:"
-        find software/stack -mindepth 1 -maxdepth 1 -type d | sed 's|software/stack/||' || true
+        find software/stacks -mindepth 1 -maxdepth 1 -type d | sed 's|software/stacks/||' || true
         exit 1
     fi
 }
 
 # Apply stack GitRepository first
-apply_stack_yaml "software/stack/$SOFTWARE_STACK/repository.yaml" "Configuring GitOps repository for stack: ${SOFTWARE_STACK}"
+apply_stack_yaml "software/stacks/$SOFTWARE_STACK/repository.yaml" "Configuring GitOps repository for stack: ${SOFTWARE_STACK}"
 
 # Apply bootstrap kustomization - different for extension vs local stacks
 if [[ "$SOFTWARE_STACK" == extension/* ]]; then
@@ -185,13 +185,13 @@ spec:
   sourceRef:
     kind: GitRepository
     name: extension-stack-system
-  path: ./software/stack/${SOFTWARE_STACK}
+  path: ./software/stacks/${SOFTWARE_STACK}
   targetNamespace: flux-system
   prune: true
   wait: false
 EOF
 else
-    apply_stack_yaml "software/stack/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
+    apply_stack_yaml "software/stacks/bootstrap.yaml" "Setting up GitOps bootstrap configuration"
 fi
 
 # Wait for GitRepository to sync

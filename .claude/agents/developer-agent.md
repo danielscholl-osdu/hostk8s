@@ -91,7 +91,7 @@ software/components/[component-name]/
 
 ### Stack Integration
 ```
-software/stack/[stack-name]/
+software/stacks/[stack-name]/
 ├── kustomization.yaml
 ├── components/
 │   └── [component-name].yaml   # Reference to component
@@ -150,7 +150,7 @@ cd trees/auth-system/
 
 # 3. Implement the feature
 # - Create component in software/components/
-# - Add to stack in software/stack/sample/
+# - Add to stack in software/stacks/sample/
 # - Configure values and settings
 
 # 4. Test implementation

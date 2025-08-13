@@ -1327,7 +1327,7 @@ In the [Software Stacks tutorial](stacks.md), you'll learn to:
 
 **Example Stack Composition:**
 ```yaml
-# software/stack/microservices-demo/kustomization.yaml
+# software/stacks/microservices-demo/kustomization.yaml
 resources:
   # Shared Components
   - ../../components/redis-infrastructure

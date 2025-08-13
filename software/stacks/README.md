@@ -126,7 +126,7 @@ spec:
 ## Directory Structure
 
 ```
-software/stack/
+software/stacks/
 ├── README.md              # This file
 ├── sources/               # Git repositories and Helm repositories
 │   ├── git-repository.yaml

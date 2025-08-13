@@ -154,7 +154,7 @@ make status                    # Verify deployment
 
 **Custom Software Stacks:**
 ```bash
-# Create complete stacks in software/stack/extension/
+# Create complete stacks in software/stacks/extension/
 export GITOPS_REPO=https://github.com/yourorg/custom-stack
 make up extension                 # Deploy complete custom environment
 make status                       # Monitor custom stack deployment
