@@ -88,6 +88,35 @@ function Log-Deploy {
     Log-Info $Message
 }
 
+# Winget package verification - more reliable than PATH-based checking
+function Test-WingetPackage {
+    param([string]$PackageName)
+    try {
+        $result = winget list $PackageName 2>$null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
+# Refresh environment variables to pick up newly installed tools
+function RefreshEnvironmentPath {
+    $machinePath = [System.Environment]::GetEnvironmentVariable("PATH", "Machine")
+    $userPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+    $env:PATH = $machinePath + ";" + $userPath
+}
+
+# Log-Debug with colored version support (matches Linux log_debug behavior)
+function Log-DebugWithColor {
+    param([string]$Tool, [string]$Version)
+    if ($env:LOG_LEVEL -ne "info") {
+        $timestamp = Get-Date -Format 'HH:mm:ss'
+        Write-Host "[$timestamp]" -ForegroundColor Green -NoNewline
+        Write-Host "  ${Tool}: " -NoNewline
+        Write-Host $Version -ForegroundColor Cyan
+    }
+}
+
 function Log-Section-Start {
     $timestamp = Get-Date -Format 'HH:mm:ss'
     Write-Host "[$timestamp] ------------------------" -ForegroundColor $Global:GREEN

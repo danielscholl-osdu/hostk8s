@@ -9,7 +9,7 @@ function Show-Usage {
     Write-Host "Options:"
     Write-Host "  -h, -help    Show this help"
     Write-Host ""
-    Write-Host "Required tools: kind, kubectl, helm, flux, docker-desktop"
+    Write-Host "Required tools: kind, kubectl, helm, flux, flux-operator-mcp"
     Write-Host ""
     Write-Host "Supported package managers:"
     Write-Host "  - Winget (winget) - Windows 10/11 (preferred)"
@@ -20,7 +20,8 @@ function Show-Usage {
 function Test-Tool {
     param(
         [string]$Tool,
-        [string]$InstallCommand = ""
+        [string]$InstallCommand = "",
+        [string]$WingetPackage = ""
     )
     
     if (Test-Command $Tool) {
@@ -59,34 +60,37 @@ function Test-Tool {
                     }
                 } catch { }
             }
-            "docker" {
+            "flux-operator-mcp" {
                 try {
-                    $output = docker version --format '{{.Client.Version}}' 2>$null
-                    if ($LASTEXITCODE -eq 0) {
-                        $version = $output
+                    $output = flux-operator-mcp --version 2>$null
+                    if ($LASTEXITCODE -eq 0 -and $output -match 'v?([0-9.]+)') {
+                        $version = $matches[1]
                     }
                 } catch { }
             }
         }
         
-        if ($env:LOG_LEVEL -ne "info") {
-            if ($version) {
-                Log-Debug "  ${Tool}: $version"
-            } else {
-                Log-Debug "  ${Tool}: installed"
-            }
+        if ($version) {
+            Log-DebugWithColor -Tool $Tool -Version $version
+        } else {
+            Log-DebugWithColor -Tool $Tool -Version "installed"
         }
         return $true
     }
     
-    if ($InstallCommand) {
-        Log-Info "Installing $Tool..."
-        try {
-            Invoke-Expression $InstallCommand
-            if ($LASTEXITCODE -eq 0) {
-                # Check version after installation
-                $version = ""
-                switch ($Tool) {
+    # First check if tool is installed via winget (more reliable than PATH check)
+    $isInstalled = $false
+    if ($WingetPackage -and (Test-WingetPackage $WingetPackage)) {
+        $isInstalled = $true
+    } elseif (Test-Command $Tool) {
+        $isInstalled = $true
+    }
+    
+    if ($isInstalled) {
+        # Tool is installed, try to get version (refresh PATH if needed)
+        RefreshEnvironmentPath
+        $version = ""
+        switch ($Tool) {
                     "kind" {
                         try {
                             $output = kind version 2>$null
@@ -119,31 +123,43 @@ function Test-Tool {
                             }
                         } catch { }
                     }
-                    "docker" {
+                    "flux-operator-mcp" {
                         try {
-                            $output = docker version --format '{{.Client.Version}}' 2>$null
-                            if ($LASTEXITCODE -eq 0) {
-                                $version = $output
+                            $output = flux-operator-mcp --version 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $output -match 'v?([0-9.]+)') {
+                                $version = $matches[1]
                             }
                         } catch { }
                     }
                 }
                 
-                if ($env:LOG_LEVEL -ne "info") {
-                    if ($version) {
-                        Log-Debug "  ${Tool}: $version"
-                    } else {
-                        Log-Success "  ${Tool}: installed"
-                    }
-                }
+        if ($version) {
+            Log-DebugWithColor -Tool $Tool -Version $version
+        } else {
+            Log-DebugWithColor -Tool $Tool -Version "installed"
+        }
+        return $true
+    }
+    
+    # Tool not found, try to install it
+    if ($InstallCommand) {
+        Log-Info "Installing $Tool..."
+        try {
+            Invoke-Expression $InstallCommand
+            # Check if tool is now available after installation
+            if (Test-Command $Tool) {
+                Log-Success "  ${Tool}: installed"
                 return $true
+            } else {
+                Log-Error "Failed to install ${Tool}"
+                return $false
             }
         } catch {
             Log-Error "Failed to install ${Tool}: $_"
             return $false
         }
     } else {
-        Log-Error "$Tool not found"
+        Log-Error "$Tool not found and no install command provided"
         return $false
     }
 }
@@ -158,16 +174,16 @@ function Install-WithWinget {
     }
     
     $tools = @(
-        @{ Name = "kind"; Command = "winget install Kubernetes.kind --accept-source-agreements --accept-package-agreements" }
-        @{ Name = "kubectl"; Command = "winget install Kubernetes.kubectl --accept-source-agreements --accept-package-agreements" }
-        @{ Name = "helm"; Command = "winget install Helm.Helm --accept-source-agreements --accept-package-agreements" }
-        @{ Name = "flux"; Command = "winget install fluxcd.flux2 --accept-source-agreements --accept-package-agreements" }
-        @{ Name = "docker"; Command = "winget install Docker.DockerDesktop --accept-source-agreements --accept-package-agreements" }
+        @{ Name = "kind"; Command = "winget install Kubernetes.kind --accept-source-agreements --accept-package-agreements"; WingetPackage = "Kubernetes.kind" }
+        @{ Name = "kubectl"; Command = "winget install Kubernetes.kubectl --accept-source-agreements --accept-package-agreements"; WingetPackage = "Kubernetes.kubectl" }
+        @{ Name = "helm"; Command = "winget install Helm.Helm --accept-source-agreements --accept-package-agreements"; WingetPackage = "Helm.Helm" }
+        @{ Name = "flux"; Command = "winget install FluxCD.Flux --accept-source-agreements --accept-package-agreements"; WingetPackage = "FluxCD.Flux" }
+        @{ Name = "flux-operator-mcp"; Command = "Invoke-WebRequest -Uri 'https://github.com/controlplaneio-fluxcd/flux-operator/releases/download/v0.27.0/flux-operator-mcp_0.27.0_windows_amd64.zip' -OutFile 'flux-operator-mcp.zip'; Expand-Archive -Path 'flux-operator-mcp.zip' -DestinationPath 'temp-flux' -Force; `$fluxPath = Split-Path (Get-Command flux).Source; Move-Item 'temp-flux/flux-operator-mcp.exe' `$fluxPath; Remove-Item 'flux-operator-mcp.zip', 'temp-flux' -Force -Recurse"; WingetPackage = "" }
     )
     
     $allSuccess = $true
     foreach ($tool in $tools) {
-        if (-not (Test-Tool -Tool $tool.Name -InstallCommand $tool.Command)) {
+        if (-not (Test-Tool -Tool $tool.Name -InstallCommand $tool.Command -WingetPackage $tool.WingetPackage)) {
             $allSuccess = $false
         }
     }
@@ -189,12 +205,12 @@ function Install-WithChocolatey {
         @{ Name = "kubectl"; Command = "choco install kubernetes-cli -y" }
         @{ Name = "helm"; Command = "choco install kubernetes-helm -y" }
         @{ Name = "flux"; Command = "choco install flux -y" }
-        @{ Name = "docker"; Command = "choco install docker-desktop -y" }
+        @{ Name = "flux-operator-mcp"; Command = "Invoke-WebRequest -Uri 'https://github.com/controlplaneio-fluxcd/flux-operator/releases/download/v0.27.0/flux-operator-mcp_0.27.0_windows_amd64.zip' -OutFile 'flux-operator-mcp.zip'; Expand-Archive -Path 'flux-operator-mcp.zip' -DestinationPath 'temp-flux' -Force; `$fluxPath = Split-Path (Get-Command flux).Source; Move-Item 'temp-flux/flux-operator-mcp.exe' `$fluxPath; Remove-Item 'flux-operator-mcp.zip', 'temp-flux' -Force -Recurse" }
     )
     
     $allSuccess = $true
     foreach ($tool in $tools) {
-        if (-not (Test-Tool -Tool $tool.Name -InstallCommand $tool.Command)) {
+        if (-not (Test-Tool -Tool $tool.Name -InstallCommand $tool.Command -WingetPackage $tool.WingetPackage)) {
             $allSuccess = $false
         }
     }
@@ -209,7 +225,7 @@ function Install-Manually {
     Log-Info "  - kubectl: https://kubernetes.io/docs/tasks/tools/install-kubectl-windows/"
     Log-Info "  - helm: https://helm.sh/docs/intro/install/#from-chocolatey-windows"
     Log-Info "  - flux: https://fluxcd.io/flux/installation/#install-the-flux-cli"
-    Log-Info "  - Docker Desktop: https://docs.docker.com/desktop/install/windows-install/"
+    Log-Info "  - flux-operator-mcp: https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest"
     
     Log-Info ""
     Log-Info "Alternatively, install a package manager:"
@@ -219,39 +235,11 @@ function Install-Manually {
     return $false
 }
 
-function Test-DockerDesktop {
-    # Check if Docker Desktop is running
-    try {
-        $null = docker info 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            if ($env:LOG_LEVEL -ne "info") {
-                Log-Success "  Docker: Running"
-            }
-            return $true
-        }
-    } catch {
-        # Docker command failed
-    }
-    
-    # Check if Docker Desktop is installed but not running
-    if (Test-Command "docker") {
-        Log-Warn "Docker Desktop is installed but not running"
-        Log-Info "Please start Docker Desktop and try again"
-        return $false
-    } else {
-        Log-Error "Docker Desktop not found"
-        Log-Info "Install Docker Desktop: https://docs.docker.com/desktop/install/windows-install/"
-        return $false
-    }
-}
 
 function Install-Dependencies {
     Log-Info "Checking dependencies..."
-    
-    if ($env:LOG_LEVEL -ne "info") {
-        Log-Info "------------------------"
-        Log-Info "Dependency Configuration"
-    }
+    Log-Info "------------------------"
+    Log-Info "Dependency Configuration"
     
     $success = $false
     
@@ -259,18 +247,14 @@ function Install-Dependencies {
     if (-not $env:PACKAGE_MANAGER) {
         # Auto-detect: prefer winget, then chocolatey, then manual
         if (Test-Command "winget") {
-            if ($env:LOG_LEVEL -ne "info") {
-                Log-Info "  Package Manager: Winget (auto-detected)"
-                Log-Info "  Platform: Windows"
-                Log-Info "------------------------"
-            }
+            Log-Info "  Package Manager: Winget (auto-detected)"
+            Log-Info "  Platform: Windows"
+            Log-Info "------------------------"
             $success = Install-WithWinget
         } elseif (Test-Command "choco") {
-            if ($env:LOG_LEVEL -ne "info") {
-                Log-Info "  Package Manager: Chocolatey (auto-detected)"
-                Log-Info "  Platform: Windows"
-                Log-Info "------------------------"
-            }
+            Log-Info "  Package Manager: Chocolatey (auto-detected)"
+            Log-Info "  Platform: Windows"
+            Log-Info "------------------------"
             $success = Install-WithChocolatey
         } else {
             if ($env:LOG_LEVEL -ne "info") {
@@ -321,14 +305,8 @@ function Install-Dependencies {
         return $false
     }
     
-    # Always check Docker Desktop separately
-    if (-not (Test-DockerDesktop)) {
-        return $false
-    }
     
-    if ($env:LOG_LEVEL -ne "info") {
-        Log-Info "------------------------"
-    }
+    Log-Info "------------------------"
     
     if ($success) {
         Log-Info "All dependencies verified"
