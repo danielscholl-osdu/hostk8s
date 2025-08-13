@@ -8,7 +8,7 @@ $PSDefaultParameterValues['*:Verbose'] = $false
 # Disable debug mode to prevent environment variable exposure
 $DebugPreference = "SilentlyContinue"
 
-# Set UTF-8 encoding for proper emoji display  
+# Set UTF-8 encoding for proper emoji display
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 $OutputEncoding = [System.Text.Encoding]::UTF8
 
@@ -56,7 +56,7 @@ function Log-Warn {
         Write-Host " WARNING: $Message"
     } else {
         Write-Host "[$timestamp]" -ForegroundColor $Global:YELLOW -NoNewline
-        Write-Host " ⚠️ $Message"
+        Write-Host " ❗ $Message"
     }
 }
 
@@ -156,7 +156,7 @@ function Load-Environment {
     if (-not $env:INGRESS_ENABLED) { $env:INGRESS_ENABLED = "false" }
     if (-not $env:FLUX_ENABLED) { $env:FLUX_ENABLED = "false" }
     if (-not $env:PACKAGE_MANAGER) { $env:PACKAGE_MANAGER = "" }
-    
+
     # Set KUBECONFIG paths using PowerShell path joining
     $kubeconfigDir = Join-Path (Get-Location) "data\kubeconfig"
     $env:KUBECONFIG_PATH = Join-Path $kubeconfigDir "config"
@@ -168,7 +168,7 @@ function Test-Cluster {
     if (-not (Test-Path $env:KUBECONFIG_PATH)) {
         return $false
     }
-    
+
     try {
         $null = kubectl cluster-info 2>$null
         return $LASTEXITCODE -eq 0
@@ -201,17 +201,17 @@ function Edit-FileInPlace {
         [string]$Replacement,
         [string]$FilePath
     )
-    
+
     if (-not (Test-Path $FilePath)) {
         Log-Error "File does not exist: $FilePath"
         return $false
     }
-    
+
     if (-not (Test-Path $FilePath -PathType Leaf)) {
         Log-Error "Path is not a file: $FilePath"
         return $false
     }
-    
+
     try {
         $content = Get-Content $FilePath -Raw
         $newContent = $content -replace $Pattern, $Replacement
@@ -226,17 +226,17 @@ function Edit-FileInPlace {
 # Helper function to set cluster name in .env
 function Set-ClusterNameInEnv {
     param([string]$ClusterName, [string]$EnvFile = ".env")
-    
+
     if (-not (Test-Path $EnvFile)) {
         Log-Error "Environment file does not exist: $EnvFile"
         return $false
     }
-    
+
     # Update or add CLUSTER_NAME
     $updated = $false
     $lines = Get-Content $EnvFile
     $newLines = @()
-    
+
     foreach ($line in $lines) {
         if ($line -match '^#?\s*CLUSTER_NAME\s*=') {
             $newLines += "CLUSTER_NAME=$ClusterName"
@@ -245,11 +245,11 @@ function Set-ClusterNameInEnv {
             $newLines += $line
         }
     }
-    
+
     if (-not $updated) {
         $newLines += "CLUSTER_NAME=$ClusterName"
     }
-    
+
     try {
         Set-Content -Path $EnvFile -Value $newLines
         return $true
@@ -266,19 +266,19 @@ function Set-GitOpsBranchInEnv {
         [string]$WorktreeName,
         [string]$EnvFile = ".env"
     )
-    
+
     if (-not (Test-Path $EnvFile)) {
         Log-Error "Environment file does not exist: $EnvFile"
         return $false
     }
-    
+
     $branchName = "user/$GitUser/$WorktreeName"
-    
+
     # Update or add GITOPS_BRANCH
     $updated = $false
     $lines = Get-Content $EnvFile
     $newLines = @()
-    
+
     foreach ($line in $lines) {
         if ($line -match '^#?\s*GITOPS_BRANCH\s*=') {
             $newLines += "GITOPS_BRANCH=$branchName"
@@ -287,11 +287,11 @@ function Set-GitOpsBranchInEnv {
             $newLines += $line
         }
     }
-    
+
     if (-not $updated) {
         $newLines += "GITOPS_BRANCH=$branchName"
     }
-    
+
     try {
         Set-Content -Path $EnvFile -Value $newLines
         return $true
@@ -304,17 +304,17 @@ function Set-GitOpsBranchInEnv {
 # Helper function to enable Flux in .env
 function Enable-FluxInEnv {
     param([string]$EnvFile = ".env")
-    
+
     if (-not (Test-Path $EnvFile)) {
         Log-Error "Environment file does not exist: $EnvFile"
         return $false
     }
-    
+
     # Update or add FLUX_ENABLED
     $updated = $false
     $lines = Get-Content $EnvFile
     $newLines = @()
-    
+
     foreach ($line in $lines) {
         if ($line -match '^#?\s*FLUX_ENABLED\s*=') {
             $newLines += "FLUX_ENABLED=true"
@@ -323,11 +323,11 @@ function Enable-FluxInEnv {
             $newLines += $line
         }
     }
-    
+
     if (-not $updated) {
         $newLines += "FLUX_ENABLED=true"
     }
-    
+
     try {
         Set-Content -Path $EnvFile -Value $newLines
         return $true
@@ -340,7 +340,7 @@ function Enable-FluxInEnv {
 # Test if a command exists (equivalent to 'command -v')
 function Test-Command {
     param([string]$Command)
-    
+
     try {
         $null = Get-Command $Command -ErrorAction Stop
         return $true
@@ -357,21 +357,21 @@ function Wait-ForCondition {
         [int]$IntervalSeconds = 5,
         [string]$Description = "condition"
     )
-    
+
     $elapsed = 0
     Log-Debug "Waiting for $Description (timeout: ${TimeoutSeconds}s)"
-    
+
     while ($elapsed -lt $TimeoutSeconds) {
         if (& $Condition) {
             Log-Debug "✅ $Description met after ${elapsed}s"
             return $true
         }
-        
+
         Start-Sleep -Seconds $IntervalSeconds
         $elapsed += $IntervalSeconds
         Log-Debug "⏳ Still waiting for $Description (${elapsed}s/${TimeoutSeconds}s)"
     }
-    
+
     Log-Error "❌ Timeout waiting for $Description after ${TimeoutSeconds}s"
     return $false
 }
@@ -379,14 +379,14 @@ function Wait-ForCondition {
 # Get pod count in namespace
 function Get-PodCountInNamespace {
     param([string]$Namespace)
-    
+
     try {
         $output = kubectl get pods -n $Namespace --no-headers 2>$null
         if ($LASTEXITCODE -ne 0) {
             Log-Error "Failed to get pods in namespace $Namespace"
             return 0
         }
-        
+
         $runningPods = $output | Where-Object { $_ -match "Running" }
         return $runningPods.Count
     } catch {
@@ -398,7 +398,7 @@ function Get-PodCountInNamespace {
 # Extract arguments from Make-style input (equivalent to bash argument parsing)
 function Get-MakeArguments {
     param([string[]]$Arguments)
-    
+
     $result = @{}
     for ($i = 0; $i -lt $Arguments.Count; $i++) {
         $result["arg$($i + 1)"] = $Arguments[$i]

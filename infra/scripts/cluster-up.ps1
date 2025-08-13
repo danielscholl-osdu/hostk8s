@@ -11,14 +11,14 @@ if ($ConfigName) {
 # Validate required tools are installed
 function Test-Dependencies {
     $missingTools = @()
-    
+
     $tools = @("kind", "kubectl", "helm", "docker")
     foreach ($tool in $tools) {
         if (-not (Test-Command $tool)) {
             $missingTools += $tool
         }
     }
-    
+
     if ($missingTools.Count -gt 0) {
         Log-Error "Missing required tools: $($missingTools -join ', ')"
         Log-Debug "Install missing tools:"
@@ -32,7 +32,7 @@ function Test-Dependencies {
         }
         exit 1
     }
-    
+
     # Check if Docker is running
     try {
         $null = docker info 2>$null
@@ -49,30 +49,30 @@ function Test-Dependencies {
 # Validate Docker resource allocation
 function Test-DockerResources {
     Log-Debug "Checking Docker resource allocation..."
-    
+
     try {
         $dockerInfo = docker system info --format 'json' 2>$null | ConvertFrom-Json
-        
+
         if ($dockerInfo) {
             $memoryBytes = $dockerInfo.MemTotal
             $cpus = $dockerInfo.NCPU
-            
+
             # Convert bytes to GB
             $memoryGB = [math]::Floor($memoryBytes / 1024 / 1024 / 1024)
-            
+
             Log-Debug "Docker resources: ${memoryGB}GB memory, ${cpus} CPUs"
-            
+
             # Validate minimum requirements
             if ($memoryGB -lt 4) {
                 Log-Warn "Docker has only ${memoryGB}GB memory allocated. Recommend 4GB+ for better performance"
                 Log-Warn "Increase in Docker Desktop -> Settings -> Resources -> Memory"
             }
-            
+
             if ($cpus -lt 2) {
                 Log-Warn "Docker has only ${cpus} CPUs allocated. Recommend 2+ for better performance"
                 Log-Warn "Increase in Docker Desktop -> Settings -> Resources -> CPUs"
             }
-            
+
             # Check available disk space
             $drive = (Get-Location).Drive
             $freeSpace = [math]::Round((Get-PSDrive $drive.Name).Free / 1GB, 1)
@@ -93,7 +93,7 @@ function Invoke-CleanupOnFailure {
     try {
         kind delete cluster --name $env:CLUSTER_NAME 2>$null
     } catch { }
-    
+
     try {
         $kubeconfigPath = Join-Path "data" "kubeconfig" "config"
         if (Test-Path $kubeconfigPath) {
@@ -110,13 +110,13 @@ function Invoke-RetryWithBackoff {
         [int]$MaxAttempts = 3,
         [int]$InitialDelay = 5
     )
-    
+
     $attempt = 1
     $delay = $InitialDelay
-    
+
     while ($attempt -le $MaxAttempts) {
         Log-Debug "Attempt $attempt`: $Description"
-        
+
         try {
             $result = & $ScriptBlock
             if ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE) {
@@ -125,12 +125,12 @@ function Invoke-RetryWithBackoff {
         } catch {
             # Continue to retry logic
         }
-        
+
         if ($attempt -eq $MaxAttempts) {
             Log-Error "Failed after $MaxAttempts attempts: $Description"
             return $false
         }
-        
+
         Log-Warn "Attempt $attempt failed, retrying in ${delay}s..."
         Start-Sleep -Seconds $delay
         $delay = $delay * 2
@@ -157,15 +157,15 @@ try {
         Log-Warn "Cluster '$($env:CLUSTER_NAME)' already exists. Use 'make restart' to recreate it."
         exit 1
     }
-    
+
     # Determine Kind configuration file with 3-tier fallback:
     # 1. KIND_CONFIG environment variable (if set)
     # 2. kind-config.yaml (if exists)
     # 3. kind-custom.yaml (functional defaults)
-    
+
     $kindConfigFile = ""
     $kindConfigPath = ""
-    
+
     if ($env:KIND_CONFIG) {
         # KIND_CONFIG explicitly set - use it
         if ($env:KIND_CONFIG.StartsWith("extension/")) {
@@ -204,7 +204,7 @@ try {
         $kindConfigFile = "kind-custom.yaml"
         $kindConfigPath = "infra/kubernetes/kind-custom.yaml"
     }
-    
+
     # Validate config file exists (if one was specified)
     if ($kindConfigPath -and -not (Test-Path $kindConfigPath)) {
         Log-Error "Kind config file not found: $kindConfigPath"
@@ -216,47 +216,47 @@ try {
         if (Test-Path "infra/kubernetes/extension") {
             Log-Error "Extension configs:"
             $extensionConfigs = Get-ChildItem "infra/kubernetes/extension/kind-*.yaml" -ErrorAction SilentlyContinue
-            $extensionConfigs | ForEach-Object { 
+            $extensionConfigs | ForEach-Object {
                 $name = $_.BaseName -replace '^kind-', ''
                 Log-Error "  extension/$name"
             }
         }
         exit 1
     }
-    
+
     # Show cluster configuration (only in debug mode)
     if ($env:LOG_LEVEL -ne "info") {
         Log-Section-Start
         Log-Status "Kind Cluster Configuration"
-        Log-Debug "  Cluster Name: $($env:CLUSTER_NAME)"
-        Log-Debug "  Kubernetes Version: $($env:K8S_VERSION)"
-        Log-Debug "  Configuration File: $kindConfigFile"
+        Write-Host "  Cluster Name: " -NoNewline; Write-Host $env:CLUSTER_NAME -ForegroundColor Cyan
+        Write-Host "  Kubernetes Version: " -NoNewline; Write-Host $env:K8S_VERSION -ForegroundColor Cyan
+        Write-Host "  Configuration File: " -NoNewline; Write-Host $kindConfigFile -ForegroundColor Cyan
         Log-Section-End
     }
-    
+
     # Create Kind cluster with retry logic
     Log-Info "Creating Kind cluster..."
     $success = Invoke-RetryWithBackoff -Description "Creating Kind cluster" -ScriptBlock {
         kind create cluster --name $env:CLUSTER_NAME --config $kindConfigPath --image "kindest/node:$($env:K8S_VERSION)" --wait 300s
     }
-    
+
     if (-not $success) {
         exit 1
     }
-    
+
     # Export kubeconfig
     Log-Debug "Setting up kubeconfig..."
     $kubeconfigDir = Join-Path "data" "kubeconfig"
     if (-not (Test-Path $kubeconfigDir)) {
         New-Item -ItemType Directory -Path $kubeconfigDir -Force | Out-Null
     }
-    
+
     $kubeconfigPath = Join-Path $kubeconfigDir "config"
     kind export kubeconfig --name $env:CLUSTER_NAME --kubeconfig $kubeconfigPath
-    
+
     # Set up kubectl context
     $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-    
+
     # Fix kubeconfig for CI environment (if needed)
     if ($env:KIND_CONFIG -eq "ci") {
         Log-Debug "Applying CI-specific kubeconfig fixes..."
@@ -265,21 +265,21 @@ try {
         Set-Content -Path $kubeconfigPath -Value $kubeconfigContent
         Log-Debug "Kubeconfig updated for CI docker-in-docker networking"
     }
-    
+
     # Wait for cluster to be ready with retry
     Log-Debug "Waiting for cluster nodes to be ready..."
     $success = Invoke-RetryWithBackoff -Description "Waiting for nodes to be ready" -ScriptBlock {
         kubectl wait --for=condition=Ready nodes --all --timeout=300s
     }
-    
+
     if (-not $success) {
         exit 1
     }
-    
+
     # Show cluster status
     Log-Debug "Cluster status:"
     kubectl get nodes
-    
+
     # Setup add-ons if enabled
     if ($env:METALLB_ENABLED -eq "true") {
         Log-Info "Setting up MetalLB..."
@@ -295,7 +295,7 @@ try {
             Log-Warn "MetalLB setup script not found, skipping..."
         }
     }
-    
+
     if ($env:INGRESS_ENABLED -eq "true") {
         Log-Info "Setting up NGINX Ingress..."
         $ingressScript = Join-Path $PSScriptRoot "setup-ingress.ps1"
@@ -310,7 +310,7 @@ try {
             Log-Warn "Ingress setup script not found, skipping..."
         }
     }
-    
+
     if ($env:FLUX_ENABLED -eq "true") {
         Log-Info "Setting up Flux GitOps..."
         $fluxScript = Join-Path $PSScriptRoot "setup-flux.ps1"
@@ -325,9 +325,9 @@ try {
             Log-Warn "Flux setup script not found, skipping..."
         }
     }
-    
+
     Log-Success "Kind cluster '$($env:CLUSTER_NAME)' is ready!"
-    
+
 } catch {
     Log-Error "Cluster setup failed: $_"
     Invoke-CleanupOnFailure

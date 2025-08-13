@@ -12,7 +12,7 @@ ifeq ($(OS),Windows_NT)
     PATH_SEP := \\
 else
     SCRIPT_EXT := .sh
-    SCRIPT_RUNNER := 
+    SCRIPT_RUNNER :=
     PWD_CMD := $$(pwd)
     PATH_SEP := /
     # Unix uses printf with ANSI color codes
@@ -82,12 +82,13 @@ restart: ## Quick cluster reset for development iteration (Usage: make restart [
 
 clean: ## Complete cleanup (destroy cluster and data)
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "try { & $(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT) 2>$$null } catch {}; try { kind delete cluster --name hostk8s 2>$$null } catch {}; try { Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue } catch {}; try { docker system prune -f 2>$$null } catch {}"
+	@pwsh -ExecutionPolicy Bypass -NoProfile -File ./infra/scripts/cluster-down.ps1 2>nul || echo ""
+	@kind delete cluster --name hostk8s 2>nul || echo ""
+	@powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>nul || echo ""
 else
 	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT) 2>/dev/null || true
 	@kind delete cluster --name hostk8s 2>/dev/null || true
 	@rm -rf data/ 2>/dev/null || true
-	@docker system prune -f >/dev/null 2>&1 || true
 endif
 
 status: ## Show cluster health and running services
