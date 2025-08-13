@@ -101,7 +101,7 @@ The key insight is managing dependencies: components must be healthy before appl
 
 ## Building Your Software Stack
 
-Let's create the complete software solution you were trying to deploy manually. You'll see how the stack "instruction booklet" approach eliminates all the coordination chaos you just experienced.
+Let's create a complete software solution. You'll see how the stack "instruction booklet" approach eliminates all the coordination chaos you just experienced.
 
 ### Your Software Stack Components
 
@@ -111,15 +111,11 @@ Together, these components create a platform supporting the complete build, stor
 
 ## Understanding Stack Structure
 
-Now let's break down a stack that solves the coordination problem you just experienced. We'll examine the same development environment you tried to build manually, but this time with proper orchestration that handles all the dependencies automatically.
+Now let's break down a stack that solves the coordination problem you just experienced. We'll examine a working stack that demonstrates proper orchestration without the complexity of building custom applications.
 
-The stack will use **Flux** as the tool to implement the GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; flux figures out how to get there and keep it there.
+The stack will use **Flux** as the tool to implement the GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; Flux figures out how to get there and keep it there.
 
-```bash
-# Create your stack extension directory
-mkdir -p software/stack/extension/tutorial-stack
-cd software/stack/extension/tutorial-stack
-```
+Let's examine the built-in sample stack that comes with HostK8s:
 
 To understand how stacks work, let's look at the three files that make them possible.
 
@@ -191,7 +187,7 @@ The beauty is in the dependency declarations - this declarative approach elimina
 Flux reads these configurations and creates an execution plan: start with components that have no dependencies, wait for them to be healthy, then start the next tier.
 
 The dependency chain flows like this:
-`cert-manager` → `basic certificates` → `certificate authority` → `certificate issuer` → `registry`
+`certs` → `certs-ca` → `certs-issuer` → `ingress-nginx` → `[sample applications]`
 
 Here's what a simple `stack.yaml` looks like with two components:
 
@@ -220,7 +216,7 @@ spec:
 
 The complete tutorial-stack follows this same pattern with a full dependency chain:
 
-First, the GitOps foundation starts everything. Then, monitoring and certificates deploy in parallel since they both just need the foundation. Next, the certificate authority waits for basic certificates. After that, the certificate issuer waits for the CA. Finally, the container registry deploys once certificates are available.
+First, certificate management deploys and gets the foundation ready. Then, the certificate authority waits for basic certificates. Next, the certificate issuer waits for the CA. Finally, the ingress controller deploys once certificates are available, followed by the sample applications.
 
 This creates the exact dependency sequence that eliminates the coordination chaos you experienced manually.
 
