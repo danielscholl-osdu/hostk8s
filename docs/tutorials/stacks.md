@@ -39,7 +39,7 @@ When projects hit this coordination wall, they naturally start creating their ow
 
 These DIY solutions work sometimes, but create a bigger architectural problem: **tight coupling**. Your setup script becomes a monolithic sequence bound to your specific environment. Want to work on just the monitoring component? You can't because you have to run through the entire process first. This tight coupling makes development painful because you can't isolate your work.
 
-This coordination chaos is exactly why individual application deployment worked smoothly in the previous tutorial, but multi-service environments become nightmares to manage manually.
+This coordination chaos is exactly why individual application deployment worked smoothly in the previous tutorial, but multi-service solutions become nightmares to manage manually.
 
 ### Enter: Composable Components
 
@@ -65,7 +65,7 @@ The stack approach is like Lego blocks with instruction booklets. The same modul
 
 This automated orchestration is called **GitOps** - it continuously monitors your desired state configuration and automatically works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
 
-Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable development environments.
+Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable software solutions.
 
 ### Stack Solution in Action
 
@@ -90,14 +90,6 @@ Step 5: container registry (depends on Step 4)
 ```
 
 **The magic:** You get the exact same result as the manual coordination you were struggling with, but with zero guesswork, zero timing issues, and zero dependency debugging.
-
-### The Two-Layer Architecture
-
-Think about what you actually need for a complete application stack. Your web API is just one piece, but it also needs somewhere to store data, certificates for HTTPS, a way to track if it's healthy, and probably a dozen other supporting services.
-
-This creates a natural two-layer architecture. **Components** provide the shared foundation: the container registry, certificate management, databases, and monitoring that multiple applications can use. **Applications** contain your actual business logic: the web services, APIs, and custom code that make your product unique.
-
-The key insight is managing dependencies: components must be healthy before applications try to use them. Instead of guessing the order, each component declares what it depends on, and the stack handles this automatically, so no more debugging connection failures because services aren't ready.
 
 ## Building Your Software Stack
 
