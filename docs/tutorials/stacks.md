@@ -229,8 +229,8 @@ Looking at the certificate chain example above, notice how each Flux Kustomizati
 
 | Property | Purpose | Example |
 |----------|---------|---------|
-| `path` | Where to find the component | `./software/components/certs-ca` |
-| `dependsOn` | What must be healthy first | `component-certs` |
+| path | Where to find the component | `./software/components/certs-ca` |
+| dependsOn | What must be healthy first | `component-certs` |
 
 This declarative approach eliminates the coordination chaos you experienced manually. Instead of guessing timing and deployment order, each component simply declares its dependencies and Flux automatically creates the execution plan: `certs → certs-ca → certs-issuer`.
 
