@@ -10,11 +10,21 @@ ifeq ($(OS),Windows_NT)
     SCRIPT_RUNNER := powershell.exe -ExecutionPolicy Bypass -NoProfile -File
     PWD_CMD := $$(powershell -Command "(Get-Location).Path")
     PATH_SEP := \\
+    # Windows uses echo without color support for compatibility
+    ECHO := echo
+    CYAN := 
+    BOLD := 
+    RESET := 
 else
     SCRIPT_EXT := .sh
     SCRIPT_RUNNER := 
     PWD_CMD := $$(pwd)
     PATH_SEP := /
+    # Unix uses printf with ANSI color codes
+    ECHO := printf
+    CYAN := \033[36m
+    BOLD := \033[1m
+    RESET := \033[0m
 endif
 
 # Environment setup
@@ -25,7 +35,32 @@ export KUBECONFIG := $(KUBECONFIG_PATH)
 ##@ Setup
 
 help: ## Show this help message
-	@$(SCRIPT_RUNNER) ./infra/scripts/show-help$(SCRIPT_EXT)
+	@$(ECHO) "HostK8s - Host-Mode Kubernetes Development Platform\n"
+	@$(ECHO) "\n"
+	@$(ECHO) "Usage:\n"
+	@$(ECHO) "  make $(CYAN)<target>$(RESET)\n"
+	@$(ECHO) "\n"
+	@$(ECHO) "$(BOLD)Setup$(RESET)\n"
+	@$(ECHO) "  $(CYAN)help$(RESET)             Show this help message\n"
+	@$(ECHO) "  $(CYAN)install$(RESET)          Install dependencies and setup environment (Usage: make install [dev])\n"
+	@$(ECHO) "\n"
+	@$(ECHO) "$(BOLD)Infrastructure$(RESET)\n"
+	@$(ECHO) "  $(CYAN)start$(RESET)            Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)\n"
+	@$(ECHO) "  $(CYAN)stop$(RESET)             Stop cluster\n"
+	@$(ECHO) "  $(CYAN)up$(RESET)               Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')\n"
+	@$(ECHO) "  $(CYAN)down$(RESET)             Remove software stack (Usage: make down <stack-name>)\n"
+	@$(ECHO) "  $(CYAN)restart$(RESET)          Quick cluster reset for development iteration (Usage: make restart [stack-name])\n"
+	@$(ECHO) "  $(CYAN)clean$(RESET)            Complete cleanup (destroy cluster and data)\n"
+	@$(ECHO) "  $(CYAN)status$(RESET)           Show cluster health and running services\n"
+	@$(ECHO) "  $(CYAN)sync$(RESET)             Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])\n"
+	@$(ECHO) "\n"
+	@$(ECHO) "$(BOLD)Applications$(RESET)\n"
+	@$(ECHO) "  $(CYAN)deploy$(RESET)           Deploy application (Usage: make deploy [app-name] [namespace] - defaults to 'simple')\n"
+	@$(ECHO) "  $(CYAN)remove$(RESET)           Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)\n"
+	@$(ECHO) "\n"
+	@$(ECHO) "$(BOLD)Development Tools$(RESET)\n"
+	@$(ECHO) "  $(CYAN)logs$(RESET)             View recent cluster events and logs\n"
+	@$(ECHO) "  $(CYAN)build$(RESET)            Build and push application from src/ (Usage: make build src/APP_NAME)\n"
 
 install: ## Install dependencies and setup environment (Usage: make install [dev])
 ifeq ($(word 2,$(MAKECMDGOALS)),dev)
