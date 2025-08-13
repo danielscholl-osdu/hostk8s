@@ -57,3 +57,4 @@ docker-compose*.yml text eol=lf
 # Git specific files
 .gitignore text eol=lf
 .gitattributes text eol=lf
+.editorconfig text eol=lf
