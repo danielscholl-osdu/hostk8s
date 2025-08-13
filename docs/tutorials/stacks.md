@@ -121,22 +121,20 @@ sample/
 ├── repository.yaml             # Where to find shared components
 ├── stack.yaml                  # Orchestration dependencies
 ├── components/                 # Stack-specific components
-│   ├── database/              # Custom PostgreSQL config for this stack
-│   └── ingress-nginx/         # Stack-specific ingress customization
-└── applications/              # Stack-specific applications
-    ├── api/                   # Backend API service
-    └── website/               # Frontend web application
+│   └── ...                     # Custom configurations for this stack
+└── applications/               # Stack-specific applications
+    └── ...                     # Business logic services
 ```
 
 ### The Stack Contract
 
-Just like applications need a `kustomization.yaml` to work with `make deploy`, stacks need a specific structure to work with `make up`. The stack contract consists of three core files:
+Just like applications need a `kustomization.yaml` to work with `make deploy`, stacks need a specific files to work with `make up`. The stack contract consists of three core files:
 
 | File | Purpose | What It Enables |
 |------|---------|-----------------|
 | `kustomization.yaml` | Table of contents | Stack discovery and deployment |
-| `repository.yaml` | Component sources | Access to shared and external components |
-| `stack.yaml` | Dependency orchestration | Automated sequencing and health checks |
+| `repository.yaml` | Flux GitRepository declaration | Defines Git repo location for components |
+| `stack.yaml` | Flux Kustomization declarations | Enhanced kustomize with sequencing and health checks |
 
 ### Component Flexibility
 
