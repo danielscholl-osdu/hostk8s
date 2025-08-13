@@ -260,9 +260,9 @@ The output shows the dependency orchestration in action:
 
 | Status | Meaning | What's Happening |
 |--------|---------|------------------|
-| `[OK]` | Component is healthy and ready | Dependencies satisfied, resources deployed successfully |
-| `[WAITING]` | Blocked by dependencies | Component waits for its dependencies to become ready |
-| `[...]` | Reconciliation in progress | Flux is actively deploying or updating the component |
+| [OK] | Component is healthy and ready | Dependencies satisfied, resources deployed successfully |
+| [WAITING] | Blocked by dependencies | Component waits for its dependencies to become ready |
+| [...` | Reconciliation in progress | Flux is actively deploying or updating the component |
 
 **What you're witnessing:** This is the exact dependency sequence we defined (`certs → certs-ca → certs-issuer`) being automatically enforced by Flux. Instead of the coordination chaos you experienced manually - guessing deployment order, waiting and hoping things are ready, debugging circular dependencies - the stack handles all that intelligence automatically.
 
