@@ -71,16 +71,16 @@ function Test-Tool {
         
         if ($env:LOG_LEVEL -ne "info") {
             if ($version) {
-                Log-Debug "  $Tool`: $version"
+                Log-Debug "  ${Tool}: $version"
             } else {
-                Log-Debug "  $Tool`: installed"
+                Log-Debug "  ${Tool}: installed"
             }
         }
         return $true
     }
     
     if ($InstallCommand) {
-        Log-Debug "Installing $Tool..."
+        Log-Info "Installing $Tool..."
         try {
             Invoke-Expression $InstallCommand
             if ($LASTEXITCODE -eq 0) {
@@ -131,15 +131,15 @@ function Test-Tool {
                 
                 if ($env:LOG_LEVEL -ne "info") {
                     if ($version) {
-                        Log-Debug "  $Tool`: $version"
+                        Log-Debug "  ${Tool}: $version"
                     } else {
-                        Log-Debug "  $Tool`: installed"
+                        Log-Success "  ${Tool}: installed"
                     }
                 }
                 return $true
             }
         } catch {
-            Log-Error "Failed to install $Tool`: $_"
+            Log-Error "Failed to install ${Tool}: $_"
             return $false
         }
     } else {
@@ -149,9 +149,7 @@ function Test-Tool {
 }
 
 function Install-WithWinget {
-    if ($env:LOG_LEVEL -ne "info") {
-        Log-Debug "Tools"
-    }
+    Log-Info "Tools"
     
     # Check if winget is available
     if (-not (Test-Command "winget")) {
@@ -178,9 +176,7 @@ function Install-WithWinget {
 }
 
 function Install-WithChocolatey {
-    if ($env:LOG_LEVEL -ne "info") {
-        Log-Debug "Tools"
-    }
+    Log-Info "Tools"
     
     # Check if chocolatey is available
     if (-not (Test-Command "choco")) {
@@ -229,7 +225,7 @@ function Test-DockerDesktop {
         $null = docker info 2>$null
         if ($LASTEXITCODE -eq 0) {
             if ($env:LOG_LEVEL -ne "info") {
-                Log-Debug "  Docker: Running"
+                Log-Success "  Docker: Running"
             }
             return $true
         }
@@ -250,11 +246,11 @@ function Test-DockerDesktop {
 }
 
 function Install-Dependencies {
-    Log-Debug "Checking dependencies..."
+    Log-Info "Checking dependencies..."
     
     if ($env:LOG_LEVEL -ne "info") {
-        Log-Debug "------------------------"
-        Log-Debug "Dependency Configuration"
+        Log-Info "------------------------"
+        Log-Info "Dependency Configuration"
     }
     
     $success = $false
@@ -264,21 +260,21 @@ function Install-Dependencies {
         # Auto-detect: prefer winget, then chocolatey, then manual
         if (Test-Command "winget") {
             if ($env:LOG_LEVEL -ne "info") {
-                Log-Debug "  Package Manager: Winget (auto-detected)"
-                Log-Debug "  Platform: Windows"
-                Log-Debug "------------------------"
+                Log-Info "  Package Manager: Winget (auto-detected)"
+                Log-Info "  Platform: Windows"
+                Log-Info "------------------------"
             }
             $success = Install-WithWinget
         } elseif (Test-Command "choco") {
             if ($env:LOG_LEVEL -ne "info") {
-                Log-Debug "  Package Manager: Chocolatey (auto-detected)"
-                Log-Debug "  Platform: Windows"
-                Log-Debug "------------------------"
+                Log-Info "  Package Manager: Chocolatey (auto-detected)"
+                Log-Info "  Platform: Windows"
+                Log-Info "------------------------"
             }
             $success = Install-WithChocolatey
         } else {
             if ($env:LOG_LEVEL -ne "info") {
-                Log-Debug "------------------------"
+                Log-Info "------------------------"
             }
             Log-Error "No supported package manager found (winget or chocolatey)."
             $success = Install-Manually
@@ -287,9 +283,9 @@ function Install-Dependencies {
         # Force Winget
         if (Test-Command "winget") {
             if ($env:LOG_LEVEL -ne "info") {
-                Log-Debug "  Package Manager: Winget (forced)"
-                Log-Debug "  Platform: Windows"
-                Log-Debug "------------------------"
+                Log-Info "  Package Manager: Winget (forced)"
+                Log-Info "  Platform: Windows"
+                Log-Info "------------------------"
             }
             $success = Install-WithWinget
         } else {
@@ -301,9 +297,9 @@ function Install-Dependencies {
         # Force Chocolatey
         if (Test-Command "choco") {
             if ($env:LOG_LEVEL -ne "info") {
-                Log-Debug "  Package Manager: Chocolatey (forced)"
-                Log-Debug "  Platform: Windows"
-                Log-Debug "------------------------"
+                Log-Info "  Package Manager: Chocolatey (forced)"
+                Log-Info "  Platform: Windows"
+                Log-Info "------------------------"
             }
             $success = Install-WithChocolatey
         } else {
@@ -314,9 +310,9 @@ function Install-Dependencies {
     } elseif ($env:PACKAGE_MANAGER -eq "manual") {
         # Force manual installation
         if ($env:LOG_LEVEL -ne "info") {
-            Log-Debug "  Package Manager: Manual (forced)"
+            Log-Info "  Package Manager: Manual (forced)"
             Log-Debug "  Platform: Windows"
-            Log-Debug "------------------------"
+            Log-Info "------------------------"
         }
         $success = Install-Manually
     } else {
@@ -331,7 +327,7 @@ function Install-Dependencies {
     }
     
     if ($env:LOG_LEVEL -ne "info") {
-        Log-Debug "------------------------"
+        Log-Info "------------------------"
     }
     
     if ($success) {

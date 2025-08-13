@@ -8,6 +8,10 @@ $PSDefaultParameterValues['*:Verbose'] = $false
 # Disable debug mode to prevent environment variable exposure
 $DebugPreference = "SilentlyContinue"
 
+# Set UTF-8 encoding for proper emoji display  
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+
 # Colors and formatting
 $Global:GREEN = [System.ConsoleColor]::Green
 $Global:YELLOW = [System.ConsoleColor]::Yellow
@@ -25,29 +29,34 @@ function Log-Debug {
     # Only show debug messages if LOG_LEVEL is not set to info
     if ($env:LOG_LEVEL -ne "info") {
         $timestamp = Get-Date -Format 'HH:mm:ss'
-        Write-Host "[$timestamp] $Message" -ForegroundColor $Global:GREEN
+        Write-Host "[$timestamp]" -ForegroundColor $Global:GREEN -NoNewline
+        Write-Host " $Message"
     }
 }
 
 function Log-Info {
     param([string]$Message)
     $timestamp = Get-Date -Format 'HH:mm:ss'
-    Write-Host "[$timestamp] $Message" -ForegroundColor $Global:BLUE
+    Write-Host "[$timestamp]" -ForegroundColor $Global:BLUE -NoNewline
+    Write-Host " $Message"
 }
 
 function Log-Success {
     param([string]$Message)
     $timestamp = Get-Date -Format 'HH:mm:ss'
-    Write-Host "[$timestamp] $Message" -ForegroundColor $Global:BLUE
+    Write-Host "[$timestamp]" -ForegroundColor $Global:BLUE -NoNewline
+    Write-Host " $Message"
 }
 
 function Log-Warn {
     param([string]$Message)
     $timestamp = Get-Date -Format 'HH:mm:ss'
     if ($env:QUIET -eq "true") {
-        Write-Host "[$timestamp] WARNING: $Message" -ForegroundColor $Global:YELLOW
+        Write-Host "[$timestamp]" -ForegroundColor $Global:YELLOW -NoNewline
+        Write-Host " WARNING: $Message"
     } else {
-        Write-Host "[$timestamp] ⚠️ $Message" -ForegroundColor $Global:YELLOW
+        Write-Host "[$timestamp]" -ForegroundColor $Global:YELLOW -NoNewline
+        Write-Host " ⚠️ $Message"
     }
 }
 
@@ -55,9 +64,11 @@ function Log-Error {
     param([string]$Message)
     $timestamp = Get-Date -Format 'HH:mm:ss'
     if ($env:QUIET -eq "true") {
-        Write-Error "[$timestamp] ERROR: $Message"
+        Write-Host "[$timestamp]" -ForegroundColor $Global:RED -NoNewline
+        Write-Host " ERROR: $Message"
     } else {
-        Write-Error "[$timestamp] ❌ $Message"
+        Write-Host "[$timestamp]" -ForegroundColor $Global:RED -NoNewline
+        Write-Host " ❌ $Message"
     }
 }
 
