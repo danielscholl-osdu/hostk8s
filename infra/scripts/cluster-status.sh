@@ -170,7 +170,7 @@ show_ingress_controller_status() {
         echo "🌐 Ingress Controller: ingress-nginx (Ready ✅)"
         echo "   Access: http://localhost:8080, https://localhost:8443"
     else
-        echo "🌐 Ingress Controller: ingress-nginx ($ingress_ready ⚠️)"
+        echo "🌐 Ingress Controller: ingress-nginx ($ingress_ready !)"
     fi
     echo
 }

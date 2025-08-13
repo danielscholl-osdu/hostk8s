@@ -171,7 +171,7 @@ jobs:
               \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
               \"description\": \"GitOps reconciliation tests starting...\",
               \"context\": \"github-actions/cluster-testing\"
-            }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
+            }" || echo "! Failed to report to GitLab (non-blocking)"
 
       - name: Create full Kind cluster with registry
         uses: helm/kind-action@v1
@@ -492,7 +492,7 @@ jobs:
               \"target_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
               \"description\": \"$description\",
               \"context\": \"github-actions/cluster-testing\"
-            }" || echo "⚠️ Failed to report to GitLab (non-blocking)"
+            }" || echo "! Failed to report to GitLab (non-blocking)"
 
           # Exit with failure code AFTER reporting to GitLab
           if [ "$overall_status" = "failed" ]; then

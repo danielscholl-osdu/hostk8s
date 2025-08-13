@@ -39,7 +39,7 @@ log_warn() {
     if [ "${QUIET:-false}" = "true" ]; then
         echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $*"
     else
-        echo -e "${YELLOW}[$(date +'%H:%M:%S')] ⚠️${NC} $*"
+        echo -e "${YELLOW}[$(date +'%H:%M:%S')] !${NC} $*"
     fi
 }
 

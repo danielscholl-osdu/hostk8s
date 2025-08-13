@@ -212,7 +212,7 @@ function Show-IngressControllerStatus {
                 $status = "not ready"
             }
         } catch { }
-        Write-Host "🌐 Ingress Controller: ingress-nginx ($status ❗)"
+        Write-Host "🌐 Ingress Controller: ingress-nginx ($status !)"
     }
     Write-Host ""
 }

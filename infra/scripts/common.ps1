@@ -56,7 +56,7 @@ function Log-Warn {
         Write-Host " WARNING: $Message"
     } else {
         Write-Host "[$timestamp]" -ForegroundColor $Global:YELLOW -NoNewline
-        Write-Host " ❗ $Message"
+        Write-Host " ! $Message"
     }
 }
 
