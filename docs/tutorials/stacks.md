@@ -223,52 +223,18 @@ spec:
   wait: true
 ```
 
-### The Stack Recipe
+### How Dependency Declarations Work
 
-The `stack.yaml` file is where the orchestration magic happens. Each component gets its own section that declares two critical things:
+Looking at the certificate chain example above, notice how each Flux Kustomization declares two critical properties:
 
 | Property | Purpose | Example |
 |----------|---------|---------|
-| `path` | Where to find the component | `./software/components/registry` |
-| `dependsOn` | What it depends on | `component-certs-issuer` |
+| `path` | Where to find the component | `./software/components/certs-ca` |
+| `dependsOn` | What must be healthy first | `component-certs` |
 
-The beauty is in the dependency declarations - this declarative approach eliminates all the timing guesswork you experienced manually. Each component simply declares "I need these other components to be healthy first" and Flux figures out the rest.
+This declarative approach eliminates the coordination chaos you experienced manually. Instead of guessing timing and deployment order, each component simply declares its dependencies and Flux automatically creates the execution plan: `certs → certs-ca → certs-issuer`.
 
-Flux reads these configurations and creates an execution plan: start with components that have no dependencies, wait for them to be healthy, then start the next tier.
-
-The dependency chain flows like this:
-`certs` → `certs-ca` → `certs-issuer` → `ingress-nginx` → `[sample applications]`
-
-Here's what a simple `stack.yaml` looks like with two components:
-
-```yaml
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: component-certs
-  namespace: flux-system
-spec:
-  path: ./software/components/certs
-  wait: true  # Must be healthy before continuing
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: component-registry
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: component-certs  # Wait for certs first
-  path: ./software/components/registry
-  wait: true
-```
-
-The complete tutorial-stack follows this same pattern with a full dependency chain:
-
-First, certificate management deploys and gets the foundation ready. Then, the certificate authority waits for basic certificates. Next, the certificate issuer waits for the CA. Finally, the ingress controller deploys once certificates are available, followed by the sample applications.
-
-This creates the exact dependency sequence that eliminates the coordination chaos you experienced manually.
+This is exactly the dependency sequence that eliminates the coordination problem you hit when trying to deploy the registry manually.
 
 ### Experience the Stack Solution
 
