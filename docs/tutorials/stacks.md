@@ -57,15 +57,15 @@ Components are the foundation blocks that make your applications possible. Need 
 
 Software stacks are like Lego instruction booklets that tell you which components to use and how they snap together. Instead of writing fragile scripts that manage timing and order manually, you declare what components and applications you want, define their dependencies, and let an automated orchestration framework handle all the sequencing, health checking, and retry logic.
 
-This automated orchestration is called **GitOps** - it continuously monitors your desired state configuration and automatically works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
-
-Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable development environments.
-
 **Think of the difference like this:**
 
 The manual approach is like a model airplane kit with custom pieces that only fit together one way. Want to build something else? You need a completely different kit with different pieces.
 
 The stack approach is like Lego blocks with instruction booklets. The same modular components can build a spaceship, a castle, or a race car, it all depends on which instruction booklet you follow.
+
+This automated orchestration is called **GitOps** - it continuously monitors your desired state configuration and automatically works to make reality match it. You declare what you want; GitOps figures out how to get there and keep it there.
+
+Components solve the modularity problem. Stacks solve the coordination problem. Together, they transform multi-service chaos into manageable, reusable development environments.
 
 ### Stack Solution in Action
 
