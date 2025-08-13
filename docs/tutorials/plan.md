@@ -4,87 +4,72 @@
 
 ## Overview
 
-Transform HostK8s into a complete development-to-deployment platform with progressive tutorial series that teaches fundamental concepts through hands-on experience, building from simple deployments to production-ready cloud infrastructure.
+Transform HostK8s into a complete development platform with progressive tutorial series that teaches fundamental concepts through hands-on experience, building from cluster setup to complete development workflows.
 
 ## Current State
 
-### ✅ **Completed Tutorials (Foundation)**
+### ✅ **Completed Tutorials**
 
-**Level 0: [Cluster Configuration](cluster.md)**
-- ✅ Completed - Host-mode architecture decisions
-- ✅ Single-node vs multi-node trade-offs
-- ✅ Configuration fallback system
-- ✅ Foundation: Infrastructure architecture understanding
+**[Cluster Configuration](cluster.md)** - ✅ *Completed*
+- Host-mode architecture decisions
+- Single-node vs multi-node trade-offs
+- Configuration fallback system
+- Foundation: Infrastructure architecture understanding
 
-### 🔨 **Active Development (Core Tutorials)**
-
-**Level 100: [Deploying Apps](apps.md)** - ✅ *Completed*
+**[Deploying Apps](apps.md)** - ✅ *Completed*
 - Three-app complexity progression (simple → basic → voting)
 - HostK8s application patterns and contracts
 - Deployment evolution: YAML → Kustomization → Helm
 - **End with resource waste problem** → sets up stacks tutorial
 - Foundation: Individual application deployment and management
 
-**Level 200: [Software Stacks](stacks.md)** - ✅ *Completed*
+**[Software Stacks](stacks.md)** - ✅ *Completed*
 - GitOps orchestration with Flux through experiential learning
 - Environment composition using pre-built components
 - Complete automated deployment workflows from manual coordination chaos
-- **End with component customization need** → sets up components tutorial
+- **End with development workflow need** → sets up development tutorial
 - Foundation: Automated environment deployment
 
-**Level 300: [Building Components](components.md)**
-- Component design patterns and architecture
-- Creating reusable infrastructure services (like the ones used in stacks)
-- Component lifecycle and customization
-- Foundation: Component development and maintenance
+### 🔨 **Active Development**
 
-### 🔮 **Future Development (Advanced Levels)**
-
-**Level 400: Development Workflows** (Target: 60-75 minutes)
-- Hot-reload Python development with vote service
-- Source code editing connected to cluster infrastructure
-- IDE debugging with real Redis/database connections
-- Foundation: Real development workflows
-
-**Level 500: Production Deployment** (Target: 75-90 minutes)
-- Deploy complete voting app stack to cloud Kubernetes
-- Real cloud infrastructure with persistent storage
-- Domain setup, ingress, and production patterns
-- Foundation: Cloud deployment and migration skills
+**[Development Workflows](development.md)** - *Final Tutorial*
+- Complete development iteration cycle with software stacks
+- Source code builds with `make build` and automatic image deployment
+- Hot-reload development with real services (databases, Redis, etc.)
+- IDE debugging connected to cluster infrastructure
+- Foundation: Real development workflows using stacks
 
 ## Tutorial Progression Strategy
 
-### **Refined Learning Journey**
+### **Complete Learning Journey**
 Progressive complexity building with clear problem-solution narrative:
 
 ```
-Level 0: Cluster        →    Infrastructure architecture
-Level 100: Apps         →    Application deployment patterns
-Level 200: Stacks       →    Environment composition & automation
-Level 300: Components   →    Building the infrastructure used in stacks
-Level 400: Development  →    Source-to-deployment workflows
-Level 500: Production   →    Cloud deployment
+Cluster Setup → App Deployment → Stack Orchestration → Development Workflows
+      ↓               ↓                    ↓                      ↓
+ Infrastructure   Individual         Complete Stack        Source-to-Deployment
+  Architecture     Services           Automation            Iteration Cycle
 ```
 
-### **Problem-Solution Flow**
+### **Tutorial Problem-Solution Flow**
 ```
-Cluster Config → App Deployment → Resource Waste → Environment Composition → Custom Components → Development → Production
-      ↓               ↓              ↓                     ↓                    ↓               ↓            ↓
- Infrastructure   Individual    Multiple Redis        Complete Stack      Component        IDE/Debug   Cloud/Scale
-  Architecture     Services     Instances            Automation         Development      Workflows   Infrastructure
+Cluster Config → App Deployment → Resource Waste → Environment Composition → Development Workflows
+      ↓               ↓              ↓                     ↓                    ↓
+ Infrastructure   Individual    Multiple Redis        Complete Stack      IDE/Debug/Build
+  Architecture     Services     Instances            Automation          Workflows
 ```
 
 ### **Application Evolution Strategy**
-**Apps Tutorial (Level 100)**:
+**Apps Tutorial**:
 - **Simple app**: Single service (demonstrates HostK8s contract)
 - **Basic app**: Multi-service (reveals complexity)
 - **Voting app**: Full application (shows Helm benefits + resource waste)
 
-**Voting App as Crescendo**:
-- Appears in Level 100 as final example showing full complexity
+**Voting App as Thread**:
+- Appears in Apps tutorial as final example showing full complexity
 - Reveals resource waste problem (multiple Redis instances)
-- Sets up shared components need for Level 200
-- Continues through higher levels as consistent example
+- Sets up shared components need for Stacks tutorial
+- Continues as development example in final tutorial
 
 ## Tutorial Content Strategy
 
@@ -120,9 +105,9 @@ Cluster Config → App Deployment → Resource Waste → Environment Composition
 - "There has to be a better way to compose apps + infrastructure together"
 - **Key insight**: Concrete ingress path conflicts demonstrate static YAML limitations perfectly
 
-**Stacks → Components Bridge**:
-- End stacks tutorial with: "These pre-built components are great, but what if you need custom ones?"
-- Set up component development need: "Let's learn to build the building blocks we've been using"
+**Stacks → Development Bridge**: ✅ *Implemented*
+- End stacks tutorial with: "You've mastered stack orchestration, now let's build applications"
+- Set up development workflow need: "Let's learn to build and iterate code using these stacks"
 
 ## Implementation Priorities
 

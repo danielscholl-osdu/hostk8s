@@ -277,10 +277,10 @@ make down sample
 make status
 ```
 
-## Understanding the Building Blocks
+## Ready for Real Development
 
-You've been using pre-built components throughout this tutorial - certificate managers, ingress controllers, and container registries that eliminate coordination chaos. But what if you need different components or want to understand how these building blocks actually work?
+You've mastered deploying complete software stacks with automated orchestration. But these have been pre-built applications - what about developing your own applications using these powerful stack environments?
 
-The components you've been deploying follow specific patterns that make them composable and reusable. Understanding these patterns is the key to building sophisticated environments beyond the tutorial examples.
+The next step is learning to build, deploy, and iterate on your own code within software stacks. This includes building source code, pushing images to the cluster registry, and having your applications automatically deploy and restart when you make changes.
 
-👉 **Continue to:** [Building Components](components.md) - *Learn to create the reusable building blocks that power software stacks*
+👉 **Continue to:** [Development Workflows](development.md) - *Learn to build and iterate applications within software stacks*
