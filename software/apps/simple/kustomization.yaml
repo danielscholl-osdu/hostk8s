@@ -6,12 +6,12 @@ metadata:
   labels:
     hostk8s.app: simple
 
+labels:
+  - pairs:
+      hostk8s.app: simple
+
 resources:
   - deployment.yaml
   - configmap.yaml
   - service.yaml
   - ingress.yaml
-
-labels:
-  - pairs:
-      hostk8s.app: simple

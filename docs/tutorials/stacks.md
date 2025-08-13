@@ -28,7 +28,7 @@ kubectl apply -f software/components/registry/
 
 **You'll see a mixture of results** because some resources create fine while others fail with errors about missing certificate resources and namespace dependency issues. The registry component assumes cert-manager is already installed and expects things to be deployed in a specific order.
 
-This is a typical coordination problem. The component assumes other services are already there and configured correctly.
+This is a typical coordination problem. The registry component requires a TLS certificate for secure connections, but to provision certificates we need certificate issuers, and to manage those issuers we need cert-manager deployed first. Kustomizations only define *what* to deploy, not *when* - there's no built-in mechanism to enforce this multi-step dependency chain (cert-manager → certificate issuer → certificate → registry).
 
 Now imagine this same experience multiplied across 5-10 foundational components, each with their own assumptions about what should already be running. You'd spend more time figuring out deployment order and debugging cryptic errors than actually building applications.
 
