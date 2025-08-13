@@ -111,13 +111,9 @@ Together, these components create a complete web application platform that elimi
 
 ## Understanding Stack Structure
 
-Now let's break down a stack that solves the coordination problem you just experienced. We'll examine a working stack that demonstrates proper orchestration without the complexity of building custom applications.
+Now let's break down a stack that solves the coordination problem you just experienced. The stack will use **Flux** as the tool to implement the GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; Flux figures out how to get there and keep it there.
 
-The stack will use **Flux** as the tool to implement the GitOps automation. Flux acts as the orchestration engine that watches your desired state and continuously works to make reality match it. You declare what you want; Flux figures out how to get there and keep it there.
-
-Let's examine the built-in sample stack that comes with HostK8s:
-
-To understand how stacks work, let's look at the three files that make them possible.
+To understand how stacks work, lets example the sample stack and look at the three files that make them possible.
 
 First, `kustomization.yaml` acts as the table of contents:
 ```yaml
@@ -128,7 +124,7 @@ resources:
   - stack.yaml         # The step-by-step instructions
 ```
 
-The next two files are GitOps configurations that the Flux tool uses as part of the GitOps automation process.
+The next files are GitOps configurations that the Flux tool uses as part of the GitOps automation process.
 
 Second, `repository.yaml` tells Flux where to find components:
 ```yaml
@@ -225,8 +221,8 @@ This creates the exact dependency sequence that eliminates the coordination chao
 Now let's see the stack eliminate the coordination chaos you experienced earlier:
 
 ```bash
-# Deploy your complete development environment (takes 2-3 minutes)
-make up extension/tutorial-stack
+# Deploy your complete software stack (takes 2-3 minutes)
+make up sample
 
 # Watch the automated orchestration happen
 make status
@@ -256,53 +252,20 @@ You'll see the GitOps automation orchestrating everything:
 
 **This is exactly the same set of services you were trying to deploy manually.** But instead of guessing deployment order, waiting and hoping things are ready, or debugging circular dependencies, the stack handles all that coordination intelligence for you. No more half-broken environments or connection debugging sessions.
 
-## Why This Coordination Matters
+## Cleaning Up Your Stack
 
-Now for the payoff - your stack creates a complete development environment that supports the full custom application development workflow. This is why you needed all that coordination in the first place.
-
-### Your Complete Development Platform
-
-The stack you just deployed gives you everything needed for end-to-end application development. You now have a private container registry to store your custom Docker images locally, automatic HTTPS certificates without manual certificate management, health monitoring to track your applications and infrastructure, and GitOps automation managing the entire lifecycle automatically.
-
-### The Complete Development Cycle
-
-Here's the development workflow your stack enables:
+Now that you've seen the stack in action, let's learn how to manage its lifecycle. One of the key benefits of stacks is clean removal:
 
 ```bash
-# Build your custom application and push to your private registry
-make build src/registry-demo
-
-# Deploy your application (it pulls from your own registry)
-make deploy registry-demo
-
-# See your complete development environment in action
-make status
+# Remove the entire stack cleanly
+make down sample
 ```
 
-Your complete development platform is now running:
-```
-[12:27:36] GitOps Applications
-📦 registry.registry
-   Deployment: registry (1/1 ready)
-   Service: registry (ClusterIP)
-   Access: https://localhost:5443 (registry ingress)
-
-📱 registry-demo.default
-   Deployment: registry-demo (1/1 ready)
-   Service: registry-demo (ClusterIP)
-   Access: http://localhost:8080/registry-demo (registry-demo ingress)
-
-[12:27:37] Health Check
-All deployed apps are healthy
-```
-
-**This is the payoff for all that coordination work.** When you build, your application gets compiled into a Docker image and pushed to your own private registry. When you deploy, your application pulls from that registry (not Docker Hub) and starts running with proper certificates and monitoring already in place.
-
-Your application configuration points to `localhost:5443/registry-demo:latest` - your own infrastructure that the stack coordinated for you. This is a complete, self-contained development environment where everything just works together.
+Watch as GitOps automation removes components in reverse dependency order, ensuring clean teardown without orphaned resources. This is the same coordination intelligence working in reverse - dependencies are respected during removal just like they were during deployment.
 
 ## Understanding What Just Happened
 
-You've gone from manual coordination chaos to a working development environment in minutes. The key insight is where the coordination intelligence lives.
+You've gone from manual coordination chaos to automated environment deployment in minutes. The key insight is where the coordination intelligence lives.
 
 ### From Human Detective to Automated Assistant
 
@@ -312,21 +275,13 @@ Flux continuously monitors when each component is actually ready, respects depen
 
 **The transformation:** coordination intelligence moves from your head into the automation system.
 
-### The Coordination Intelligence Transfer
-
-You've experienced a fundamental shift in where coordination intelligence lives. Before, you were the dependency detective, manually figuring out what needed to happen when. Now, the stack declarations contain that intelligence, and Flux executes it reliably every time.
-
-This intelligence transfer is what makes complex multi-service environments manageable.
-
 ### When Things Go Wrong
 
 Troubleshooting is much simpler now because the stack guarantees dependencies are met before anything tries to use them. Most issues are component-specific rather than coordination problems.
 
-**Start with the big picture:** `make status` shows all components and their health, while `kubectl get kustomizations -n flux-system` shows the GitOps automation status.
+**Start with the big picture:** `make status` shows all components and their health.
 
-**Drill down to specifics:** If a component is stuck, `kubectl describe kustomization component-registry -n flux-system` will show exactly what's happening with that component.
-
-**Test the actual services:** For the registry specifically, you can test direct access with port-forwarding and verify your custom images are actually stored there.
+**Drill down to specifics:** If a component is stuck, `kubectl describe kustomization component-registry -n flux-system` will show exactly what's happening.
 
 The key difference from manual coordination debugging: you're debugging individual component behavior, not trying to figure out why services can't find each other.
 
@@ -334,22 +289,20 @@ The key difference from manual coordination debugging: you're debugging individu
 
 You've experienced the fundamental shift that makes complex development environments manageable. Remember that registry deployment failure at the beginning? That coordination chaos is now completely eliminated.
 
-**Before this tutorial:** You were stuck playing dependency detective, guessing what needed to be deployed first, juggling different tools, debugging half-broken environments, and spending more time on service coordination than actual application development.
+**Before this tutorial:** You were stuck playing dependency detective, guessing what needed to be deployed first, juggling different tools, debugging half-broken environments, and spending more time on service coordination than actual development work.
 
-**After this tutorial:** You have a complete development environment deployed with one command, automatic dependency resolution and health monitoring handling all the complexity, an end-to-end custom application workflow from build to deployment, and zero coordination overhead so you can focus on your applications instead of infrastructure.
+**After this tutorial:** You can deploy complete development environments with one command, automatic dependency resolution handles all the complexity, clean removal respects dependencies in reverse order, and you have zero coordination overhead so you can focus on building instead of infrastructure.
 
-**The transformation:** Software stacks move multi-service environments from coordination nightmares into simple, reliable development platforms. The same pattern scales whether you need 5 services or 50.
+**The transformation:** Software stacks move multi-service environments from coordination nightmares into simple, reliable platforms. The same pattern scales whether you need 5 services or 50.
 
-### From Tutorial to Production
+### Understanding the Building Blocks
 
-Your tutorial stack is just the beginning. The same coordination principles apply to any application stack you need to build. Database-heavy applications need PostgreSQL, Redis, and Elasticsearch with proper connection management. Microservice platforms require service meshes, API gateways, monitoring, and distributed tracing. Data platforms coordinate Airflow, Kafka, data lakes, and processing pipelines. Enterprise environments add security layers, compliance tools, audit logging, and RBAC systems.
+You've been using pre-built components throughout this tutorial - the certificate manager, container registry, and ingress controller that make up your stack's foundation. These components are the building blocks that eliminate coordination chaos.
 
-The pattern remains the same: declare what components you want, define their dependencies, and let GitOps automation handle the orchestration complexity.
+But what if you need different components? What if you want to understand how these building blocks actually work, or need to create custom ones for your specific requirements?
 
-### Advanced Stack Patterns
+The components you've been deploying follow specific patterns and conventions that make them composable and reusable. Understanding these patterns is the key to building sophisticated development environments that go beyond the tutorial examples.
 
-As you build more sophisticated stacks, you'll extend these patterns in predictable ways. Multi-environment stacks create dev, staging, and prod variants with different configurations but the same coordination logic. External integration connects to cloud services and existing infrastructure while maintaining the declarative approach. Team collaboration uses shared stacks with personal customization overlays. Advanced dependencies handle complex service meshes and data pipeline orchestration.
+**The next step:** Learning to build and customize the components that power your stacks.
 
-The core insight never changes: eliminate manual coordination through declarative orchestration. The complexity stays in the automation system, not in your head.
-
-👉 **Continue to:** [Shared Components](shared-components.md) - *Learn how applications connect to and consume the foundation services your stacks provide*
+👉 **Continue to:** [Building Components](components.md) - *Learn how to create the reusable building blocks that power software stacks*
