@@ -238,7 +238,7 @@ This is exactly the dependency sequence that eliminates the coordination problem
 
 ### Experience the Stack Solution
 
-You've already deployed the sample stack with `make up sample`. Let's examine what the GitOps automation actually did when you ran `make status`.
+You've already deployed the sample stack, let's examine what the GitOps automation actually did when you ran `make status`.
 
 The output shows the dependency orchestration in action:
 
@@ -247,17 +247,13 @@ The output shows the dependency orchestration in action:
    Ready: True
    Message: Applied revision: main@sha1:4ce8b6ba
 
-[WAITING] Kustomization: component-certs-ca
+[...] Kustomization: component-certs-ca
    Ready: False
    Message: dependency 'flux-system/component-certs' is not ready
 
 [WAITING] Kustomization: component-certs-issuer
    Ready: False
    Message: dependency 'flux-system/component-certs-ca' is not ready
-
-[WAITING] Kustomization: component-ingress-nginx
-   Ready: False
-   Message: dependency 'flux-system/component-certs-issuer' is not ready
 ```
 
 **Understanding the Kustomization States:**
@@ -268,9 +264,7 @@ The output shows the dependency orchestration in action:
 | `[WAITING]` | Blocked by dependencies | Component waits for its dependencies to become ready |
 | `[...]` | Reconciliation in progress | Flux is actively deploying or updating the component |
 
-**What you're witnessing:** This is the exact dependency sequence we defined - `certs → certs-ca → certs-issuer → ingress-nginx` - being automatically enforced by Flux. Each component waits for its dependencies to be completely ready before starting.
-
-**This is exactly the same coordination problem you hit manually.** But instead of guessing deployment order, waiting and hoping things are ready, or debugging circular dependencies, the stack handles all that coordination intelligence automatically. No more half-broken environments or connection debugging sessions.
+**What you're witnessing:** This is the exact dependency sequence we defined (`certs → certs-ca → certs-issuer`) being automatically enforced by Flux. Instead of the coordination chaos you experienced manually - guessing deployment order, waiting and hoping things are ready, debugging circular dependencies - the stack handles all that intelligence automatically.
 
 ## Cleaning Up Your Stack
 
