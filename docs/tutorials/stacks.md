@@ -266,23 +266,14 @@ The output shows the dependency orchestration in action:
 
 **What you're witnessing:** This is the exact dependency sequence we defined being automatically enforced by Flux. Instead of the coordination chaos you experienced manually - guessing deployment order, waiting and hoping things are ready, debugging circular dependencies - the stack handles all that intelligence automatically.
 
-## Stack Lifecycle Management
+## Clean Up Your Stack
 
-Stacks provide complete lifecycle management with the same dependency intelligence:
+Now let's remove the stack you deployed:
 
 ```bash
-# Deploy a stack
-make up sample
-
-# Remove a stack (respects dependencies in reverse order)
 make down sample
-
-# Deploy multiple stacks
-make up sample
-make up extension/my-custom-stack
+make status
 ```
-
-The same dependency coordination that handles deployment also manages clean removal - components are removed in reverse dependency order to prevent orphaned resources or broken references.
 
 ## What Just Changed for You
 
