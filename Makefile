@@ -10,11 +10,6 @@ ifeq ($(OS),Windows_NT)
     SCRIPT_RUNNER := powershell.exe -ExecutionPolicy Bypass -NoProfile -File
     PWD_CMD := $$(powershell -Command "(Get-Location).Path")
     PATH_SEP := \\
-    # Windows uses echo without color support for compatibility
-    ECHO := echo
-    CYAN := 
-    BOLD := 
-    RESET := 
 else
     SCRIPT_EXT := .sh
     SCRIPT_RUNNER := 
@@ -35,6 +30,36 @@ export KUBECONFIG := $(KUBECONFIG_PATH)
 ##@ Setup
 
 help: ## Show this help message
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "& { \
+		Write-Host 'HostK8s - Host-Mode Kubernetes Development Platform'; \
+		Write-Host ''; \
+		Write-Host 'Usage:'; \
+		Write-Host '  make ' -NoNewline; Write-Host '<target>' -ForegroundColor Cyan; \
+		Write-Host ''; \
+		Write-Host 'Setup' -ForegroundColor White; \
+		Write-Host '  ' -NoNewline; Write-Host 'help' -ForegroundColor Cyan -NoNewline; Write-Host '             Show this help message'; \
+		Write-Host '  ' -NoNewline; Write-Host 'install' -ForegroundColor Cyan -NoNewline; Write-Host '          Install dependencies and setup environment (Usage: make install [dev])'; \
+		Write-Host ''; \
+		Write-Host 'Infrastructure' -ForegroundColor White; \
+		Write-Host '  ' -NoNewline; Write-Host 'start' -ForegroundColor Cyan -NoNewline; Write-Host '            Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)'; \
+		Write-Host '  ' -NoNewline; Write-Host 'stop' -ForegroundColor Cyan -NoNewline; Write-Host '             Stop cluster'; \
+		Write-Host '  ' -NoNewline; Write-Host 'up' -ForegroundColor Cyan -NoNewline; Write-Host '               Deploy software stack (Usage: make up [stack-name] - defaults to ''sample'')'; \
+		Write-Host '  ' -NoNewline; Write-Host 'down' -ForegroundColor Cyan -NoNewline; Write-Host '             Remove software stack (Usage: make down <stack-name>)'; \
+		Write-Host '  ' -NoNewline; Write-Host 'restart' -ForegroundColor Cyan -NoNewline; Write-Host '          Quick cluster reset for development iteration (Usage: make restart [stack-name])'; \
+		Write-Host '  ' -NoNewline; Write-Host 'clean' -ForegroundColor Cyan -NoNewline; Write-Host '            Complete cleanup (destroy cluster and data)'; \
+		Write-Host '  ' -NoNewline; Write-Host 'status' -ForegroundColor Cyan -NoNewline; Write-Host '           Show cluster health and running services'; \
+		Write-Host '  ' -NoNewline; Write-Host 'sync' -ForegroundColor Cyan -NoNewline; Write-Host '             Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])'; \
+		Write-Host ''; \
+		Write-Host 'Applications' -ForegroundColor White; \
+		Write-Host '  ' -NoNewline; Write-Host 'deploy' -ForegroundColor Cyan -NoNewline; Write-Host '           Deploy application (Usage: make deploy [app-name] [namespace] - defaults to ''simple'')'; \
+		Write-Host '  ' -NoNewline; Write-Host 'remove' -ForegroundColor Cyan -NoNewline; Write-Host '           Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)'; \
+		Write-Host ''; \
+		Write-Host 'Development Tools' -ForegroundColor White; \
+		Write-Host '  ' -NoNewline; Write-Host 'logs' -ForegroundColor Cyan -NoNewline; Write-Host '             View recent cluster events and logs'; \
+		Write-Host '  ' -NoNewline; Write-Host 'build' -ForegroundColor Cyan -NoNewline; Write-Host '            Build and push application from src/ (Usage: make build src/APP_NAME)' \
+	}"
+else
 	@$(ECHO) "HostK8s - Host-Mode Kubernetes Development Platform\n"
 	@$(ECHO) "\n"
 	@$(ECHO) "Usage:\n"
@@ -61,6 +86,7 @@ help: ## Show this help message
 	@$(ECHO) "$(BOLD)Development Tools$(RESET)\n"
 	@$(ECHO) "  $(CYAN)logs$(RESET)             View recent cluster events and logs\n"
 	@$(ECHO) "  $(CYAN)build$(RESET)            Build and push application from src/ (Usage: make build src/APP_NAME)\n"
+endif
 
 install: ## Install dependencies and setup environment (Usage: make install [dev])
 ifeq ($(word 2,$(MAKECMDGOALS)),dev)
