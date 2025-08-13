@@ -4,34 +4,37 @@
 .DEFAULT_GOAL := help
 .PHONY: help install start stop up down restart clean status deploy remove sync logs build
 
+# OS Detection for cross-platform script execution
+ifeq ($(OS),Windows_NT)
+    SCRIPT_EXT := .ps1
+    SCRIPT_RUNNER := powershell.exe -ExecutionPolicy Bypass -NoProfile -File
+    PWD_CMD := $$(powershell -Command "(Get-Location).Path")
+    PATH_SEP := \\
+else
+    SCRIPT_EXT := .sh
+    SCRIPT_RUNNER := 
+    PWD_CMD := $$(pwd)
+    PATH_SEP := /
+endif
+
 # Environment setup
-KUBECONFIG_PATH := $(shell pwd)/data/kubeconfig/config
+KUBECONFIG_PATH := $(PWD_CMD)$(PATH_SEP)data$(PATH_SEP)kubeconfig$(PATH_SEP)config
 export KUBECONFIG := $(KUBECONFIG_PATH)
 
-# Check if cluster is running
-define check_cluster
-	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then \
-		echo "⚠️  Cluster not found. Run 'make up' first."; \
-		exit 1; \
-	fi
-endef
 
 ##@ Setup
 
 help: ## Show this help message
-	@echo "HostK8s - Host-Mode Kubernetes Development Platform"
-	@echo ""
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@$(SCRIPT_RUNNER) ./infra/scripts/show-help$(SCRIPT_EXT)
 
 install: ## Install dependencies and setup environment (Usage: make install [dev])
-	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ "$$ARG" = "dev" ]; then \
-		echo "Setting up development environment..."; \
-		./infra/scripts/prepare.sh; \
-	else \
-		echo "Installing local dependencies..."; \
-		QUIET=true ./infra/scripts/install.sh; \
-	fi
+ifeq ($(word 2,$(MAKECMDGOALS)),dev)
+	@echo "Setting up development environment..."
+	@$(SCRIPT_RUNNER) ./infra/scripts/prepare$(SCRIPT_EXT)
+else
+	@echo "Installing local dependencies..."
+	@$(SCRIPT_RUNNER) ./infra/scripts/install$(SCRIPT_EXT)
+endif
 
 # Handle dev argument as target to avoid "No rule to make target" errors
 dev:
@@ -40,60 +43,28 @@ dev:
 ##@ Infrastructure
 
 start: ## Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)
-	@# Only check dependencies if no cluster config exists (fresh setup)
-	@if [ ! -f "$(KUBECONFIG_PATH)" ]; then $(MAKE) install; fi
-	@# Start cluster with optional Kind config
-	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ -n "$$ARG" ]; then \
-		if [ -f "infra/kubernetes/kind-$$ARG.yaml" ]; then \
-			echo "Starting cluster with Kind config: $$ARG"; \
-			KIND_CONFIG="$$ARG" ./infra/scripts/cluster-up.sh; \
-		else \
-			echo "Unknown Kind config: $$ARG"; \
-			echo "Available configurations:"; \
-			find infra/kubernetes -name "kind-*.yaml" -exec basename {} .yaml \; | sed 's/kind-/  /' | sort || echo "  No configurations found"; \
-			exit 1; \
-		fi; \
-	else \
-		KIND_CONFIG=${KIND_CONFIG} ./infra/scripts/cluster-up.sh; \
-	fi
+	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-up$(SCRIPT_EXT) $(word 2,$(MAKECMDGOALS))
 
 stop: ## Stop cluster
-	@./infra/scripts/cluster-down.sh
+	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT)
 
 up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
-	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	if [ -z "$$STACK_NAME" ]; then \
-		STACK_NAME="sample"; \
-		echo "No stack specified, using default: $$STACK_NAME"; \
-	fi; \
-	if [ "$$STACK_NAME" = "sample" ]; then \
-		echo "Deploying local software stack: $$STACK_NAME"; \
-		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
-			echo "Cluster exists - deploying software stack to existing cluster..."; \
-			./infra/scripts/deploy-stack.sh "$$STACK_NAME"; \
-		else \
-			echo "Creating new cluster with software stack..."; \
-			FLUX_ENABLED=true SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/cluster-up.sh; \
-		fi; \
-	elif [[ "$$STACK_NAME" == extension/* ]]; then \
-		echo "Deploying extension software stack: $$STACK_NAME"; \
-		if kind get clusters 2>/dev/null | grep -q "^hostk8s$$"; then \
-			echo "Cluster exists - deploying extension stack to existing cluster..."; \
-			./infra/scripts/deploy-stack.sh "$$STACK_NAME"; \
-		else \
-			echo "Creating new cluster with extension stack..."; \
-			FLUX_ENABLED=true SOFTWARE_STACK="$$STACK_NAME" ./infra/scripts/cluster-up.sh; \
-		fi; \
-	else \
-		echo "Unknown stack: $$STACK_NAME"; \
-		echo "Available stacks:"; \
-		find software/stacks -mindepth 1 -maxdepth 1 -type d | sed 's|software/stacks/||' || true; \
-		exit 1; \
-	fi
+	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 
 # Handle arguments as targets to avoid "No rule to make target" errors
-minimal simple default sample extension multi-tier %:
+minimal:
+	@:
+simple:
+	@:
+default:
+	@:
+sample:
+	@:
+extension:
+	@:
+multi-tier:
+	@:
+%:
 	@:
 
 # Handle extension/* patterns
@@ -101,68 +72,40 @@ extension/%:
 	@:
 
 down: ## Remove software stack (Usage: make down <stack-name>)
-	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	if [ -z "$$STACK_NAME" ]; then \
-		echo "Stack name required. Usage: make down <stack-name>"; \
-		exit 1; \
-	fi; \
-	echo "Removing stack: $$STACK_NAME"; \
-	./infra/scripts/deploy-stack.sh down "$$STACK_NAME"
+	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) down "$(word 2,$(MAKECMDGOALS))"
 
 restart: ## Quick cluster reset for development iteration (Usage: make restart [stack-name])
-	@echo "🔄 Restarting cluster..."
-	@# Determine if argument is a software stack
-	@ARG="$(word 2,$(MAKECMDGOALS))"; \
-	if [ -n "$$ARG" ]; then \
-		echo "🎯 Restarting with software stack: $$ARG"; \
-		FLUX_ENABLED=true SOFTWARE_STACK="$$ARG" ./infra/scripts/cluster-restart.sh; \
-	else \
-		./infra/scripts/cluster-restart.sh; \
-	fi
+	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-restart$(SCRIPT_EXT) $(word 2,$(MAKECMDGOALS))
 
 clean: ## Complete cleanup (destroy cluster and data)
-	@./infra/scripts/cluster-down.sh 2>/dev/null || true
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "try { & $(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT) 2>$$null } catch {}; try { kind delete cluster --name hostk8s 2>$$null } catch {}; try { Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue } catch {}; try { docker system prune -f 2>$$null } catch {}"
+else
+	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT) 2>/dev/null || true
 	@kind delete cluster --name hostk8s 2>/dev/null || true
 	@rm -rf data/ 2>/dev/null || true
 	@docker system prune -f >/dev/null 2>&1 || true
+endif
 
 status: ## Show cluster health and running services
-	@./infra/scripts/cluster-status.sh
+	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-status$(SCRIPT_EXT)
 
 sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])
-	@if [ -n "$(REPO)" ]; then \
-		./infra/scripts/flux-sync.sh --repo "$(REPO)"; \
-	elif [ -n "$(KUSTOMIZATION)" ]; then \
-		./infra/scripts/flux-sync.sh --kustomization "$(KUSTOMIZATION)"; \
-	else \
-		./infra/scripts/flux-sync.sh; \
-	fi
+ifdef REPO
+	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --repo "$(REPO)"
+else ifdef KUSTOMIZATION
+	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --kustomization "$(KUSTOMIZATION)"
+else
+	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT)
+endif
 
 ##@ Applications
 
 deploy: ## Deploy application (Usage: make deploy [app-name] [namespace] - defaults to 'simple')
-	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	POSITIONAL_NS="$(word 3,$(MAKECMDGOALS))"; \
-	TARGET_NAMESPACE="$${POSITIONAL_NS:-$${NAMESPACE:-default}}"; \
-	if [ -z "$$APP_NAME" ]; then \
-		APP_NAME="simple"; \
-		echo "No app specified, using default: $$APP_NAME"; \
-	fi; \
-	./infra/scripts/deploy-app.sh "$$APP_NAME" "$$TARGET_NAMESPACE"
+	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),simple) $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),default)
 
 remove: ## Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)
-	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	POSITIONAL_NS="$(word 3,$(MAKECMDGOALS))"; \
-	TARGET_NAMESPACE="$${POSITIONAL_NS:-$${NAMESPACE:-default}}"; \
-	if [ -z "$$APP_NAME" ]; then \
-		echo "Application name required. Usage: make remove <app-name> [namespace]"; \
-		echo "Examples:"; \
-		echo "  make remove simple                    # Remove from default namespace"; \
-		echo "  make remove simple testing           # Remove from testing namespace"; \
-		echo "  NAMESPACE=apps make remove simple    # Remove from apps namespace"; \
-		exit 1; \
-	fi; \
-	./infra/scripts/deploy-app.sh remove "$$APP_NAME" "$$TARGET_NAMESPACE"
+	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) remove "$(word 2,$(MAKECMDGOALS))" $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),$(if $(NAMESPACE),$(NAMESPACE),default))
 
 # Handle app and namespace arguments as targets to avoid "No rule to make target" errors
 %:
@@ -175,16 +118,7 @@ src/%:
 ##@ Development Tools
 
 logs: ## View recent cluster events and logs
-	$(call check_cluster)
-	@./infra/scripts/utils.sh logs $(filter-out logs,$(MAKECMDGOALS))
+	@$(SCRIPT_RUNNER) ./infra/scripts/utils$(SCRIPT_EXT) logs $(filter-out logs,$(MAKECMDGOALS))
 
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
-	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
-	./infra/scripts/build.sh "$$APP_PATH"
-
-	@if [ -f "$(KUBECONFIG_PATH)" ]; then \
-		echo "✅ Kubeconfig found: $(KUBECONFIG_PATH)"; \
-		echo "🔗 MCP configuration: .mcp.json"; \
-	else \
-		echo "❌ Cluster not running. Run 'make up' to start cluster."; \
-	fi
+	@$(SCRIPT_RUNNER) ./infra/scripts/build$(SCRIPT_EXT) "$(word 2,$(MAKECMDGOALS))"
