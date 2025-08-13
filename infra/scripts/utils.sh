@@ -21,7 +21,7 @@ if [ -f .env ]; then
     set +a  # Disable allexport mode
 fi
 
-KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"
+KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"
 
 # Ensure cluster is running
 if [ ! -f "$KUBECONFIG_PATH" ]; then

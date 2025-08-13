@@ -189,6 +189,12 @@ if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
     log_section_end
 fi
 
+# Prepare data directories with correct permissions before cluster creation
+log_debug "Preparing data directories..."
+# Create both kubeconfig and storage directories to prevent root ownership
+mkdir -p data/kubeconfig
+mkdir -p data/storage
+
 # Create Kind cluster with retry logic
 log_info "Creating Kind cluster..."
 if ! retry_with_backoff "Creating Kind cluster" \
@@ -202,19 +208,20 @@ fi
 
 # Export kubeconfig
 log_debug "Setting up kubeconfig..."
-mkdir -p data/kubeconfig
+# Use absolute path to avoid shell expansion issues in WSL
+KUBECONFIG_FULL_PATH="$(realpath data/kubeconfig/config)"
 kind export kubeconfig \
     --name "${CLUSTER_NAME}" \
-    --kubeconfig data/kubeconfig/config
+    --kubeconfig "${KUBECONFIG_FULL_PATH}"
 
 # Set up kubectl context
-export KUBECONFIG=$(pwd)/data/kubeconfig/config
+export KUBECONFIG="${KUBECONFIG_FULL_PATH}"
 
 # Fix kubeconfig for CI environment (GitLab CI networking)
 if [[ "${KIND_CONFIG}" == "ci" ]]; then
     log_debug "Applying CI-specific kubeconfig fixes for GitLab CI networking..."
     # Replace 0.0.0.0 and localhost with docker hostname for GitLab CI
-    sed -i.bak -E -e "s/localhost|0\.0\.0\.0/docker/g" "$(pwd)/data/kubeconfig/config"
+    sed -i.bak -E -e "s/localhost|0\.0\.0\.0/docker/g" "${KUBECONFIG_FULL_PATH}"
     log_debug "Kubeconfig updated for GitLab CI docker-in-docker networking"
 fi
 
@@ -233,7 +240,7 @@ kubectl get nodes
 if [[ "${METALLB_ENABLED}" == "true" ]]; then
     log_info "Setting up MetalLB..."
     if [ -f "infra/scripts/setup-metallb.sh" ]; then
-        KUBECONFIG=$(pwd)/data/kubeconfig/config ./infra/scripts/setup-metallb.sh || log_warn "MetalLB setup failed, continuing..."
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-metallb.sh || log_warn "MetalLB setup failed, continuing..."
     else
         log_warn "MetalLB setup script not found, skipping..."
     fi
@@ -242,7 +249,7 @@ fi
 if [[ "${INGRESS_ENABLED}" == "true" ]]; then
     log_info "Setting up NGINX Ingress..."
     if [ -f "infra/scripts/setup-ingress.sh" ]; then
-        KUBECONFIG=$(pwd)/data/kubeconfig/config ./infra/scripts/setup-ingress.sh || log_warn "Ingress setup failed, continuing..."
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-ingress.sh || log_warn "Ingress setup failed, continuing..."
     else
         log_warn "Ingress setup script not found, skipping..."
     fi
@@ -251,7 +258,7 @@ fi
 if [[ "${FLUX_ENABLED}" == "true" ]]; then
     log_info "Setting up Flux GitOps..."
     if [ -f "infra/scripts/setup-flux.sh" ]; then
-        KUBECONFIG=$(pwd)/data/kubeconfig/config ./infra/scripts/setup-flux.sh || log_warn "Flux setup failed, continuing..."
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-flux.sh || log_warn "Flux setup failed, continuing..."
     else
         log_warn "Flux setup script not found, skipping..."
     fi

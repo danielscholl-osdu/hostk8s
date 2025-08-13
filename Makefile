@@ -22,9 +22,14 @@ else
     RESET := \033[0m
 endif
 
-# Environment setup
-KUBECONFIG_PATH := $(PWD_CMD)$(PATH_SEP)data$(PATH_SEP)kubeconfig$(PATH_SEP)config
-export KUBECONFIG := $(KUBECONFIG_PATH)
+# Environment setup - Cross-platform path resolution
+ifeq ($(OS),Windows_NT)
+    KUBECONFIG_PATH := data\kubeconfig\config
+    export KUBECONFIG := $(shell pwsh -Command "(Get-Location).Path")\$(KUBECONFIG_PATH)
+else
+    KUBECONFIG_PATH := data/kubeconfig/config
+    export KUBECONFIG := $(shell pwd)/$(KUBECONFIG_PATH)
+endif
 
 
 ##@ Setup

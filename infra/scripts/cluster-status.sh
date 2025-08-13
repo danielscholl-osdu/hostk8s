@@ -3,7 +3,7 @@
 source "$(dirname "$0")/common.sh"
 
 show_kubeconfig_info() {
-    log_debug "export KUBECONFIG=$(pwd)/data/kubeconfig/config"
+    log_debug "export KUBECONFIG=${PWD}/data/kubeconfig/config"
     echo
 }
 

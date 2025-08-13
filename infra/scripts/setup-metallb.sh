@@ -20,8 +20,8 @@ detect_kubeconfig() {
     elif [ -f "/kubeconfig/config" ]; then
         KUBECONFIG_PATH="/kubeconfig/config"  # Container mode
         log "Using container kubeconfig: $KUBECONFIG_PATH"
-    elif [ -f "$(pwd)/data/kubeconfig/config" ]; then
-        KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"  # Host mode
+    elif [ -f "${PWD}/data/kubeconfig/config" ]; then
+        KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"  # Host mode
         log "Using host-mode kubeconfig: $KUBECONFIG_PATH"
     else
         error_exit "No kubeconfig found. Ensure cluster is running."
