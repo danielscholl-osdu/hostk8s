@@ -105,9 +105,9 @@ Let's create a complete software solution. You'll see how the stack "instruction
 
 ### Your Software Stack Components
 
-We'll build a stack with four essential components. A container registry stores your Docker images locally instead of pushing every change to Docker Hub. Certificate management provides HTTPS even in development, which many modern frameworks now require. Basic monitoring lets you know when things break. The GitOps foundation acts as the automation engine that orchestrates everything.
+We'll examine a stack with essential components that work together. Certificate management provides HTTPS capabilities that modern web applications require. An ingress controller handles external traffic routing to your applications. Sample applications demonstrate how business logic connects to the foundation components.
 
-Together, these components create a platform supporting the complete build, store, deploy, and monitor cycle that real development workflows need.
+Together, these components create a complete web application platform that eliminates the coordination chaos you experienced manually.
 
 ## Understanding Stack Structure
 
