@@ -128,7 +128,7 @@ sample/
 
 ### The Stack Contract
 
-Just like applications need a `kustomization.yaml` to work with `make deploy`, stacks need a specific files to work with `make up`. The stack contract consists of three core files:
+Similar to applications stacks need specific files to work with `make up`. The stack contract consists of three core files:
 
 | File | Purpose | What It Enables |
 |------|---------|-----------------|
@@ -138,12 +138,7 @@ Just like applications need a `kustomization.yaml` to work with `make deploy`, s
 
 ### Component Flexibility
 
-The key insight is that stacks can mix components from multiple sources:
-
-**Shared Components** (from `software/components/`):
-- Certificate management, container registry, monitoring
-- Maintained centrally, reused across multiple stacks
-- Located in the main HostK8s repository
+Stacks can mix components from multiple sources:
 
 **External Components** (from other repositories):
 - Specialized databases, custom monitoring, third-party services
@@ -154,6 +149,12 @@ The key insight is that stacks can mix components from multiple sources:
 - Custom configurations that don't belong in shared libraries
 - Stack-specific tweaks to standard components
 - Specialized components unique to this environment
+
+**Shared hostk8s Components** (from `software/components/`):
+- Certificate management, container registry, monitoring
+- Maintained centrally, reused across multiple stacks
+- Located in the main HostK8s repository
+
 
 This flexibility means your stack can pull the PostgreSQL component from your team's database repository, the monitoring from a shared infrastructure repository, and include a custom authentication component specific to this application.
 
@@ -202,13 +203,24 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-registry
+  name: component-certs-ca
   namespace: flux-system
 spec:
   dependsOn:
-    - name: component-certs                  # Wait for certs before starting
-  path: ./software/components/registry
-  wait: true                                 # Must be healthy before continuing
+    - name: component-certs                  # Wait for cert-manager first
+  path: ./software/components/certs-ca
+  wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs-issuer
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-certs-ca               # Wait for certificate authority
+  path: ./software/components/certs-issuer
+  wait: true
 ```
 
 ### The Stack Recipe
