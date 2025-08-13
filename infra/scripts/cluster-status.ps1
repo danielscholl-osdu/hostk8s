@@ -2,7 +2,7 @@
 . "$PSScriptRoot\common.ps1"
 
 function Show-KubeconfigInfo {
-    Log-Debug "export KUBECONFIG=$(Get-Location)\data\kubeconfig\config"
+    Log-Debug "`$env:KUBECONFIG = `"$(Get-Location)\data\kubeconfig\config`""
     Write-Host ""
 }
 

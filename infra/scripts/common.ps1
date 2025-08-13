@@ -140,6 +140,12 @@ function Load-Environment {
             if ($_ -match '^([^#=]+)=(.*)$') {
                 $name = $matches[1].Trim()
                 $value = $matches[2].Trim()
+
+                # Remove inline comments (everything after first # including the #)
+                if ($value -match '^([^#]*?)(\s*#.*)?$') {
+                    $value = $matches[1].Trim()
+                }
+
                 # Remove quotes if present
                 $value = $value -replace '^"(.*)"$', '$1'
                 $value = $value -replace "^'(.*)'$", '$1'
