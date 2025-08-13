@@ -118,12 +118,12 @@ Just like we explored the anatomy of HostK8s applications, let's examine what ma
 ```
 sample/
 ├── kustomization.yaml          # Stack contract (table of contents)
-├── repository.yaml             # Where to find shared components
-├── stack.yaml                  # Orchestration dependencies
+├── repository.yaml             # Source Location
+├── stack.yaml                  # Orchestration configuration
 ├── components/                 # Stack-specific components
-│   └── ...                     # Custom configurations for this stack
+│   └── ...
 └── applications/               # Stack-specific applications
-    └── ...                     # Business logic services
+    └── ...
 ```
 
 ### The Stack Contract
