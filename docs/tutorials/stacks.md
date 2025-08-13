@@ -238,39 +238,39 @@ This is exactly the dependency sequence that eliminates the coordination problem
 
 ### Experience the Stack Solution
 
-Now let's see the stack eliminate the coordination chaos you experienced earlier:
+You've already deployed the sample stack with `make up sample`. Let's examine what the GitOps automation actually did when you ran `make status`.
 
-```bash
-# Deploy your complete software stack (takes 2-3 minutes)
-make up sample
+The output shows the dependency orchestration in action:
 
-# Watch the automated orchestration happen
-make status
 ```
-
-You'll see the GitOps automation orchestrating everything:
-```
-[12:27:33] Cluster Addons
-🔄 Flux (GitOps): Ready
-   Status: GitOps automation available (v2.6.4)
-
-[12:27:34] GitOps Resources
 [OK] Kustomization: component-certs
-   Message: Applied revision: main@sha1:40e82c67
+   Ready: True
+   Message: Applied revision: main@sha1:4ce8b6ba
 
-[OK] Kustomization: component-certs-ca
-   Message: Applied revision: main@sha1:40e82c67
+[WAITING] Kustomization: component-certs-ca
+   Ready: False
+   Message: dependency 'flux-system/component-certs' is not ready
 
-[OK] Kustomization: component-certs-issuer
-   Message: Applied revision: main@sha1:40e82c67
+[WAITING] Kustomization: component-certs-issuer
+   Ready: False
+   Message: dependency 'flux-system/component-certs-ca' is not ready
 
-[OK] Kustomization: component-registry
-   Message: Applied revision: main@sha1:40e82c67
+[WAITING] Kustomization: component-ingress-nginx
+   Ready: False
+   Message: dependency 'flux-system/component-certs-issuer' is not ready
 ```
 
-**What you'll see:** The GitOps foundation deploys first and sets up the automation system. Then cert-manager and monitoring deploy in parallel since they both just need the foundation. The certificate authority waits for cert-manager to be completely ready before starting. The certificate issuer waits for the CA to exist. Finally, the container registry deploys once certificates are available.
+**Understanding the Kustomization States:**
 
-**This is exactly the same set of services you were trying to deploy manually.** But instead of guessing deployment order, waiting and hoping things are ready, or debugging circular dependencies, the stack handles all that coordination intelligence for you. No more half-broken environments or connection debugging sessions.
+| Status | Meaning | What's Happening |
+|--------|---------|------------------|
+| `[OK]` | Component is healthy and ready | Dependencies satisfied, resources deployed successfully |
+| `[WAITING]` | Blocked by dependencies | Component waits for its dependencies to become ready |
+| `[...]` | Reconciliation in progress | Flux is actively deploying or updating the component |
+
+**What you're witnessing:** This is the exact dependency sequence we defined - `certs → certs-ca → certs-issuer → ingress-nginx` - being automatically enforced by Flux. Each component waits for its dependencies to be completely ready before starting.
+
+**This is exactly the same coordination problem you hit manually.** But instead of guessing deployment order, waiting and hoping things are ready, or debugging circular dependencies, the stack handles all that coordination intelligence automatically. No more half-broken environments or connection debugging sessions.
 
 ## Cleaning Up Your Stack
 
