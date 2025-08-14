@@ -24,11 +24,11 @@ Current solutions make simple tasks painful:
 
 HostK8s eliminates this complexity by letting you pick exactly what you need. Want to test your API against a database and search engine? Deploy just those three services. Need to swap PostgreSQL for MySQL to test compatibility? Change one line in a config and redeploy.
 
-Beyond selective deployment, the platform separates the cluster from the data, so you can experiment fearlessly. Try that risky Helm chart upgrade, test new networking configs in the mesh, or completely rebuild your environment - the databases and persistent storage survive every change. When something breaks (and it will), you're back to working in 2 minutes, not 2 hours.
+Beyond selective deployment, the platform separates the cluster from the data, so you can experiment fearlessly. Try that risky Helm chart upgrade, test new networking configs in the mesh, or completely rebuild your environment. The databases and persistent storage survive every change. When something breaks (and it will), you're back to working in 2 minutes instead of 2 hours.
 
-Most importantly, HostK8s bridges the gap between your IDE and distributed services. Connect familiar debugging tools directly to services running in Kubernetes. Set breakpoints, inspect variables, and step through code just like you would with local development - but with the full complexity of a production-like environment.
+Most importantly, HostK8s bridges the gap between your IDE and distributed services. Connect familiar debugging tools directly to services running in Kubernetes. Set breakpoints, inspect variables, and step through code just like you would with local development, but with the full complexity of a production-like environment.
 
-When you inevitably hit complexity walls - why didn't that service start? What's wrong with the ingress configuration? - HostK8s includes AI agents that understand your specific setup. Ask natural language questions and get targeted analysis of your deployment, networking issues, or configuration trade-offs without diving into documentation rabbit holes.
+When you inevitably hit complexity walls, you can ask questions like "why didn't that service start?" or "what's wrong with the ingress configuration?" HostK8s includes AI agents that understand your specific setup. Ask natural language questions and get targeted analysis of your deployment, networking issues, or configuration trade-offs without diving into documentation rabbit holes.
 
 ## Key Concepts
 
