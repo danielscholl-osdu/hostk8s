@@ -99,7 +99,7 @@ flux install \
 
 # Wait for Flux controllers to be ready
 log_info "Waiting for Flux controllers to be ready..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log_warn "Flux controllers still initializing, continuing setup..."
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=available deployment -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log_warn "Flux controllers still initializing, continuing setup..."
 
 # Function to apply stamp YAML files with template substitution support
 apply_stamp_yaml() {

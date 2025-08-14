@@ -115,7 +115,7 @@ if ($LASTEXITCODE -ne 0) {
 # Wait for Flux controllers to be ready
 Log-Info "Waiting for Flux controllers to be ready..."
 try {
-    kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s 2>$null
+    kubectl wait --for=condition=available deployment -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s 2>$null
     if ($LASTEXITCODE -ne 0) {
         Write-Host "error: no matching resources found"
         Log-Warn "! Flux controllers still initializing, continuing setup..."
