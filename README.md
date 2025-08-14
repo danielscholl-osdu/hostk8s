@@ -83,9 +83,21 @@ make up                         # Bring up a simple software stack
 
 * **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
 * **2+ CPU cores, 4GB+ RAM** (8GB recommended)
-* **Mac, Linux, or WSL2**
+* **Mac, Linux, or Windows**
 
-> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install`.
+#### Platform-Specific Requirements
+
+**Windows**:
+* **Make for Windows** (`winget install ezwinports.make`) - **Required first**
+* **PowerShell 7+** (`winget install Microsoft.PowerShell`)
+* **Git for Windows** (`winget install Git.Git`)
+
+**Mac/Linux/WSL2**:
+* **Make** (typically pre-installed or via package manager)
+* **[Homebrew](https://brew.sh)** (recommended for automatic tool installation)
+* Standard Unix shell environment
+
+> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install` after Make is available.
 
 ---
 
@@ -174,7 +186,7 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
 | `K8S_VERSION`     | Kubernetes version to use                     | `latest`  |
 | `KIND_CONFIG`     | Kind config file (if not set, uses kind-config.yaml or kind-custom.yaml) | *(none)* |
-| `PACKAGE_MANAGER` | Package manager preference (brew, native)     | `auto`    |
+| `PACKAGE_MANAGER` | Package manager preference (brew, native, winget, chocolatey) | `auto` |
 | `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |
 | `METALLB_ENABLED` | Enable MetalLB for LoadBalancer support       | `false`   |
 | `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
@@ -182,3 +194,71 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
 | `NAMESPACE`       | Default namespace for app deployments         | `default` |
+
+---
+
+## Windows PowerShell Support
+
+HostK8s now supports native Windows PowerShell alongside traditional Mac/Linux/WSL2 environments.
+
+### Windows Setup
+
+```powershell
+# Install prerequisites
+winget install Microsoft.PowerShell     # PowerShell 7+
+winget install ezwinports.make         # Make for Windows
+winget install Git.Git                 # Git for Windows
+winget install Docker.DockerDesktop    # Docker Desktop
+
+# Clone and setup
+git clone https://community.opengroup.org/danielscholl/hostk8s.git
+cd hostk8s
+
+# Install Kubernetes tools automatically
+make install
+
+# Start your first cluster
+export FLUX_ENABLED=true
+make start
+make up
+```
+
+### Windows-Specific Notes
+
+* **PowerShell 7+ Required**: Windows PowerShell 5.1 is not supported
+* **Line Endings**: Automatically handled by `.gitattributes`
+* **Tool Installation**: Uses winget by default, with chocolatey fallback
+* **Docker Desktop**: Must be running before cluster operations
+* **PATH Updates**: May require PowerShell restart after tool installation
+
+### Troubleshooting Windows Issues
+
+**PowerShell Execution Policy**:
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Tool Not Found After Installation**:
+```powershell
+# Restart PowerShell session
+# Or add to PATH manually
+$env:PATH += ";C:\Program Files\kind"
+```
+
+**Docker Issues**:
+```powershell
+# Ensure Docker Desktop is running
+docker info
+
+# Common fix: restart Docker Desktop service
+Restart-Service docker
+```
+
+**Make Command Issues**:
+```powershell
+# Verify make installation
+make --version
+
+# Alternative: use chocolatey version
+choco install make
+```

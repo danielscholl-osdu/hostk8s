@@ -39,7 +39,7 @@ log_warn() {
     if [ "${QUIET:-false}" = "true" ]; then
         echo -e "${YELLOW}[$(date +'%H:%M:%S')] WARNING:${NC} $*"
     else
-        echo -e "${YELLOW}[$(date +'%H:%M:%S')] ⚠️${NC} $*"
+        echo -e "${YELLOW}[$(date +'%H:%M:%S')] !${NC} $*"
     fi
 }
 
@@ -92,7 +92,7 @@ load_environment() {
     export INGRESS_ENABLED=${INGRESS_ENABLED:-false}
     export FLUX_ENABLED=${FLUX_ENABLED:-false}
     export PACKAGE_MANAGER=${PACKAGE_MANAGER:-}
-    export KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"
+    export KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"
     export KUBECONFIG="$KUBECONFIG_PATH"
 }
 

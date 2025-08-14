@@ -3,7 +3,7 @@
 source "$(dirname "$0")/common.sh"
 
 show_kubeconfig_info() {
-    log_debug "export KUBECONFIG=$(pwd)/data/kubeconfig/config"
+    log_debug "export KUBECONFIG=${PWD}/data/kubeconfig/config"
     echo
 }
 
@@ -170,7 +170,7 @@ show_ingress_controller_status() {
         echo "🌐 Ingress Controller: ingress-nginx (Ready ✅)"
         echo "   Access: http://localhost:8080, https://localhost:8443"
     else
-        echo "🌐 Ingress Controller: ingress-nginx ($ingress_ready ⚠️)"
+        echo "🌐 Ingress Controller: ingress-nginx ($ingress_ready !)"
     fi
     echo
 }

@@ -20,8 +20,8 @@ detect_kubeconfig() {
     elif [ -f "/kubeconfig/config" ]; then
         KUBECONFIG_PATH="/kubeconfig/config"  # Container mode
         log_info "Using container kubeconfig: $KUBECONFIG_PATH"
-    elif [ -f "$(pwd)/data/kubeconfig/config" ]; then
-        KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"  # Host mode
+    elif [ -f "${PWD}/data/kubeconfig/config" ]; then
+        KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"  # Host mode
         log_info "Using host-mode kubeconfig: $KUBECONFIG_PATH"
     else
         error_exit "No kubeconfig found. Ensure cluster is running."
@@ -99,7 +99,7 @@ flux install \
 
 # Wait for Flux controllers to be ready
 log_info "Waiting for Flux controllers to be ready..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log_warn "Flux controllers still initializing, continuing setup..."
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=available deployment -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s || log_warn "Flux controllers still initializing, continuing setup..."
 
 # Function to apply stamp YAML files with template substitution support
 apply_stamp_yaml() {

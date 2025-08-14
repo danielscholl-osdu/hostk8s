@@ -9,6 +9,8 @@ infra/kubernetes/kind-config.yaml
 
 .vscode/*
 !.vscode/mcp.json
+!.vscode/settings.json
+!.vscode/extensions.json
 
 # Data directory (runtime artifacts, credentials, storage)
 data/

@@ -20,8 +20,8 @@ detect_kubeconfig() {
     elif [ -f "/kubeconfig/config" ]; then
         KUBECONFIG_PATH="/kubeconfig/config"  # Container mode
         log "Using container kubeconfig: $KUBECONFIG_PATH"
-    elif [ -f "$(pwd)/data/kubeconfig/config" ]; then
-        KUBECONFIG_PATH="$(pwd)/data/kubeconfig/config"  # Host mode
+    elif [ -f "${PWD}/data/kubeconfig/config" ]; then
+        KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"  # Host mode
         log "Using host-mode kubeconfig: $KUBECONFIG_PATH"
     else
         error_exit "No kubeconfig found. Ensure cluster is running."
@@ -62,8 +62,8 @@ fi
 
 # Extract network prefix and create IP pool range
 NETWORK_PREFIX=$(echo "$DOCKER_SUBNET" | cut -d'/' -f1 | cut -d'.' -f1-2)
-IP_POOL_START="${NETWORK_PREFIX}.255.200"
-IP_POOL_END="${NETWORK_PREFIX}.255.250"
+IP_POOL_START="${NETWORK_PREFIX}.200.200"
+IP_POOL_END="${NETWORK_PREFIX}.200.250"
 
 log "Configuring MetalLB IP pool: $IP_POOL_START-$IP_POOL_END"
 

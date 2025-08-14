@@ -14,6 +14,7 @@ Optimized ADR Index for Agent Context
 | 006 | Hybrid CI/CD Strategy               | acc    | [ADR-006](006-hybrid-ci-cd-strategy.md) |
 | 007 | Kind Configuration Fallback System | acc    | [ADR-007](007-kind-configuration-fallback-system.md) |
 | 008 | Source Code Build System Architecture | acc    | [ADR-008](008-source-code-build-system.md) |
+| 009 | Cross-Platform Implementation Strategy | acc    | [ADR-009](009-cross-platform-implementation-strategy.md) |
 
 ---
 
@@ -156,4 +157,21 @@ why: |
 tradeoffs:
 positive: [rapid development, multi-language support, educational excellence, registry integration, GitOps compatibility]
 negative: [build dependencies, registry complexity, disk usage, build time, platform dependencies]
+```
+
+--------------------------------------------
+```yaml
+id: 009
+title: Cross-Platform Implementation Strategy
+status: accepted
+date: 2025-01-15
+decision: Implement dual script architecture with functional parity between platform-native scripts (.sh/.ps1) rather than cross-platform scripting solutions.
+why: |
+• Platform optimization: Native tooling integration (winget/chocolatey vs brew/apt) provides better user experience
+• Developer familiarity: Platform-specific scripting conventions align with developer expectations
+• Performance: No abstraction layer overhead; scripts execute in optimal platform environments
+• Architecture preservation: Maintains successful three-layer abstraction while extending platform support
+tradeoffs:
+positive: [native platform integration, developer familiarity, performance, architecture preservation, feature parity]
+negative: [dual maintenance burden, functional parity verification, testing complexity, synchronization risk]
 ```

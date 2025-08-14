@@ -1,0 +1,7 @@
+{
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "ms-vscode.vscode-yaml",
+    "redhat.vscode-xml"
+  ]
+}
