@@ -60,7 +60,7 @@ Natural language cluster management and software troubleshooting through special
 
 | Component | Requirement |
 |-----------|-------------|
-| Hardware | 4+ CPU cores, 8GB+ RAM (16GB+ recommended for complex stacks) |
+| Hardware | 4+ CPU cores, 16GB+ RAM |
 | OS | **Mac**/**Linux** (bash/zsh) or **Windows** ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5)) |
 | Package Manager | [Homebrew](https://brew.sh) (Mac/Linux) or [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) (Windows) |
 | Containerization | [Docker Desktop](https://docs.docker.com/get-docker/) v24+ |
