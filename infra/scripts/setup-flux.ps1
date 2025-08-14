@@ -63,12 +63,12 @@ if (-not $env:SOFTWARE_STACK) {
 if ($env:LOG_LEVEL -ne "info") {
     Log-Section-Start
     Log-Status "Flux GitOps Configuration"
-    Log-Status "  Repository: $($env:GITOPS_REPO)"
-    Log-Status "  Branch: $($env:GITOPS_BRANCH)"
+    Log-Debug "  Repository: $($env:GITOPS_REPO)"
+    Log-Debug "  Branch: $($env:GITOPS_BRANCH)"
     if ($env:SOFTWARE_STACK) {
-        Log-Status "  Stack: $($env:SOFTWARE_STACK)"
+        Log-Debug "  Stack: $($env:SOFTWARE_STACK)"
     } else {
-        Log-Status "  Stack: Not configured (Flux only)"
+        Log-Debug "  Stack: Not configured (Flux only)"
     }
     Log-Section-End
 }
