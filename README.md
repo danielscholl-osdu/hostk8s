@@ -93,8 +93,8 @@ make up                         # Bring up a simple software stack
 
 ### Setup
 
-**Windows**: Install make in powershell core
 ```powershell
+# Windows: Install make
 winget install ezwinports.make
 ```
 
