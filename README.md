@@ -75,6 +75,7 @@ For a deeper understanding of the platform's design:
 git clone https://community.opengroup.org/danielscholl/hostk8s.git
 
 export FLUX_ENABLED=true        # Enable the GitOps AddOn
+                                 # Windows: $env:FLUX_ENABLED = "true"
 make start                      # Start a gitops enabled cluster
 make up                         # Bring up a simple software stack
 ```
@@ -93,7 +94,7 @@ make up                         # Bring up a simple software stack
 
 ### Setup
 
-```powershell
+```bash
 # Windows: Install make
 winget install ezwinports.make
 ```
@@ -112,22 +113,24 @@ Direct cluster management with manual application deployments. Ideal for **itera
 
 **Basic Development:**
 ```bash
-export INGRESS_ENABLED=true
-make start              # Start basic cluster
-make deploy             # Deploy the default app (simple) to the default namespace
-make status             # Check cluster and app status
-make clean              # Complete cleanup
+export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
+
+make start                      # Start basic cluster
+make deploy                     # Deploy the default app (simple) to the default namespace
+make status                     # Check cluster and app status
+make clean                      # Complete cleanup
 ```
 
 **Advanced Development:**
 ```bash
-export INGRESS_ENABLED=true
-export METALLB_ENABLED=true
-make start              # Start cluster with LoadBalancer and Ingress
-make deploy basic       # Deploy a multi-tier app
-make status             # Monitor cluster health
-make restart            # Quick reset of the cluster without app
-make stop               # Stop cluster (preserve data)
+export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
+export METALLB_ENABLED=true     # Windows: $env:METALLB_ENABLED = "true"
+
+make start                      # Start cluster with LoadBalancer and Ingress
+make deploy basic               # Deploy a multi-tier app
+make status                     # Monitor cluster health
+make restart                    # Quick reset of the cluster without app
+make stop                       # Stop cluster (preserve data)
 ```
 
 ### 2. Automated Operations
@@ -136,12 +139,13 @@ Complete software stack deployments using GitOps automation. Perfect for **consi
 
 **Built-in Sample Stack:**
 ```bash
-export INGRESS_ENABLED=true
-export FLUX_ENABLED=true
-make start              # Start the cluster with Flux
-make up sample          # Deploy complete GitOps environment
-make status             # Monitor GitOps reconciliation
-make sync               # Force Flux reconciliation when needed
+export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
+export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
+
+make start                      # Start the cluster with Flux
+make up sample                  # Deploy complete GitOps environment
+make status                     # Monitor GitOps reconciliation
+make sync                       # Force Flux reconciliation when needed
 ```
 
 ### 3. Customizations
@@ -150,10 +154,11 @@ Custom applications and cluster configurations for specialized requirements. Ena
 
 **Custom Clusters:**
 ```bash
-cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml. # Copy starter and modify
+cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml  # Copy starter and modify
 
-export METALLB_ENABLED=true
-export INGRESS_ENABLED=true
+export METALLB_ENABLED=true     # Windows: $env:METALLB_ENABLED = "true"
+export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
+
 make start                      # Uses the modified cluster configuration
 ```
 
@@ -168,7 +173,8 @@ make status                    # Verify deployment
 **Custom Software Stacks:**
 ```bash
 # Create complete stacks in software/stacks/extension/
-export GITOPS_REPO=https://github.com/yourorg/custom-stack
+export GITOPS_REPO=https://github.com/yourorg/custom-stack  # Windows: $env:GITOPS_REPO = "https://github.com/yourorg/custom-stack"
+
 make up extension                 # Deploy complete custom environment
 make status                       # Monitor custom stack deployment
 ```
@@ -195,71 +201,3 @@ Duplicate `.env.example` to `.env` and customize as needed. The main options are
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
 | `NAMESPACE`       | Default namespace for app deployments         | `default` |
-
----
-
-## Windows PowerShell Support
-
-HostK8s now supports native Windows PowerShell alongside traditional Mac/Linux/WSL2 environments.
-
-### Windows Setup
-
-```powershell
-# Install prerequisites
-winget install Microsoft.PowerShell     # PowerShell 7+
-winget install ezwinports.make         # Make for Windows
-winget install Git.Git                 # Git for Windows
-winget install Docker.DockerDesktop    # Docker Desktop
-
-# Clone and setup
-git clone https://community.opengroup.org/danielscholl/hostk8s.git
-cd hostk8s
-
-# Install Kubernetes tools automatically
-make install
-
-# Start your first cluster
-export FLUX_ENABLED=true
-make start
-make up
-```
-
-### Windows-Specific Notes
-
-* **PowerShell 7+ Required**: Windows PowerShell 5.1 is not supported
-* **Line Endings**: Automatically handled by `.gitattributes`
-* **Tool Installation**: Uses winget by default, with chocolatey fallback
-* **Docker Desktop**: Must be running before cluster operations
-* **PATH Updates**: May require PowerShell restart after tool installation
-
-### Troubleshooting Windows Issues
-
-**PowerShell Execution Policy**:
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
-```
-
-**Tool Not Found After Installation**:
-```powershell
-# Restart PowerShell session
-# Or add to PATH manually
-$env:PATH += ";C:\Program Files\kind"
-```
-
-**Docker Issues**:
-```powershell
-# Ensure Docker Desktop is running
-docker info
-
-# Common fix: restart Docker Desktop service
-Restart-Service docker
-```
-
-**Make Command Issues**:
-```powershell
-# Verify make installation
-make --version
-
-# Alternative: use chocolatey version
-choco install make
-```
