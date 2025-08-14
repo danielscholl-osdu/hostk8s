@@ -72,16 +72,15 @@ Get started in 3 simple steps:
 
 ```bash
 export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
+
 make start                      # Start a gitops enabled cluster
 make up                         # Bring up a simple software stack
 ```
 
-#### Setup
+#### Windows Setup
 
 ```bash
-# Windows: Install make
-
-winget install ezwinports.make
+winget install ezwinports.make    # Install make
 ```
 
 > **Note**: Other required tools are installed automatically via `make install`
