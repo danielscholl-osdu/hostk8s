@@ -85,7 +85,7 @@ make up                         # Bring up a simple software stack
 
 **OS:** Mac/Linux (bash/zsh) or Windows ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5))
 
-**Package Manager:** [Homebrew](https://brew.sh) (Mac/Linux) or Winget (Windows)
+**Package Manager:** [Homebrew](https://brew.sh) (Mac/Linux) or [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) (Windows)
 
 **Containerization:** [Docker Desktop](https://docs.docker.com/get-docker/) v24+
 
