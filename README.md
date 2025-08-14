@@ -32,23 +32,23 @@ When you inevitably hit complexity walls, you can ask questions like "why didn't
 
 ## Key Concepts
 
-### Software Stacks
+#### Software Stacks
 
 Pre-configured software stacks (web app + database, microservices + message queue, etc.) that spin up complete development environments. Deployed through declarative configuration that keeps environments version-controlled and consistent across the project.
 
-### Host Mode Architecture
+#### Host Mode Architecture
 
 HostK8s is built on **Kind** (Kubernetes in Docker) - a tool that runs Kubernetes clusters using Docker containers as nodes. Unlike heavy VM-based solutions, HostK8s uses your host Docker daemon directly, eliminating nested Docker layers and VM overhead. This means faster startup, lower resource usage, and seamless integration with standard tools (`make`, `kubectl`, `helm`, etc.).
 
 [Learn more about the architecture →](docs/architecture.md)
 
-### Software with Extensibility Points
+#### Software with Extensibility Points
 
 Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure custom software stacks while leveraging the HostK8s framework.
 
 [Get started with tutorials →](docs/tutorials/README.md)
 
-### AI Guided Operations
+#### AI Guided Operations
 
 Natural language cluster management and software troubleshooting through specialized AI agents, prompts and MCP servers.
 
@@ -59,7 +59,7 @@ Natural language cluster management and software troubleshooting through special
 
 ## Quick Start
 
-**Get started in a 3 simple steps:**
+Get started in a 3 simple steps:
 
 ```bash
 git clone https://community.opengroup.org/danielscholl/hostk8s.git
