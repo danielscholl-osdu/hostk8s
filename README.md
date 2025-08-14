@@ -36,17 +36,15 @@ When you inevitably hit complexity walls, you can ask questions like "why didn't
 
 Pre-configured software stacks (web app + database, microservices + message queue, etc.) that spin up complete development environments. Deployed through declarative configuration that keeps environments version-controlled and consistent across the project.
 
+Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure custom software stacks while leveraging the HostK8s framework.
+
+[Get started with tutorials →](docs/tutorials/README.md)
+
 #### Host Mode Architecture
 
 HostK8s is built on **Kind** (Kubernetes in Docker) - a tool that runs Kubernetes clusters using Docker containers as nodes. Unlike heavy VM-based solutions, HostK8s uses your host Docker daemon directly, eliminating nested Docker layers and VM overhead. This means faster startup, lower resource usage, and seamless integration with standard tools (`make`, `kubectl`, `helm`, etc.).
 
 [Learn more about the architecture →](docs/architecture.md)
-
-#### Software with Extensibility Points
-
-Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure custom software stacks while leveraging the HostK8s framework.
-
-[Get started with tutorials →](docs/tutorials/README.md)
 
 #### AI Guided Operations
 
@@ -63,7 +61,7 @@ Natural language cluster management and software troubleshooting through special
 | Component | Requirement |
 |-----------|-------------|
 | Hardware | 4+ CPU cores, 8GB+ RAM (16GB+ recommended for complex stacks) |
-| OS | Mac/Linux (bash/zsh) or Windows ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5)) |
+| OS | **Mac**/**Linux** (bash/zsh) or **Windows** ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5)) |
 | Package Manager | [Homebrew](https://brew.sh) (Mac/Linux) or [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) (Windows) |
 | Containerization | [Docker Desktop](https://docs.docker.com/get-docker/) v24+ |
 | Software | [make](https://www.gnu.org/software/make/) |
