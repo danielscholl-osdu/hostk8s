@@ -431,7 +431,7 @@ function Show-GitOpsApplications {
                 $displayName = if ($ns -eq "default") { $deploymentName } else { "$ns.$deploymentName" }
 
                 # Get the hostk8s.application label for services/ingress lookup
-                $appLabel = kubectl get deployment $deploymentName -n $ns -o jsonpath='{.metadata.labels.hostk8s\.application}' 2>$null
+                $appLabel = kubectl get deployment $deploymentName -n $ns -o jsonpath="{.metadata.labels.hostk8s\.application}" 2>$null
 
                 Write-Host "📱 $displayName"
                 Write-Host "   Deployment: $deploymentName ($ready ready)"
@@ -512,17 +512,58 @@ function Show-ManualDeployedApps {
     } catch { }
 }
 
-function Show-HealthCheck {
-    try {
-        $allApps = kubectl get all -l hostk8s.app --all-namespaces 2>$null
-        if ($LASTEXITCODE -ne 0) { return }
+function Test-GitOpsHealth {
+    $gitopsIssuesFound = $false
 
-        Log-Info "Health Check"
-        $issuesFound = $false
+    if (-not (Test-FluxCLI)) {
+        return $false
+    }
+
+    try {
+        # Check Kustomization status for GitOps stacks
+        $kustomizationOutput = flux get kustomizations 2>$null
+        if ($LASTEXITCODE -eq 0 -and $kustomizationOutput -match "^NAME") {
+            $lines = $kustomizationOutput -split "`n" | Where-Object { $_ -notmatch "^NAME" -and $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "`t"
+                if ($parts.Count -ge 4) {
+                    $name = $parts[0].Trim()
+                    $revision = $parts[1].Trim()
+                    $suspended = $parts[2].Trim()
+                    $ready = $parts[3].Trim()
+                    $message = if ($parts.Count -gt 4) { $parts[4].Trim() } else { "" }
+
+                    # Skip if suspended (paused by design)
+                    if ($suspended -eq "True") {
+                        continue
+                    }
+
+                    # Check if not ready
+                    if ($ready -eq "False") {
+                        Log-Warn "GitOps Kustomization $name not ready: $message"
+                        $gitopsIssuesFound = $true
+                    }
+                }
+            }
+        }
+    } catch {
+        $gitopsIssuesFound = $true
+    }
+
+    return $gitopsIssuesFound
+}
+
+function Test-ManualAppsHealth {
+    $manualIssuesFound = $false
+
+    try {
+        # Check if any manual apps exist
+        $allApps = kubectl get all -l hostk8s.app --all-namespaces 2>$null
+        if ($LASTEXITCODE -ne 0) { return $false }
 
         # Check LoadBalancer services
         $services = kubectl get services -l hostk8s.app --all-namespaces --no-headers 2>$null
-        if ($services) {
+        if ($LASTEXITCODE -eq 0 -and $services) {
             $lines = $services -split "`n" | Where-Object { $_.Trim() }
             foreach ($line in $lines) {
                 $parts = $line -split "\s+"
@@ -534,7 +575,7 @@ function Show-HealthCheck {
 
                     if ($type -eq "LoadBalancer" -and $externalIp -eq "<pending>") {
                         Log-Warn "LoadBalancer $name is pending (MetalLB not installed?)"
-                        $issuesFound = $true
+                        $manualIssuesFound = $true
                     }
                 }
             }
@@ -542,7 +583,7 @@ function Show-HealthCheck {
 
         # Check deployments
         $deployments = kubectl get deployments -l hostk8s.app --all-namespaces --no-headers 2>$null
-        if ($deployments) {
+        if ($LASTEXITCODE -eq 0 -and $deployments) {
             $lines = $deployments -split "`n" | Where-Object { $_.Trim() }
             foreach ($line in $lines) {
                 $parts = $line -split "\s+"
@@ -554,7 +595,7 @@ function Show-HealthCheck {
                     $readyParts = $ready -split "/"
                     if ($readyParts.Count -eq 2 -and $readyParts[0] -ne $readyParts[1]) {
                         Log-Warn "Deployment $name not fully ready ($ready)"
-                        $issuesFound = $true
+                        $manualIssuesFound = $true
                     }
                 }
             }
@@ -562,7 +603,7 @@ function Show-HealthCheck {
 
         # Check pods
         $pods = kubectl get pods -l hostk8s.app --all-namespaces --no-headers 2>$null
-        if ($pods) {
+        if ($LASTEXITCODE -eq 0 -and $pods) {
             $lines = $pods -split "`n" | Where-Object { $_.Trim() }
             foreach ($line in $lines) {
                 $parts = $line -split "\s+"
@@ -574,13 +615,149 @@ function Show-HealthCheck {
 
                     if ($status -ne "Running" -and $status -ne "Completed") {
                         Log-Warn "Pod $name in $status state"
-                        $issuesFound = $true
+                        $manualIssuesFound = $true
+                    }
+                }
+            }
+        }
+    } catch {
+        $manualIssuesFound = $true
+    }
+
+    return $manualIssuesFound
+}
+
+function Test-GitOpsAppsHealth {
+    $gitopsAppIssuesFound = $false
+
+    try {
+        # Check if any GitOps apps exist
+        $allApps = kubectl get all -l hostk8s.application --all-namespaces 2>$null
+        if ($LASTEXITCODE -ne 0) { return $false }
+
+        # Check LoadBalancer services
+        $services = kubectl get services -l hostk8s.application --all-namespaces --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $services) {
+            $lines = $services -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 5) {
+                    $ns = $parts[0]
+                    $name = $parts[1]
+                    $type = $parts[2]
+                    $externalIp = $parts[4]
+
+                    if ($type -eq "LoadBalancer" -and $externalIp -eq "<pending>") {
+                        Log-Warn "LoadBalancer $name is pending (MetalLB not installed?)"
+                        $gitopsAppIssuesFound = $true
                     }
                 }
             }
         }
 
-        if (-not $issuesFound) {
+        # Check deployments
+        $deployments = kubectl get deployments -l hostk8s.application --all-namespaces --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $deployments) {
+            $lines = $deployments -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 3) {
+                    $ns = $parts[0]
+                    $name = $parts[1]
+                    $ready = $parts[2]
+
+                    $readyParts = $ready -split "/"
+                    if ($readyParts.Count -eq 2 -and $readyParts[0] -ne $readyParts[1]) {
+                        Log-Warn "Deployment $name not fully ready ($ready)"
+                        $gitopsAppIssuesFound = $true
+                    }
+                }
+            }
+        }
+
+        # Check pods
+        $pods = kubectl get pods -l hostk8s.application --all-namespaces --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $pods) {
+            $lines = $pods -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 4) {
+                    $ns = $parts[0]
+                    $name = $parts[1]
+                    $ready = $parts[2]
+                    $status = $parts[3]
+
+                    if ($status -ne "Running" -and $status -ne "Completed") {
+                        Log-Warn "Pod $name in $status state"
+                        $gitopsAppIssuesFound = $true
+                    }
+                }
+            }
+        }
+    } catch {
+        $gitopsAppIssuesFound = $true
+    }
+
+    return $gitopsAppIssuesFound
+}
+
+function Show-HealthCheck {
+    try {
+        # Check if there are any deployed resources to check
+        $hasManualApps = $false
+        $hasGitOpsApps = $false
+        $hasGitOpsStacks = $false
+
+        # Check for manual apps
+        $manualApps = kubectl get all -l hostk8s.app --all-namespaces 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $hasManualApps = $true
+        }
+
+        # Check for GitOps applications
+        $gitopsApps = kubectl get all -l hostk8s.application --all-namespaces 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $hasGitOpsApps = $true
+        }
+
+        # Check for GitOps stacks (Flux Kustomizations)
+        if (Test-FluxCLI) {
+            $kustomizationOutput = flux get kustomizations 2>$null
+            if ($LASTEXITCODE -eq 0 -and $kustomizationOutput -match "^NAME") {
+                $hasGitOpsStacks = $true
+            }
+        }
+
+        # If nothing is deployed, skip health check
+        if (-not $hasManualApps -and -not $hasGitOpsApps -and -not $hasGitOpsStacks) {
+            return
+        }
+
+        Log-Info "Health Check"
+        $totalIssuesFound = $false
+
+        # Check GitOps stack reconciliation status first (most important for stacks)
+        if ($hasGitOpsStacks) {
+            if (Test-GitOpsHealth) {
+                $totalIssuesFound = $true
+            }
+        }
+
+        # Check GitOps application resources
+        if ($hasGitOpsApps) {
+            if (Test-GitOpsAppsHealth) {
+                $totalIssuesFound = $true
+            }
+        }
+
+        # Check manual application resources
+        if ($hasManualApps) {
+            if (Test-ManualAppsHealth) {
+                $totalIssuesFound = $true
+            }
+        }
+
+        if (-not $totalIssuesFound) {
             Log-Success "All deployed apps are healthy"
         }
     } catch { }
@@ -614,12 +791,15 @@ function Show-AppServices {
         $labelSelector = "hostk8s.$appType=$appName"
         $namespaceFlag = if ($ns) { "-n $ns" } else { "--all-namespaces" }
 
-        $services = kubectl get services -l $labelSelector $namespaceFlag --no-headers 2>$null
+        $cmd = "kubectl get services -l `"$labelSelector`" $namespaceFlag --no-headers 2>`$null"
+        $services = Invoke-Expression $cmd
         if ($LASTEXITCODE -eq 0 -and $services) {
             $lines = $services -split "`n" | Where-Object { $_.Trim() }
             foreach ($line in $lines) {
                 $parts = $line -split "\s+"
-                if ($parts.Count -ge 7) {
+                # Different field count based on namespace flag
+                $minParts = if ($ns) { 5 } else { 6 }
+                if ($parts.Count -ge $minParts) {
                     $svcNs = if ($ns) { $ns } else { $parts[0] }
                     $name = if ($ns) { $parts[0] } else { $parts[1] }
                     $type = if ($ns) { $parts[1] } else { $parts[2] }
@@ -651,7 +831,8 @@ function Show-AppIngress {
         $labelSelector = "hostk8s.$appType=$appName"
         $namespaceFlag = if ($ns) { "-n $ns" } else { "--all-namespaces" }
 
-        $ingresses = kubectl get ingress -l $labelSelector $namespaceFlag --no-headers 2>$null
+        $cmd = "kubectl get ingress -l `"$labelSelector`" $namespaceFlag --no-headers 2>`$null"
+        $ingresses = Invoke-Expression $cmd
         if ($LASTEXITCODE -eq 0 -and $ingresses) {
             $lines = $ingresses -split "`n" | Where-Object { $_.Trim() }
             foreach ($line in $lines) {
@@ -660,17 +841,32 @@ function Show-AppIngress {
                     $ingressNs = if ($ns) { $ns } else { $parts[0] }
                     $name = if ($ns) { $parts[0] } else { $parts[1] }
 
-                    # Get detailed ingress info to show paths
-                    $ingressDetails = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                    if ($LASTEXITCODE -eq 0 -and $ingressDetails) {
-                        $path = $ingressDetails.Trim('/')
-                        if ($path) {
-                            Write-Host "   Ingress: $name -> http://localhost:8080/$path"
+                    # Check if ingress controller is ready
+                    if (Test-IngressControllerReady) {
+                        if ($appType -eq "application") {
+                            # Get detailed ingress info to show paths for GitOps applications
+                            $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $path) {
+                                if ($path -eq "/") {
+                                    Write-Host "   Access: http://localhost:8080/ ($name ingress)"
+                                } else {
+                                    Write-Host "   Access: http://localhost:8080$path ($name ingress)"
+                                }
+                            } else {
+                                Write-Host "   Access: http://localhost:8080/ ($name ingress)"
+                            }
                         } else {
-                            Write-Host "   Ingress: $name -> http://localhost:8080/"
+                            # For non-GitOps applications, use simpler format
+                            $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
+                                Write-Host "   Ingress: $name -> http://localhost:8080$path"
+                            } else {
+                                Write-Host "   Ingress: $name -> http://localhost:8080/"
+                            }
                         }
                     } else {
-                        Write-Host "   Ingress: $name -> http://localhost:8080"
+                        Write-Host "   Ingress: $name (configured but controller not ready)"
+                        Write-Host "   Enable with: export INGRESS_ENABLED=true && make restart"
                     }
                 }
             }

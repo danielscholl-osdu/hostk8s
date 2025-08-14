@@ -433,13 +433,46 @@ show_helm_app_resources() {
     done
 }
 
-show_health_check() {
-    if ! kubectl get all -l hostk8s.app --all-namespaces >/dev/null 2>&1; then
+check_gitops_health() {
+    local gitops_issues_found=0
+
+    if ! has_flux_cli; then
         return 0
     fi
 
-    log_info "Health Check"
-    local issues_found=0
+    # Check Kustomization status for GitOps stacks
+    local kustomization_output=$(flux get kustomizations 2>/dev/null)
+    if [ -n "$kustomization_output" ] && echo "$kustomization_output" | grep -q "^NAME"; then
+        echo "$kustomization_output" | grep -v "^NAME" | grep -v "^[[:space:]]*$" | while IFS=$'\t' read -r name revision suspended ready message; do
+            local name_trimmed=$(echo "$name" | tr -d ' ')
+            [ -z "$name_trimmed" ] && continue
+
+            local ready_trim=$(echo "$ready" | tr -d ' ')
+            local suspended_trim=$(echo "$suspended" | tr -d ' ')
+
+            # Skip if suspended (paused by design)
+            if [ "$suspended_trim" = "True" ]; then
+                continue
+            fi
+
+            # Check if not ready
+            if [ "$ready_trim" = "False" ]; then
+                log_warn "GitOps Kustomization $name_trimmed not ready: $message"
+                exit 1
+            fi
+        done || gitops_issues_found=1
+    fi
+
+    return $gitops_issues_found
+}
+
+check_manual_apps_health() {
+    local manual_issues_found=0
+
+    # Check if any manual apps exist
+    if ! kubectl get all -l hostk8s.app --all-namespaces >/dev/null 2>&1; then
+        return 0
+    fi
 
     # Check LoadBalancer services
     kubectl get services -l hostk8s.app --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do
@@ -465,9 +498,102 @@ show_health_check() {
             log_warn "Pod $name in $status state"
             exit 1
         fi
-    done || issues_found=1
+    done || manual_issues_found=1
 
-    if [ "$issues_found" = "0" ]; then
+    return $manual_issues_found
+}
+
+check_gitops_apps_health() {
+    local gitops_app_issues_found=0
+
+    # Check if any GitOps apps exist
+    if ! kubectl get all -l hostk8s.application --all-namespaces >/dev/null 2>&1; then
+        return 0
+    fi
+
+    # Check LoadBalancer services
+    kubectl get services -l hostk8s.application --all-namespaces --no-headers 2>/dev/null | while read -r ns name type cluster_ip external_ip ports age; do
+        if ! check_service_health "$ns $name $type $cluster_ip $external_ip $ports $age"; then
+            log_warn "LoadBalancer $name is pending (MetalLB not installed?)"
+            exit 1
+        fi
+    done && \
+
+    # Check deployments
+    kubectl get deployments -l hostk8s.application --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready up total age; do
+        if ! check_deployment_health "$ready"; then
+            local ready_count=$(echo "$ready" | cut -d/ -f1)
+            local total_count=$(echo "$ready" | cut -d/ -f2)
+            log_warn "Deployment $name not fully ready ($ready_count/$total_count)"
+            exit 1
+        fi
+    done && \
+
+    # Check pods
+    kubectl get pods -l hostk8s.application --all-namespaces --no-headers 2>/dev/null | while read -r ns name ready status restarts age; do
+        if ! check_pod_health "$status"; then
+            log_warn "Pod $name in $status state"
+            exit 1
+        fi
+    done || gitops_app_issues_found=1
+
+    return $gitops_app_issues_found
+}
+
+show_health_check() {
+    # Check if there are any deployed resources to check
+    local has_manual_apps=0
+    local has_gitops_apps=0
+    local has_gitops_stacks=0
+
+    # Check for manual apps
+    if kubectl get all -l hostk8s.app --all-namespaces >/dev/null 2>&1; then
+        has_manual_apps=1
+    fi
+
+    # Check for GitOps applications
+    if kubectl get all -l hostk8s.application --all-namespaces >/dev/null 2>&1; then
+        has_gitops_apps=1
+    fi
+
+    # Check for GitOps stacks (Flux Kustomizations)
+    if has_flux_cli; then
+        local kustomization_output=$(flux get kustomizations 2>/dev/null)
+        if [ -n "$kustomization_output" ] && echo "$kustomization_output" | grep -q "^NAME"; then
+            has_gitops_stacks=1
+        fi
+    fi
+
+    # If nothing is deployed, skip health check
+    if [ "$has_manual_apps" = "0" ] && [ "$has_gitops_apps" = "0" ] && [ "$has_gitops_stacks" = "0" ]; then
+        return 0
+    fi
+
+    log_info "Health Check"
+    local total_issues_found=0
+
+    # Check GitOps stack reconciliation status first (most important for stacks)
+    if [ "$has_gitops_stacks" = "1" ]; then
+        if ! check_gitops_health; then
+            total_issues_found=1
+        fi
+    fi
+
+    # Check GitOps application resources
+    if [ "$has_gitops_apps" = "1" ]; then
+        if ! check_gitops_apps_health; then
+            total_issues_found=1
+        fi
+    fi
+
+    # Check manual application resources
+    if [ "$has_manual_apps" = "1" ]; then
+        if ! check_manual_apps_health; then
+            total_issues_found=1
+        fi
+    fi
+
+    if [ "$total_issues_found" = "0" ]; then
         log_success "All deployed apps are healthy"
     fi
 }
