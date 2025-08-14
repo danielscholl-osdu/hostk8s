@@ -135,7 +135,19 @@ function Log-Section-End {
 
 # Environment setup - load .env if exists
 function Load-Environment {
+    # Clear environment variables that could be set from .env to prevent persistence
     if (Test-Path ".env") {
+        # First pass: identify all variables that could be set from .env (including commented ones)
+        Get-Content ".env" | ForEach-Object {
+            if ($_ -match '^#?([^#=]+)=(.*)$') {
+                $varName = $matches[1].Trim()
+                if ($varName -and $varName.Length -gt 0) {
+                    [Environment]::SetEnvironmentVariable($varName, $null, "Process")
+                }
+            }
+        }
+
+        # Second pass: load only uncommented variables
         Get-Content ".env" | ForEach-Object {
             if ($_ -match '^([^#=]+)=(.*)$') {
                 $name = $matches[1].Trim()
