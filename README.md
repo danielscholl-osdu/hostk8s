@@ -93,7 +93,9 @@ HostK8s supports three primary usage patterns, each optimized for different deve
 
 ### 1. Manual Operations
 
-Direct cluster management with manual application deployments. Ideal for **iterative development**, **learning Kubernetes**, and **testing individual applications**.
+Direct cluster management with manual application deployments.
+
+> *Ideal for iterative development, learning Kubernetes, and testing individual applications.*
 
 **Basic Development:**
 ```bash
@@ -119,7 +121,9 @@ make stop                       # Stop cluster (preserve data)
 
 ### 2. Automated Operations
 
-Complete software stack deployments using GitOps automation. Perfect for **consistent environments**, **team collaboration**, and **production-like setups**.
+Complete software stack deployments using GitOps automation.
+
+> *Perfect for consistent environments, team collaboration, and production-like setups.*
 
 **Built-in Sample Stack:**
 ```bash
@@ -134,7 +138,9 @@ make sync                       # Force Flux reconciliation when needed
 
 ### 3. Customizations
 
-Custom applications and cluster configurations for specialized requirements. Enables **complete customization** while leveraging the HostK8s framework.
+Custom applications and cluster configurations for specialized requirements.
+
+> *Enables complete customization while leveraging the HostK8s framework.*
 
 **Custom Clusters:**
 ```bash
