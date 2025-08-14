@@ -1,8 +1,8 @@
-# HostK8s Tutorials
+# Tutorials
 
 Progressive learning series from cluster setup to complete development workflows.
 
-## Cluster Configuration
+### Cluster Configuration
 
 *Learn configurable cluster architecture patterns that let you version control your development environment alongside your application code*
 
@@ -12,7 +12,7 @@ Experience the development workflow trade-offs that drive configuration decision
 
 ---
 
-## Deploying Applications
+### Deploying Applications
 
 *Understanding HostK8s application patterns and why they eliminate deployment complexity*
 
@@ -22,7 +22,7 @@ Deploy individual applications using HostK8s contracts. Experience the evolution
 
 ---
 
-## Software Stacks
+### Software Stacks
 
 *Building complete development environments that eliminate service coordination chaos*
 
@@ -32,7 +32,7 @@ Learn how software stacks solve the multi-service reality through GitOps automat
 
 ---
 
-## Development Workflows
+### Development Workflows
 
 *Complete source-to-deployment development cycle with production-like environments*
 
