@@ -79,25 +79,24 @@ make start                      # Start a gitops enabled cluster
 make up                         # Bring up a simple software stack
 ```
 
-### Prerequisites
+## Prerequisites
 
-* **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
-* **2+ CPU cores, 4GB+ RAM** (8GB recommended)
-* **Mac, Linux, or Windows**
+**Hardware:** 8+ CPU cores, 16GB+ RAM
+**OS:** Mac/Linux (bash/zsh) or Windows ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5))
+**Package Manager:** [Homebrew](https://brew.sh) (Mac/Linux) or Winget (Windows)
+**Containerization:** [Docker Desktop](https://docs.docker.com/get-docker/) v24+
+**Software:** [make](https://www.gnu.org/software/make/)
 
-#### Platform-Specific Requirements
+### Setup
 
-**Windows**:
-* **Make for Windows** (`winget install ezwinports.make`) - **Required first**
-* **PowerShell 7+** (`winget install Microsoft.PowerShell`)
-* **Git for Windows** (`winget install Git.Git`)
+**Mac/Linux**: make installed by default
 
-**Mac/Linux/WSL2**:
-* **Make** (typically pre-installed or via package manager)
-* **[Homebrew](https://brew.sh)** (recommended for automatic tool installation)
-* Standard Unix shell environment
+**Windows**: Install make in powershell core
+```powershell
+winget install ezwinports.make
+```
 
-> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install` after Make is available.
+> **Note**: Other required tools are installed automatically via `make install`
 
 ---
 
