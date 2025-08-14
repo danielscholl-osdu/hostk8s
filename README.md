@@ -83,8 +83,6 @@ make up                         # Bring up a simple software stack
 winget install ezwinports.make    # Install make
 ```
 
-> **Note**: Other required tools are installed automatically via `make install`
-
 ---
 
 ## Usage Scenarios
