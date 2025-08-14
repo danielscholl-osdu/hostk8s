@@ -19,12 +19,121 @@ spec:
     spec:
       containers:
       - name: api
-        image: nginx:alpine
+        image: node:18-alpine
         ports:
-        - containerPort: 80
-        env:
-        - name: DATABASE_URL
-          value: "postgresql://appuser:apppass@postgresql.database.svc.cluster.local:5432/appdb"
+        - containerPort: 3000
+        command:
+        - sh
+        - -c
+        - |
+          cat > /app/server.js << 'EOF'
+          const express = require('express');
+          const fs = require('fs').promises;
+          const path = require('path');
+
+          const app = express();
+          const port = 3000;
+          const storageDir = '/app/storage';
+          const testFilePath = path.join(storageDir, 'test.txt');
+
+          // Ensure storage directory exists
+          async function ensureStorageDir() {
+            try {
+              await fs.access(storageDir);
+            } catch {
+              await fs.mkdir(storageDir, { recursive: true });
+            }
+          }
+
+          // Serve static HTML at root
+          app.get('/', (req, res) => {
+            res.send(`
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Sample API</title>
+                <meta charset="UTF-8">
+                <style>
+                    body { font-family: Arial, sans-serif; margin: 40px; background: #f0f8ff; }
+                    .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                    .api-status { padding: 20px; background: #e8f4f8; border-radius: 5px; }
+                    code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>🔌 Sample API Service</h1>
+                    <div class="api-status">
+                        <h2>API Status: Running</h2>
+                        <p><strong>Storage:</strong> /app/storage (persistent volume)</p>
+                        <p><strong>Deployment:</strong> GitOps via Flux</p>
+                        <p><strong>Endpoints:</strong></p>
+                        <ul>
+                            <li><code>GET /health</code> - Health check</li>
+                            <li><code>POST /storage/test</code> - Write test file</li>
+                            <li><code>GET /storage/test</code> - Read test file</li>
+                            <li><code>DELETE /storage/test</code> - Delete test file</li>
+                        </ul>
+                        <p><strong>Access:</strong> http://localhost:8080/api</p>
+                    </div>
+                </div>
+            </body>
+            </html>
+            `);
+          });
+
+          // Health check endpoint
+          app.get('/health', (req, res) => {
+            res.json({ status: 'healthy', timestamp: new Date().toISOString() });
+          });
+
+          // Write test file
+          app.post('/storage/test', async (req, res) => {
+            try {
+              await ensureStorageDir();
+              const content = `Test file created at ${new Date().toISOString()}\nPod: ${process.env.HOSTNAME || 'unknown'}`;
+              await fs.writeFile(testFilePath, content);
+              res.send('File written successfully');
+            } catch (error) {
+              res.status(500).send(`Error: ${error.message}`);
+            }
+          });
+
+          // Read test file
+          app.get('/storage/test', async (req, res) => {
+            try {
+              const content = await fs.readFile(testFilePath, 'utf8');
+              res.send(content);
+            } catch (error) {
+              if (error.code === 'ENOENT') {
+                res.status(404).send('File not found');
+              } else {
+                res.status(500).send(`Error: ${error.message}`);
+              }
+            }
+          });
+
+          // Delete test file
+          app.delete('/storage/test', async (req, res) => {
+            try {
+              await fs.unlink(testFilePath);
+              res.send('File deleted successfully');
+            } catch (error) {
+              if (error.code === 'ENOENT') {
+                res.status(404).send('File not found');
+              } else {
+                res.status(500).send(`Error: ${error.message}`);
+              }
+            }
+          });
+
+          app.listen(port, () => {
+            console.log(`Sample API listening on port ${port}`);
+            console.log(`Storage directory: ${storageDir}`);
+          });
+          EOF
+
+          cd /app && npm init -y && npm install express && node server.js
         resources:
           requests:
             memory: "64Mi"
@@ -33,48 +142,24 @@ spec:
             memory: "128Mi"
             cpu: "100m"
         volumeMounts:
-        - name: api-content
-          mountPath: /usr/share/nginx/html
+        - name: storage-volume
+          mountPath: /app/storage
       volumes:
-      - name: api-content
-        configMap:
-          name: sample-api-content
+      - name: storage-volume
+        persistentVolumeClaim:
+          claimName: sample-api-storage
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: PersistentVolumeClaim
 metadata:
-  name: sample-api-content
+  name: sample-api-storage
   namespace: sample-api
   labels:
     hostk8s.application: api
-data:
-  index.html: |
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Sample API</title>
-        <meta charset="UTF-8">
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; background: #f0f8ff; }
-            .container { max-width: 600px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-            .api-status { padding: 20px; background: #e8f4f8; border-radius: 5px; }
-            code { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>🔌 Sample API Service</h1>
-            <div class="api-status">
-                <h2>API Status: Running</h2>
-                <p><strong>Database:</strong> postgresql://postgresql.database.svc.cluster.local:5432/appdb</p>
-                <p><strong>Deployment:</strong> GitOps via Flux</p>
-                <p><strong>Endpoints:</strong></p>
-                <ul>
-                    <li><code>GET /health</code> - Health check</li>
-                    <li><code>GET /api/data</code> - Sample data</li>
-                </ul>
-                <p><strong>Access:</strong> http://localhost:8080/api</p>
-            </div>
-        </div>
-    </body>
-    </html>
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 1Gi

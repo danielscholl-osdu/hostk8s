@@ -10,5 +10,5 @@ spec:
     app: sample-api
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 3000
   type: ClusterIP

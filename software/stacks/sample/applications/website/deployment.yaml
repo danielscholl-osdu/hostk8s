@@ -76,25 +76,32 @@ data:
 
             <h3>🧱 Components (Infrastructure)</h3>
             <div class="component">
+                <h4>Metrics Server</h4>
+                <p><strong>Purpose:</strong> Resource monitoring and cluster metrics</p>
+                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
+                <p><strong>Source:</strong> metrics-server.github.io/metrics-server</p>
+            </div>
+
+            <div class="component">
+                <h4>Cert Manager</h4>
+                <p><strong>Purpose:</strong> TLS certificate management</p>
+                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
+                <p><strong>Source:</strong> charts.jetstack.io</p>
+            </div>
+
+            <div class="component">
                 <h4>Ingress-NGINX Controller</h4>
                 <p><strong>Purpose:</strong> HTTP routing and load balancing</p>
                 <p><strong>Deployment:</strong> HelmRelease via Flux</p>
                 <p><strong>Source:</strong> kubernetes.github.io/ingress-nginx</p>
             </div>
 
-            <div class="component">
-                <h4>PostgreSQL Database</h4>
-                <p><strong>Purpose:</strong> Data persistence layer</p>
-                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
-                <p><strong>Source:</strong> charts.bitnami.com/bitnami</p>
-            </div>
-
             <h3>🚀 Applications (Business Logic)</h3>
             <div class="application">
                 <h4>Sample API</h4>
-                <p><strong>Purpose:</strong> Backend service</p>
+                <p><strong>Purpose:</strong> Backend service with storage persistence testing</p>
                 <p><strong>Access:</strong> <a href="/api">http://localhost:8080/api</a></p>
-                <p><strong>Database:</strong> Connects to PostgreSQL component</p>
+                <p><strong>Storage:</strong> Uses local-path-provisioner for persistent data</p>
             </div>
 
             <div class="application">
@@ -114,13 +121,75 @@ data:
                     <li><button class="test-btn" onclick="testAPI()">Test API Connection</button></li>
                 </ul>
             </div>
+
+            <div style="margin-top: 20px; padding: 20px; background: #fff3cd; border-radius: 5px;">
+                <h3>💾 Storage Persistence Test</h3>
+                <p>Test persistent storage using local-path-provisioner:</p>
+                <div id="storage-status" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px;">
+                    <strong>Status:</strong> <span id="file-status">Loading...</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <button class="test-btn" onclick="writeTestFile()">Write Test File</button>
+                    <button class="test-btn" onclick="checkTestFile()">Check File Status</button>
+                    <button class="test-btn" onclick="deleteTestFile()">Delete Test File</button>
+                </div>
+                <div id="storage-info" style="margin-top: 10px; font-size: 0.9em; color: #6c757d;">
+                    <strong>Info:</strong> Files written to <code>/app/storage/test.txt</code> persist across pod restarts
+                </div>
+            </div>
         </div>
 
         <script>
             function testAPI() {
-                // In a real app, this would make an actual API call
                 alert('Testing API connection to:\\nhttp://sample-api.sample-api.svc.cluster.local\\n\\nIn the GitOps pattern, services communicate via Kubernetes DNS!');
             }
+
+            async function makeAPICall(endpoint, method = 'GET') {
+                try {
+                    const response = await fetch('/api' + endpoint, { method });
+                    const data = await response.text();
+                    return { success: response.ok, data, status: response.status };
+                } catch (error) {
+                    return { success: false, data: error.message, status: 0 };
+                }
+            }
+
+            async function writeTestFile() {
+                document.getElementById('file-status').innerText = 'Writing...';
+                const result = await makeAPICall('/storage/test', 'POST');
+                if (result.success) {
+                    document.getElementById('file-status').innerText = 'File written successfully ✅';
+                } else {
+                    document.getElementById('file-status').innerText = `Write failed: ${result.data}`;
+                }
+            }
+
+            async function checkTestFile() {
+                document.getElementById('file-status').innerText = 'Checking...';
+                const result = await makeAPICall('/storage/test', 'GET');
+                if (result.success) {
+                    document.getElementById('file-status').innerText = `File exists ✅ - Content: ${result.data}`;
+                } else if (result.status === 404) {
+                    document.getElementById('file-status').innerText = 'File not found ❌';
+                } else {
+                    document.getElementById('file-status').innerText = `Check failed: ${result.data}`;
+                }
+            }
+
+            async function deleteTestFile() {
+                document.getElementById('file-status').innerText = 'Deleting...';
+                const result = await makeAPICall('/storage/test', 'DELETE');
+                if (result.success) {
+                    document.getElementById('file-status').innerText = 'File deleted successfully ✅';
+                } else {
+                    document.getElementById('file-status').innerText = `Delete failed: ${result.data}`;
+                }
+            }
+
+            // Check file status on page load
+            window.onload = function() {
+                checkTestFile();
+            };
         </script>
     </body>
     </html>
