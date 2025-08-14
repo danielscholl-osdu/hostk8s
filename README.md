@@ -57,32 +57,28 @@ Natural language cluster management and software troubleshooting through special
 
 ---
 
-## Quick Start
-
-Get started in a 3 simple steps:
-
-```bash
-git clone https://community.opengroup.org/danielscholl/hostk8s.git
-
-export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
-
-make start                      # Start a cluster
-make up                         # Bring up a stack
-```
 
 ## Prerequisites
 
-**Hardware:** 8+ CPU cores, 16GB+ RAM
+| Component | Requirement |
+|-----------|-------------|
+| Hardware | 4+ CPU cores, 8GB+ RAM (16GB+ recommended for complex stacks) |
+| OS | Mac/Linux (bash/zsh) or Windows ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5)) |
+| Package Manager | [Homebrew](https://brew.sh) (Mac/Linux) or [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) (Windows) |
+| Containerization | [Docker Desktop](https://docs.docker.com/get-docker/) v24+ |
+| Software | [make](https://www.gnu.org/software/make/) |
 
-**OS:** Mac/Linux (bash/zsh) or Windows ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5))
+## Quick Start
 
-**Package Manager:** [Homebrew](https://brew.sh) (Mac/Linux) or [Winget](https://learn.microsoft.com/en-us/windows/package-manager/winget/) (Windows)
+**Get started in 3 simple steps:**
 
-**Containerization:** [Docker Desktop](https://docs.docker.com/get-docker/) v24+
+```bash
+export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
+make start                      # Start a gitops enabled cluster
+make up                         # Bring up a simple software stack
+```
 
-**Software:** [make](https://www.gnu.org/software/make/)
-
-### Setup
+## Setup
 
 ```bash
 # Windows: Install make
