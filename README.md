@@ -126,7 +126,6 @@ Complete software stack deployments using GitOps automation.
 
 **Built-in Sample Stack:**
 ```bash
-export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
 export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
 
 make start                      # Start the cluster with Flux
