@@ -48,8 +48,6 @@ function Apply-StampYaml {
     }
 }
 
-Log-Info "Setting up Flux GitOps..."
-
 # Set GitOps repository defaults
 if (-not $env:GITOPS_REPO) {
     $env:GITOPS_REPO = "https://community.opengroup.org/danielscholl/hostk8s"
@@ -64,13 +62,13 @@ if (-not $env:SOFTWARE_STACK) {
 # Show Flux configuration (only in debug mode)
 if ($env:LOG_LEVEL -ne "info") {
     Log-Section-Start
-    Log-Info "Flux GitOps Configuration"
-    Log-Debug "  Repository: $($env:GITOPS_REPO)"
-    Log-Debug "  Branch: $($env:GITOPS_BRANCH)"
+    Log-Status "Flux GitOps Configuration"
+    Log-Status "  Repository: $($env:GITOPS_REPO)"
+    Log-Status "  Branch: $($env:GITOPS_BRANCH)"
     if ($env:SOFTWARE_STACK) {
-        Log-Debug "  Stack: $($env:SOFTWARE_STACK)"
+        Log-Status "  Stack: $($env:SOFTWARE_STACK)"
     } else {
-        Log-Debug "  Stack: Not configured (Flux only)"
+        Log-Status "  Stack: Not configured (Flux only)"
     }
     Log-Section-End
 }
@@ -93,6 +91,8 @@ try {
                 }
             }
             return
+        } else {
+            Write-Host "No resources found in flux-system namespace."
         }
     }
 } catch {
@@ -114,9 +114,15 @@ if ($LASTEXITCODE -ne 0) {
 
 # Wait for Flux controllers to be ready
 Log-Info "Waiting for Flux controllers to be ready..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s
-if ($LASTEXITCODE -ne 0) {
-    Log-Warn "Flux controllers still initializing, continuing setup..."
+try {
+    kubectl wait --for=condition=ready pod -l app.kubernetes.io/part-of=flux -n flux-system --timeout=600s 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "error: no matching resources found"
+        Log-Warn "! Flux controllers still initializing, continuing setup..."
+    }
+} catch {
+    Write-Host "error: no matching resources found"
+    Log-Warn "! Flux controllers still initializing, continuing setup..."
 }
 
 # Only create GitOps configuration if a stack is specified
@@ -160,8 +166,12 @@ spec:
 
 # Show Flux installation status
 Log-Info "Flux installation completed! Checking status..."
-flux get all
-if ($LASTEXITCODE -ne 0) {
+try {
+    flux get all
+    if ($LASTEXITCODE -ne 0) {
+        Log-Warn "Could not get flux status"
+    }
+} catch {
     Log-Warn "Could not get flux status"
 }
 
