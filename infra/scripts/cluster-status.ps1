@@ -678,8 +678,132 @@ function Show-AppIngress {
     } catch { }
 }
 
-function Show-HelmChartInfo { param($appKey) }
-function Show-HelmAppResources { param($appKey) }
+function Show-HelmChartInfo {
+    param($appKey)
+
+    # Extract namespace and instance name
+    $namespace = "default"
+    $instance = $appKey
+    if ($appKey -match '\.') {
+        $parts = $appKey -split '\.', 2
+        $namespace = $parts[0]
+        $instance = $parts[1]
+    }
+
+    # Get chart info from any deployment with this instance label in the namespace
+    try {
+        $firstDeployment = kubectl get deployments -l "app.kubernetes.io/instance=$instance" -n $namespace --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $firstDeployment) {
+            $deploymentName = ($firstDeployment -split "`n")[0] -split "\s+"
+            if ($deploymentName.Count -gt 0) {
+                $chartInfo = kubectl get deployment $deploymentName[0] -n $namespace -o jsonpath='{.metadata.labels.helm\.sh/chart}' 2>$null
+                if ($LASTEXITCODE -eq 0 -and $chartInfo) {
+                    Write-Host "   Chart: $chartInfo"
+                }
+            }
+        }
+    } catch { }
+}
+
+function Show-HelmAppResources {
+    param($appKey)
+
+    # Extract namespace and instance name
+    $namespace = "default"
+    $instance = $appKey
+    if ($appKey -match '\.') {
+        $parts = $appKey -split '\.', 2
+        $namespace = $parts[0]
+        $instance = $parts[1]
+    }
+
+    try {
+        # Show deployments for this Helm instance
+        $deployments = kubectl get deployments -l "app.kubernetes.io/instance=$instance" -n $namespace --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $deployments) {
+            $lines = $deployments -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 2) {
+                    $name = $parts[0]
+                    $ready = $parts[1]
+                    Write-Host "   Deployment: $name ($ready ready)"
+                }
+            }
+        }
+
+        # Show services for this Helm instance
+        $services = kubectl get services -l "app.kubernetes.io/instance=$instance" -n $namespace --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $services) {
+            $lines = $services -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 5) {
+                    $name = $parts[0]
+                    $type = $parts[1]
+                    $ports = $parts[4]
+
+                    if ($type -eq "NodePort") {
+                        # Extract NodePort from ports (format like "80:30081/TCP")
+                        if ($ports -match ":(\d+)/") {
+                            $nodePort = $matches[1]
+                            Write-Host "   Service: $name (NodePort $nodePort)"
+                        } else {
+                            Write-Host "   Service: $name (NodePort)"
+                        }
+                    } elseif ($type -eq "LoadBalancer") {
+                        Write-Host "   Service: $name ($type)"
+                    } else {
+                        Write-Host "   Service: $name ($type)"
+                    }
+                }
+            }
+        }
+
+        # Show ingress for this Helm instance
+        $ingresses = kubectl get ingress -l "app.kubernetes.io/instance=$instance" -n $namespace --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $ingresses) {
+            $lines = $ingresses -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 2) {
+                    $name = $parts[0]
+                    $hosts = if ($parts.Count -ge 3) { $parts[2] } else { "*" }
+
+                    if ($hosts -eq "localhost" -or $hosts -eq "*") {
+                        if (Test-IngressControllerReady) {
+                            $path = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
+                                Write-Host "   Ingress: $name -> http://localhost:8080$path"
+                            } else {
+                                Write-Host "   Ingress: $name -> http://localhost:8080/"
+                            }
+                        } else {
+                            Write-Host "   Ingress: $name (configured but controller not ready)"
+                            Write-Host "   Enable with: export INGRESS_ENABLED=true && make restart"
+                        }
+                    } else {
+                        # Handle namespace-based hostnames (e.g., test.localhost)
+                        if (Test-IngressControllerReady) {
+                            if ($hosts -match "\.localhost$") {
+                                $path = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                                if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
+                                    Write-Host "   Ingress: $name -> http://${hosts}:8080$path"
+                                } else {
+                                    Write-Host "   Ingress: $name -> http://${hosts}:8080/"
+                                }
+                            } else {
+                                Write-Host "   Ingress: $name (hosts: $hosts)"
+                            }
+                        } else {
+                            Write-Host "   Ingress: $name (configured but controller not ready)"
+                        }
+                    }
+                }
+            }
+        }
+    } catch { }
+}
 
 # Main function
 function Main {

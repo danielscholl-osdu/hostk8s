@@ -40,9 +40,9 @@ try {
         }
 
         # Extract network prefix and create IP pool range
-        $networkPrefix = ($dockerSubnet -split '/')[0] -replace '\.\d+$', ''
-        $ipPoolStart = "$networkPrefix.255.200"
-        $ipPoolEnd = "$networkPrefix.255.250"
+        $networkPrefix = ($dockerSubnet -split '/')[0] -replace '\.\d+\.\d+$', ''
+        $ipPoolStart = "$networkPrefix.200.200"
+        $ipPoolEnd = "$networkPrefix.200.250"
 
         Log-Info "Creating IP pool: $ipPoolStart-$ipPoolEnd"
 

@@ -12,6 +12,22 @@ function Show-Usage {
     Write-Host "  remove       Remove the application instead of deploying"
 }
 
+function Get-AppDeploymentType {
+    param([string]$AppName)
+
+    $appPath = Join-Path "software" "apps" $AppName
+
+    if (Test-Path (Join-Path $appPath "Chart.yaml")) {
+        return "helm"
+    } elseif (Test-Path (Join-Path $appPath "kustomization.yaml")) {
+        return "kustomization"
+    } elseif (Test-Path (Join-Path $appPath "app.yaml")) {
+        return "legacy"
+    } else {
+        return "none"
+    }
+}
+
 function Deploy-Application {
     param(
         [string]$AppName,
@@ -33,45 +49,101 @@ function Deploy-Application {
         return $false
     }
 
-    if ($Remove) {
-        Log-Info "Removing $AppName via Kustomization from namespace: $Namespace"
-        try {
-            # Remove application - let kubectl output show the deleted resources
-            $output = kubectl delete -k $appPath --namespace=$Namespace
-            $output | ForEach-Object { Write-Host $_ }
+    # Determine deployment type
+    $deploymentType = Get-AppDeploymentType $AppName
 
-            if ($LASTEXITCODE -eq 0) {
-                Log-Success "$AppName removed successfully via Kustomization from $Namespace"
-                return $true
-            } else {
-                Log-Error "Failed to remove $AppName via Kustomization from $Namespace"
+    if ($Remove) {
+        switch ($deploymentType) {
+            "helm" {
+                Log-Info "Removing $AppName via Helm from namespace: $Namespace"
+                try {
+                    helm uninstall $AppName -n $Namespace
+                    if ($LASTEXITCODE -eq 0) {
+                        Log-Success "$AppName removed successfully via Helm from $Namespace"
+                        return $true
+                    } else {
+                        Log-Error "Failed to remove $AppName via Helm from $Namespace"
+                        return $false
+                    }
+                } catch {
+                    Log-Error "Failed to remove Helm application '$AppName': $_"
+                    return $false
+                }
+            }
+            "kustomization" {
+                Log-Info "Removing $AppName via Kustomization from namespace: $Namespace"
+                try {
+                    $output = kubectl delete -k $appPath --namespace=$Namespace
+                    $output | ForEach-Object { Write-Host $_ }
+
+                    if ($LASTEXITCODE -eq 0) {
+                        Log-Success "$AppName removed successfully via Kustomization from $Namespace"
+                        return $true
+                    } else {
+                        Log-Error "Failed to remove $AppName via Kustomization from $Namespace"
+                        return $false
+                    }
+                } catch {
+                    Log-Error "Failed to remove application '$AppName': $_"
+                    return $false
+                }
+            }
+            default {
+                Log-Error "Unknown deployment type '$deploymentType' for $AppName"
                 return $false
             }
-        } catch {
-            Log-Error "Failed to remove application '$AppName': $_"
-            return $false
         }
     } else {
-        Log-Info "Deploying $AppName via Kustomization to namespace: $Namespace"
-        try {
-            # Ensure namespace exists
-            kubectl create namespace $Namespace --dry-run=client -o yaml | kubectl apply -f - 2>$null
+        switch ($deploymentType) {
+            "helm" {
+                Log-Info "Deploying $AppName via Helm to namespace: $Namespace"
+                try {
+                    # Ensure namespace exists
+                    kubectl create namespace $Namespace --dry-run=client -o yaml | kubectl apply -f - 2>$null
 
-            # Deploy application - let kubectl output show the created resources
-            $output = kubectl apply -k $appPath --namespace=$Namespace
-            $output | ForEach-Object { Write-Host $_ }
+                    # Deploy with Helm
+                    helm upgrade --install $AppName $appPath --namespace $Namespace --create-namespace
 
-            if ($LASTEXITCODE -eq 0) {
-                Log-Success "$AppName deployed successfully via Kustomization to $Namespace"
-                Log-Info "See software/apps/$AppName/README.md for access details"
-                return $true
-            } else {
-                Log-Error "Failed to deploy $AppName via Kustomization to $Namespace"
+                    if ($LASTEXITCODE -eq 0) {
+                        Log-Success "$AppName deployed successfully via Helm to $Namespace"
+                        Log-Info "See software/apps/$AppName/README.md for access details"
+                        return $true
+                    } else {
+                        Log-Error "Failed to deploy $AppName via Helm to $Namespace"
+                        return $false
+                    }
+                } catch {
+                    Log-Error "Failed to deploy Helm application '$AppName': $_"
+                    return $false
+                }
+            }
+            "kustomization" {
+                Log-Info "Deploying $AppName via Kustomization to namespace: $Namespace"
+                try {
+                    # Ensure namespace exists
+                    kubectl create namespace $Namespace --dry-run=client -o yaml | kubectl apply -f - 2>$null
+
+                    # Deploy application - let kubectl output show the created resources
+                    $output = kubectl apply -k $appPath --namespace=$Namespace
+                    $output | ForEach-Object { Write-Host $_ }
+
+                    if ($LASTEXITCODE -eq 0) {
+                        Log-Success "$AppName deployed successfully via Kustomization to $Namespace"
+                        Log-Info "See software/apps/$AppName/README.md for access details"
+                        return $true
+                    } else {
+                        Log-Error "Failed to deploy $AppName via Kustomization to $Namespace"
+                        return $false
+                    }
+                } catch {
+                    Log-Error "Failed to deploy application '$AppName': $_"
+                    return $false
+                }
+            }
+            default {
+                Log-Error "Unknown deployment type '$deploymentType' for $AppName"
                 return $false
             }
-        } catch {
-            Log-Error "Failed to deploy application '$AppName': $_"
-            return $false
         }
     }
 }
