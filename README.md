@@ -68,7 +68,7 @@ Natural language cluster management and software troubleshooting through special
 
 ## Quick Start
 
-**Get started in 3 simple steps:**
+Get started in 3 simple steps:
 
 ```bash
 export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
@@ -76,7 +76,7 @@ make start                      # Start a gitops enabled cluster
 make up                         # Bring up a simple software stack
 ```
 
-## Setup
+#### Setup
 
 ```bash
 # Windows: Install make
