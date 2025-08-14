@@ -73,6 +73,7 @@ Get started in 3 simple steps:
 ```bash
 export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
 
+make install                    # Install required tools
 make start                      # Start a gitops enabled cluster
 make up                         # Bring up a simple software stack
 ```
