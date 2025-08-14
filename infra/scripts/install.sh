@@ -89,9 +89,7 @@ check_tool() {
 }
 
 install_with_homebrew() {
-    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-        log_debug "Tools"
-    fi
+    log_info "Tools"
 
     local tools=(
         "kind:brew install kind"
@@ -109,9 +107,7 @@ install_with_homebrew() {
 }
 
 install_with_apt() {
-    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-        log_debug "Tools"
-    fi
+    log_info "Tools"
 
     # Update package list
     sudo apt update
@@ -132,9 +128,7 @@ install_with_apt() {
 }
 
 install_with_apk() {
-    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-        log_debug "Tools"
-    fi
+    log_info "Tools"
 
     local tools=(
         "kind:curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64 && chmod +x ./kind && sudo mv ./kind /usr/local/bin/kind"
@@ -173,29 +167,22 @@ validate_ci_environment() {
 }
 
 install_dependencies() {
-    log_debug "Checking dependencies..."
-    
-    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-        log_debug "------------------------"
-        log_debug "Dependency Configuration"
-    fi
+    log_info "Checking dependencies..."
+    log_info "------------------------"
+    log_info "Dependency Configuration"
 
     # Select package manager based on PACKAGE_MANAGER setting
     if [ -z "$PACKAGE_MANAGER" ]; then
         # Auto-detect: prefer brew, then native
         if command -v brew >/dev/null 2>&1; then
-            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-                log_debug "  Package Manager: ${CYAN}Homebrew${NC} (auto-detected)"
-                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
-                log_debug "------------------------"
-            fi
+            log_info "  Package Manager: Homebrew (auto-detected)"
+            log_info "  Platform: $(uname -s)"
+            log_info "------------------------"
             install_with_homebrew
         elif command -v apt >/dev/null 2>&1; then
-            if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-                log_debug "  Package Manager: ${CYAN}APT${NC} (auto-detected)"
-                log_debug "  Platform: ${CYAN}$(uname -s)${NC}"
-                log_debug "------------------------"
-            fi
+            log_info "  Package Manager: APT (auto-detected)"
+            log_info "  Platform: $(uname -s)"
+            log_info "------------------------"
             install_with_apt
         elif command -v apk >/dev/null 2>&1; then
             if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -265,9 +252,7 @@ install_dependencies() {
         return 1
     fi
 
-    if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-        log_debug "------------------------"
-    fi
+    log_info "------------------------"
     log_info "All dependencies verified"
 }
 

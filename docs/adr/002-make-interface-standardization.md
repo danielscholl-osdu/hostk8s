@@ -7,14 +7,14 @@
 HostK8s consists of multiple shell scripts for cluster management, each with different calling conventions and environment requirements. Developers needed a consistent, discoverable interface that handles environment setup (KUBECONFIG), validation, and provides standardized commands regardless of the underlying script complexity.
 
 ## Decision
-Implement a **Make interface as thin orchestration layer** that provides consistent command patterns while delegating complex operations to dedicated, purpose-built bash scripts. Make handles interface concerns (argument parsing, environment setup, dependency chains) while scripts handle operational complexity.
+Implement a **Make interface as thin orchestration layer** that provides consistent command patterns while delegating complex operations to dedicated, purpose-built platform-native scripts (bash for Unix/Linux/Mac, PowerShell for Windows). Make handles interface concerns (argument parsing, environment setup, dependency chains, cross-platform script selection) while scripts handle operational complexity.
 
 ## Rationale
-1. **Separation of Concerns**: Make excels at interface/orchestration; bash excels at complex operations
+1. **Separation of Concerns**: Make excels at interface/orchestration; platform-native scripts excel at complex operations
 2. **Universal Familiarity**: Standard `make start`, `make test`, `make clean` patterns developers expect
 3. **Maintainability**: Complex logic in dedicated scripts is easier to test, debug, and modify
 4. **Discoverability**: `make help` provides consistent interface while scripts offer detailed help
-5. **Platform Consistency**: Same Make interface across all platforms, regardless of script complexity
+5. **Platform Consistency**: Same Make interface across all platforms (Unix/Linux/Mac/Windows), with automatic platform detection and script selection
 6. **Evolution**: Scripts can be enhanced independently without changing user interface
 
 ## Architecture Design
@@ -24,27 +24,41 @@ Implement a **Make interface as thin orchestration layer** that provides consist
 - **Argument Parsing**: Extract and validate arguments using Make's `$(word)` functions
 - **Environment Setup**: KUBECONFIG management and variable passing to scripts
 - **Dependency Chains**: Ensure prerequisite operations (`up: install`)
-- **Script Orchestration**: Route commands to appropriate dedicated scripts
+- **Cross-Platform Detection**: Automatic OS detection and script selection (.sh/.ps1)
+- **Script Orchestration**: Route commands to appropriate platform-native scripts
 
 ### Script Responsibilities (Complex Operations)
-- **Operational Logic**: All complex bash operations, validations, and integrations
+- **Operational Logic**: All complex platform-native operations, validations, and integrations
 - **Error Handling**: Detailed error messages and recovery suggestions
 - **Help Systems**: Comprehensive usage documentation with examples
-- **Shared Utilities**: Common functions for logging, validation, and kubectl operations
+- **Shared Utilities**: Platform-specific common functions (common.sh/common.ps1) for logging, validation, and kubectl operations
+- **Functional Parity**: Identical behavior across platforms despite implementation differences
 - **Independent Testing**: Each script can be tested and debugged in isolation
 
 ### Division of Labor Example
 ```makefile
-# Make handles interface and routing
+# OS Detection for cross-platform script execution
+ifeq ($(OS),Windows_NT)
+    SCRIPT_EXT := .ps1
+    SCRIPT_RUNNER := pwsh -ExecutionPolicy Bypass -NoProfile -File
+else
+    SCRIPT_EXT := .sh
+    SCRIPT_RUNNER :=
+endif
+
+# Make handles interface, OS detection, and routing
 deploy: ## Deploy application (Usage: make deploy [sample/app1])
-	@APP_NAME="$(word 2,$(MAKECMDGOALS))"; \
-	./infra/scripts/deploy-app.sh "$$APP_NAME"
+	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) $(word 2,$(MAKECMDGOALS))
 ```
 
 ```bash
-# Script handles all operational complexity
-# - App validation, kubectl operations, error handling, help system
+# Unix/Linux/Mac script handles operational complexity
 ./infra/scripts/deploy-app.sh sample/app2
+```
+
+```powershell
+# Windows PowerShell script provides identical functionality
+./infra/scripts/deploy-app.ps1 sample/app2
 ```
 
 ## Alternatives Considered
@@ -151,21 +165,28 @@ up: ## Deploy software stack with extension support
 **Negative:**
 - **Two-Layer System**: Understanding requires familiarity with both Make patterns and script organization
 - **Indirection**: Simple operations now route through script calls
-- **Dependency**: Requires both Make and bash capabilities across platforms
+- **Platform Dependencies**: Requires Make plus platform-native scripting (bash on Unix/Linux/Mac, PowerShell 7+ on Windows)
+- **Dual Maintenance**: Cross-platform functional parity requires maintaining script pairs
 
 ## Implementation Results
 
 ### Script Organization
-- `infra/scripts/common.sh` - Shared utilities (logging, validation, kubectl helpers)
-- `infra/scripts/install.sh` - Dependency installation and validation
-- `infra/scripts/prepare.sh` - Development environment setup
-- `infra/scripts/cluster-status.sh` - Comprehensive cluster status reporting
-- `infra/scripts/deploy-app.sh` - Application deployment with validation
-- `infra/scripts/flux-sync.sh` - Flux reconciliation operations
-- `infra/scripts/build.sh` - Docker application build and registry push
-- `infra/scripts/deploy-stack.sh` - Software stack deployment and management
-- `infra/scripts/cluster-up.sh` - Advanced cluster creation with fallback configuration
-- `infra/scripts/cluster-restart.sh` - Development iteration optimization
+**Cross-Platform Script Pairs (.sh/.ps1):**
+- `infra/scripts/common.[sh|ps1]` - Platform-specific utilities (logging, validation, kubectl helpers)
+- `infra/scripts/install.[sh|ps1]` - Dependency installation using platform package managers
+- `infra/scripts/prepare.[sh|ps1]` - Development environment setup
+- `infra/scripts/cluster-status.[sh|ps1]` - Comprehensive cluster status reporting
+- `infra/scripts/deploy-app.[sh|ps1]` - Application deployment with validation
+- `infra/scripts/flux-sync.[sh|ps1]` - Flux reconciliation operations
+- `infra/scripts/build.[sh|ps1]` - Docker application build and registry push
+- `infra/scripts/deploy-stack.[sh|ps1]` - Software stack deployment and management
+- `infra/scripts/cluster-up.[sh|ps1]` - Advanced cluster creation with fallback configuration
+- `infra/scripts/cluster-restart.[sh|ps1]` - Development iteration optimization
+
+**Platform-Specific Implementations:**
+- **Unix/Linux/Mac**: Uses brew, apt, native package managers; bash scripting conventions
+- **Windows**: Uses winget, chocolatey; PowerShell 7+ scripting conventions
+- **Functional Parity**: Identical user experience and outcomes across all platforms
 
 ### Makefile Evolution
 - **Original**: Complex inline bash logic, difficult to maintain and test
@@ -180,4 +201,4 @@ up: ## Deploy software stack with extension support
 - Automatic environment management eliminates KUBECONFIG errors
 - New developers can discover and use all functions in < 5 minutes
 - Scripts can evolve without breaking user interface
-- Cross-platform consistency (same commands, same behavior)
+- Cross-platform consistency (same commands, same behavior across Unix/Linux/Mac/Windows)

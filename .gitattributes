@@ -1,0 +1,60 @@
+# Git Attributes for HostK8s Cross-Platform Compatibility
+# Ensures proper line endings for Windows PowerShell compatibility
+
+# Force LF for shell scripts (Unix/Mac/WSL)
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Force CRLF for PowerShell scripts (Windows)
+*.ps1 text eol=crlf
+*.psm1 text eol=crlf
+
+# Force LF for configuration files
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+*.ini text eol=lf
+
+# Force LF for build and configuration files
+Makefile text eol=lf
+*.mk text eol=lf
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf
+
+# Force LF for environment and documentation files
+.env* text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# Force LF for web files
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.ts text eol=lf
+
+# Force LF for source code files
+*.py text eol=lf
+*.go text eol=lf
+*.java text eol=lf
+*.c text eol=lf
+*.cpp text eol=lf
+*.h text eol=lf
+*.hpp text eol=lf
+
+# Binary files - no text processing
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.tgz binary
+
+# Git specific files
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.editorconfig text eol=lf

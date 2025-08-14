@@ -94,24 +94,28 @@ These decisions work together to create a platform that prioritizes developer pr
 
 The platform simplifies complex Kubernetes operations through a three-layer abstraction:
 
-1. **Make Interface Layer** - Standardized commands engineers recognize (`install`, `start`, `stop`, `up`, `down`, `restart`, `clean`, `status`)
-2. **Script Orchestration Layer** - Single-responsibility scripts managing specific operations
-3. **Common Utilities Layer** - Shared functions ensuring consistent behavior (logging, error handling, environment management)
+1. **Make Interface Layer** - Standardized commands with cross-platform OS detection (`install`, `start`, `stop`, `up`, `down`, `restart`, `clean`, `status`)
+2. **Script Orchestration Layer** - Platform-native scripts (.sh/.ps1) managing specific operations with functional parity
+3. **Common Utilities Layer** - Platform-specific utilities (common.sh/common.ps1) ensuring consistent behavior across operating systems
 
-For example, when you run `make start`, the Make interface validates dependencies, the orchestration layer selects the appropriate Kind configuration, and the utilities layer handles KUBECONFIG setup and provides consistent logging—all transparently.
+For example, when you run `make start`, the Make interface detects the OS and selects the appropriate script (.sh or .ps1), the orchestration layer handles the Kind configuration, and the platform-specific utilities layer manages KUBECONFIG setup and provides consistent logging—all transparently across Unix/Linux/Mac/Windows.
 
-This strategy delivers complexity abstraction, automatic environment management, and clean separation of concerns. (Design decision rationale in [ADR-002](adr/002-make-interface-standardization.md))
+This strategy delivers complexity abstraction, automatic environment management, cross-platform consistency, and clean separation of concerns. (Design decision rationale in [ADR-002](adr/002-make-interface-standardization.md))
 
 ### Dependencies and Tool Integration
 
-The platform integrates with four essential tools, automatically installed to ensure consistent environments:
+The platform integrates with four essential tools, automatically installed using platform-native package managers to ensure consistent environments:
 
 - **Kind** for cluster creation and management
 - **kubectl** for Kubernetes API interaction
 - **Helm** for package management
 - **Docker** as the container runtime foundation
 
-This integration approach eliminates manual dependency management while preserving standard Kubernetes tooling compatibility.
+**Platform-Specific Installation:**
+- **Unix/Linux/Mac**: brew, apt, yum, and other native package managers
+- **Windows**: winget (preferred) with chocolatey fallback
+
+This integration approach eliminates manual dependency management while preserving standard Kubernetes tooling compatibility across all platforms.
 
 ### Cluster Lifecycle Management
 

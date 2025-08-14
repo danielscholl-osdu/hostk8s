@@ -61,14 +61,14 @@ pod_count=$(kubectl get pods | grep -c Running || echo "0")  # BAD
 #### Use common.sh Functions
 ```bash
 log_info "Starting cluster validation..."
-log_warn "⚠ System pods starting up, this is normal"
+log_warn "! System pods starting up, this is normal"
 log_error "❌ Critical failure in cluster connectivity"
 log_debug "Debug info (only shown when LOG_LEVEL=debug)"
 ```
 
 #### Status Indicators
 - ✅ `log_info "✅ Success message"`
-- ⚠️ `log_warn "⚠ Warning message"`
+- ! `log_warn "! Warning message"`
 - ❌ `log_error "❌ Error message"`
 - ℹ️ `log_info "ℹ️ Information message"`
 - ✓ `log_info "✓ Test N: Description..."`
@@ -98,7 +98,7 @@ run_test_component_status() {
         log_info "✅ Component is healthy"
         return 0
     else
-        log_warn "⚠ Component has issues"
+        log_warn "! Component has issues"
         return 1
     fi
 }
@@ -158,7 +158,7 @@ fi
 if [ "$TEST_FAILURES" -eq 0 ]; then
     log_info "✅ All tests passed"
 else
-    log_warn "⚠ $TEST_FAILURES warnings (may be normal during startup)"
+    log_warn "! $TEST_FAILURES warnings (may be normal during startup)"
 fi
 ```
 
