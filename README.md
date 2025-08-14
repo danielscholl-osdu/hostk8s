@@ -83,21 +83,21 @@ make up                         # Bring up a simple software stack
 
 * **[Docker Desktop](https://docs.docker.com/get-docker/)** v24+
 * **2+ CPU cores, 4GB+ RAM** (8GB recommended)
-* **Mac, Linux, WSL2, or Windows PowerShell**
+* **Mac, Linux, or Windows**
 
 #### Platform-Specific Requirements
 
-**Windows PowerShell (Native)**:
+**Windows**:
+* **Make for Windows** (`winget install ezwinports.make`) - **Required first**
 * **PowerShell 7+** (`winget install Microsoft.PowerShell`)
-* **Make for Windows** (`winget install ezwinports.make`)
 * **Git for Windows** (`winget install Git.Git`)
-* **Winget or Chocolatey** for automatic tool installation
 
 **Mac/Linux/WSL2**:
+* **Make** (typically pre-installed or via package manager)
+* **[Homebrew](https://brew.sh)** (recommended for automatic tool installation)
 * Standard Unix shell environment
-* Package managers (brew, apt, etc.) supported
 
-> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install`.
+> **Note:** Required tools (kind, kubectl, helm, flux) are installed automatically via `make install` after Make is available.
 
 ---
 
