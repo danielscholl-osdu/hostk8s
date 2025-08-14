@@ -30,7 +30,17 @@ function Log-Debug {
     if ($env:LOG_LEVEL -ne "info") {
         $timestamp = Get-Date -Format 'HH:mm:ss'
         Write-Host "[$timestamp]" -ForegroundColor $Global:GREEN -NoNewline
-        Write-Host " $Message"
+        
+        # Parse message for colored variables (pattern: variable_name: variable_value)
+        if ($Message -match '^(\s+\w+):\s(.+)$') {
+            $label = $matches[1]
+            $value = $matches[2]
+            Write-Host "$label" -NoNewline
+            Write-Host ": " -NoNewline
+            Write-Host $value -ForegroundColor $Global:CYAN
+        } else {
+            Write-Host " $Message"
+        }
     }
 }
 
