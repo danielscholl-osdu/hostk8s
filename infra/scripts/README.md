@@ -215,6 +215,36 @@ pwsh ./infra/scripts/cluster-status.ps1
 
 ---
 
+## GitOps Sync Patterns
+
+### Stack-Aware Sync (New Feature)
+```bash
+# Bash
+./flux-sync.sh --stack sample    # Sync source + sample stack
+```
+
+```powershell
+# PowerShell
+./flux-sync.ps1 --stack sample   # Sync source + sample stack
+```
+
+**Implementation Notes:**
+- Stack sync combines `flux reconcile source git flux-system` + `flux reconcile kustomization bootstrap-stack --with-source`
+- Solves dependency chain deadlocks where components get stuck on different Git revisions
+- Both .sh and .ps1 implementations must handle the `--stack` parameter identically
+
+### Make Integration
+```bash
+make sync sample    # Calls flux-sync.sh --stack sample
+make sync          # Syncs all sources + stack kustomizations
+```
+
+The Makefile automatically routes:
+- `make sync sample` → `--stack sample`
+- `make sync` → sync all (enhanced with stack kustomizations)
+- `REPO=name make sync` → `--repo name` (backward compatible)
+- `KUSTOMIZATION=name make sync` → `--kustomization name` (backward compatible)
+
 ## Summary
 
 Focus on:
@@ -222,5 +252,6 @@ Focus on:
 2. **PowerShell variable expansion gotchas** (most common bug source)
 3. **Production code stability** (don't over-optimize working systems)
 4. **Explicit error handling** (prevent silent failures)
+5. **GitOps sync reliability** (stack-aware sync prevents dependency deadlocks)
 
 When in doubt: preserve complexity that handles real-world scenarios, and always maintain functional parity between .sh and .ps1 implementations.

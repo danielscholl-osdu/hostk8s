@@ -99,11 +99,13 @@ endif
 status: ## Show cluster health and running services
 	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-status$(SCRIPT_EXT)
 
-sync: ## Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])
+sync: ## Force Flux reconciliation (Usage: make sync [stack-name] or REPO=name/KUSTOMIZATION=name make sync)
 ifdef REPO
 	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --repo "$(REPO)"
 else ifdef KUSTOMIZATION
 	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --kustomization "$(KUSTOMIZATION)"
+else ifneq ($(word 2,$(MAKECMDGOALS)),)
+	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --stack "$(word 2,$(MAKECMDGOALS))"
 else
 	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT)
 endif
