@@ -587,9 +587,97 @@ function Show-HealthCheck {
 }
 
 # Helper functions for app details
-function Show-AppServices { param($appName, $appType, $ns = $null) }
-function Show-AppIngress { param($appName, $appType, $ns = $null) }
-function Show-AppDeployments { param($appName, $appType) }
+function Show-AppDeployments {
+    param($appName, $appType)
+
+    try {
+        $deployments = kubectl get deployments -l "hostk8s.$appType=$appName" --all-namespaces --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $deployments) {
+            $lines = $deployments -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 6) {
+                    $ns = $parts[0]
+                    $name = $parts[1]
+                    $ready = $parts[2]
+                    Write-Host "   Deployment: $name ($ready ready)"
+                }
+            }
+        }
+    } catch { }
+}
+
+function Show-AppServices {
+    param($appName, $appType, $ns = $null)
+
+    try {
+        $labelSelector = "hostk8s.$appType=$appName"
+        $namespaceFlag = if ($ns) { "-n $ns" } else { "--all-namespaces" }
+
+        $services = kubectl get services -l $labelSelector $namespaceFlag --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $services) {
+            $lines = $services -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 7) {
+                    $svcNs = if ($ns) { $ns } else { $parts[0] }
+                    $name = if ($ns) { $parts[0] } else { $parts[1] }
+                    $type = if ($ns) { $parts[1] } else { $parts[2] }
+                    $ports = if ($ns) { $parts[4] } else { $parts[5] }
+
+                    if ($type -eq "NodePort") {
+                        # Extract NodePort from ports (format like "80:30081/TCP")
+                        if ($ports -match ":(\d+)/") {
+                            $nodePort = $matches[1]
+                            Write-Host "   Service: $name (NodePort $nodePort)"
+                        } else {
+                            Write-Host "   Service: $name (NodePort)"
+                        }
+                    } elseif ($type -eq "LoadBalancer") {
+                        Write-Host "   Service: $name ($type)"
+                    } else {
+                        Write-Host "   Service: $name ($type)"
+                    }
+                }
+            }
+        }
+    } catch { }
+}
+
+function Show-AppIngress {
+    param($appName, $appType, $ns = $null)
+
+    try {
+        $labelSelector = "hostk8s.$appType=$appName"
+        $namespaceFlag = if ($ns) { "-n $ns" } else { "--all-namespaces" }
+
+        $ingresses = kubectl get ingress -l $labelSelector $namespaceFlag --no-headers 2>$null
+        if ($LASTEXITCODE -eq 0 -and $ingresses) {
+            $lines = $ingresses -split "`n" | Where-Object { $_.Trim() }
+            foreach ($line in $lines) {
+                $parts = $line -split "\s+"
+                if ($parts.Count -ge 4) {
+                    $ingressNs = if ($ns) { $ns } else { $parts[0] }
+                    $name = if ($ns) { $parts[0] } else { $parts[1] }
+
+                    # Get detailed ingress info to show paths
+                    $ingressDetails = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                    if ($LASTEXITCODE -eq 0 -and $ingressDetails) {
+                        $path = $ingressDetails.Trim('/')
+                        if ($path) {
+                            Write-Host "   Ingress: $name -> http://localhost:8080/$path"
+                        } else {
+                            Write-Host "   Ingress: $name -> http://localhost:8080/"
+                        }
+                    } else {
+                        Write-Host "   Ingress: $name -> http://localhost:8080"
+                    }
+                }
+            }
+        }
+    } catch { }
+}
+
 function Show-HelmChartInfo { param($appKey) }
 function Show-HelmAppResources { param($appKey) }
 
