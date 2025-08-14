@@ -214,7 +214,14 @@ fi
 log_info "Software stack '${SOFTWARE_STACK}' deployment completed!"
 log_info "GitOps Status:"
 export KUBECONFIG="$KUBECONFIG_PATH"
-flux get all 2>/dev/null || log_warn "Could not get flux status"
+
+# Show filtered GitOps status (only sources and kustomizations)
+if flux get sources git 2>/dev/null; then
+    echo
+    flux get kustomizations 2>/dev/null || true
+else
+    log_warn "Could not get flux status"
+fi
 
 log_success "Software stack '${SOFTWARE_STACK}' deployed successfully!"
 log_info "Monitor deployment: make status"

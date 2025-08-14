@@ -315,10 +315,20 @@ spec:
     Log-Info "Software stack '$StackName' deployment completed!"
     Log-Info "GitOps Status:"
     $env:KUBECONFIG = $env:KUBECONFIG_PATH
-    $fluxOutput = flux get all 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $fluxOutput -split "`n" | ForEach-Object { Write-Host $_ }
-    } else {
+
+    # Show filtered GitOps status (align with bash script approach)
+    try {
+        $gitOutput = flux get sources git 2>&1
+        if ($LASTEXITCODE -eq 0 -and $gitOutput) {
+            $gitOutput -split "`n" | ForEach-Object { Write-Host $_ }
+
+            Write-Host ""
+            $kustomizationOutput = flux get kustomizations 2>&1
+            if ($LASTEXITCODE -eq 0 -and $kustomizationOutput) {
+                $kustomizationOutput -split "`n" | ForEach-Object { Write-Host $_ }
+            }
+        }
+    } catch {
         Log-Warn "Could not get flux status"
     }
 
