@@ -143,12 +143,12 @@ Custom applications and cluster configurations for specialized requirements.
 > *Enables complete customization while leveraging the HostK8s framework.*
 
 **Custom Clusters:**
-```bash
-cp infra/kubernetes/kind-custom.yaml infra/kubernetes/kind-config.yaml  # Copy starter and modify
 
+Duplicate `kind-custom.yaml` to `kind-config.yaml` found in the `infra/kubernetes` directory and customize as needed.
+
+```bash
 export METALLB_ENABLED=true     # Windows: $env:METALLB_ENABLED = "true"
 export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
-
 make start                      # Uses the modified cluster configuration
 ```
 
@@ -169,13 +169,11 @@ make up extension                 # Deploy complete custom environment
 make status                       # Monitor custom stack deployment
 ```
 
-> **Note**: Extensions require no code changes to HostK8s core - simply add files in the appropriate `extension/` directories with proper labels and configurations or just clone a repo directly.
-
 ---
 
 ## Configuration
 
-Duplicate `.env.example` to `.env` and customize as needed. The main options are:
+Duplicate `.env.example` to `.env` and customize as needed.
 
 | Variable          | Description                                   | Default   |
 | ----------------- | --------------------------------------------- | --------- |
