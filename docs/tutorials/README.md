@@ -1,59 +1,41 @@
 # HostK8s Tutorials
 
-Learn HostK8s through a progressive tutorial series that builds from cluster configuration to complete software stacks.
+Progressive learning series from cluster setup to complete development workflows.
 
-#### [Cluster Configuration](cluster.md)
+## Cluster Configuration
 
-Learn configurable cluster architecture patterns that let you version control your development environment alongside your application code. Experience the development workflow trade-offs that drive configuration decisions.
+*Learn configurable cluster architecture patterns that let you version control your development environment alongside your application code*
 
-**Key Topics:**
-- Configuration-as-code patterns for development environments
-- Single-node vs multi-node cluster architecture choices
-- Custom Kind configurations for specific development needs
-- 3-tier configuration fallback system (named, personal, system defaults)
+Experience the development workflow trade-offs that drive configuration decisions and understand how HostK8s eliminates infrastructure complexity through declarative cluster patterns.
+
+👉 **[Start Tutorial](cluster.md)**
 
 ---
 
-#### [Deploying Applications](apps.md)
+## Deploying Applications
 
-Deploy individual applications using HostK8s patterns. Experience the evolution from static YAML limitations to dynamic Helm templates and understand the application contract requirements.
+*Understanding HostK8s application patterns and why they eliminate deployment complexity*
 
-**Key Topics:**
-- Application contracts (Kustomization vs Helm chart requirements)
-- Multi-namespace deployment with dynamic configuration
-- Static YAML limitations vs template flexibility
-- Custom values support for local development overrides
+Deploy individual applications using HostK8s contracts. Experience the evolution from static YAML limitations to dynamic Helm templates and discover the application patterns that make deployment consistent.
+
+👉 **[Start Tutorial](apps.md)**
 
 ---
 
-#### [Software Stacks](stacks.md)
+## Software Stacks
 
-Build complete development environments using GitOps automation. Learn how software stacks eliminate the operational overhead of individual deployments through coordinated component management.
+*Building complete development environments that eliminate service coordination chaos*
 
-**Key Topics:**
-- Stack composition and dependency management
-- GitOps deployment automation with Flux
-- Component vs application coordination
-- Environment consistency and reproducibility
+Learn how software stacks solve the multi-service reality through GitOps automation. Experience coordinated component management and understand how environments become reproducible and consistent.
+
+👉 **[Start Tutorial](stacks.md)**
 
 ---
 
-#### [Using Components](shared-components.md)
+## Development Workflows
 
-Connect applications to reusable infrastructure components. Learn consumption patterns and service discovery by connecting applications to shared services like Redis and databases.
+*Complete source-to-deployment development cycle with production-like environments*
 
-**Key Topics:**
-- Component consumption patterns
-- Service discovery mechanisms
-- Resource efficiency through sharing
-- When to use vs. build components
+Build, deploy, and iterate code using software stacks. Experience hot-reload development with real services and learn to debug applications running in Kubernetes infrastructure.
 
-#### [Building Components](components.md)
-
-Design and customize reusable infrastructure services. Explore component architecture patterns and understand how to create shareable infrastructure building blocks.
-
-**Key Topics:**
-- Component design patterns
-- Configuration and customization
-- Component lifecycle management
-- Best practices for reusability
+👉 **[Start Tutorial](development.md)**
