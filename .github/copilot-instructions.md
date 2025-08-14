@@ -5,6 +5,7 @@ HostK8s is a **host-mode Kubernetes development platform** built on Kind that re
 
 **Key Features:**
 - **Host-Mode:** Kind runs directly on host Docker daemon
+- **Cross-Platform:** Full support for Mac, Linux, and Windows (PowerShell)
 - **GitOps Stacks:** Complete app + infra deployments via Flux
 - **Extensions:** Filesystem- or Git-based pluggable components
 - **Make Interface:** Unified commands for cluster and app management
@@ -33,7 +34,7 @@ make clean         # Tear down cluster
 
 **Abstraction Layers:**
 1. **Make Interface** – CLI commands, KUBECONFIG auto-handling
-2. **Scripts** – Single-purpose, sourced from `common.sh`
+2. **Scripts** – Single-purpose, sourced from `common.sh/.ps1` (cross-platform)
 3. **Shared Utilities** – Common orchestration helpers
 
 **Software Stack Structure:**
@@ -61,11 +62,18 @@ export GITOPS_REPO=https://github.com/team/stack
 make up extension
 ```
 
+## Critical Constraints
+
+1. **Always use `make` commands** – Never execute scripts directly (they lack KUBECONFIG/dependencies)
+2. **GitOps changes require commits** – Modifications in `software/` need Git commits to deploy
+3. **Check `.env` state** – Configuration affects available operations
+4. **Data persistence** – `data/` directory survives cluster operations
+
 ## Coding Conventions
 
 - **YAML:** Validate with `yamllint -c .yamllint.yaml .` (CI enforced)
 - **Labels:** Use `hostk8s.app: <name>` for all K8s resources
-- **Scripts:** Use `set -euo pipefail` and `common.sh` logging functions
+- **Scripts:** Use `set -euo pipefail` and `common.sh/.ps1` logging functions (cross-platform)
 
 ## Debugging Priority
 

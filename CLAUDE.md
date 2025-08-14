@@ -6,6 +6,7 @@ HostK8s provides GitOps-based Kubernetes development environments using host-mod
 
 **Technology Stack**: Docker (host-mode), Kind, Flux v2, MetalLB, NGINX
 **Languages**: Bash, YAML
+**Platforms**: Cross-platform support for Mac, Linux, and Windows (PowerShell)
 
 ## Critical Constraints
 
@@ -60,7 +61,7 @@ make up extension/<stack>        # Deploy extension stack
 ```
 hostk8s/
 ├── Makefile           # Primary interface
-├── scripts/           # Implementation (via common.sh)
+├── scripts/           # Implementation (via common.sh/.ps1)
 ├── software/          # GitOps content
 │   ├── stack/         # Complete stacks
 │   └── apps/          # Individual applications
@@ -69,7 +70,7 @@ hostk8s/
 
 **Key Files**:
 - `.env` - Runtime configuration
-- `scripts/common.sh` - Shared utilities
+- `scripts/common.sh/.ps1` - Cross-platform shared utilities
 - `software/stacks/*/kustomization.yaml` - Stack definitions
 
 ## Working Principles
