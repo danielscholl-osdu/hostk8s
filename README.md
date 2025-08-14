@@ -42,7 +42,7 @@ HostK8s is built on **Kind** (Kubernetes in Docker) - a tool that runs Kubernete
 
 [Learn more about the architecture →](docs/architecture.md)
 
-### Software Stacks with Extensibility Points
+### Software with Extensibility Points
 
 Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure custom software stacks while leveraging the HostK8s framework.
 
@@ -52,7 +52,7 @@ Built-in extensibility requiring no code changes. Add custom kubernetes configur
 
 Natural language cluster management and software troubleshooting through specialized AI agents, prompts and MCP servers.
 
-[Learn about AI capabilities →](docs/ai-guide.md)
+[Learn how AI can help →](docs/ai-guide.md)
 
 
 ---
@@ -64,10 +64,10 @@ Natural language cluster management and software troubleshooting through special
 ```bash
 git clone https://community.opengroup.org/danielscholl/hostk8s.git
 
-export FLUX_ENABLED=true        # Enable the GitOps AddOn
-                                 # Windows: $env:FLUX_ENABLED = "true"
-make start                      # Start a gitops enabled cluster
-make up                         # Bring up a simple software stack
+export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
+
+make start                      # Start a cluster
+make up                         # Bring up a stack
 ```
 
 ## Prerequisites
@@ -86,6 +86,7 @@ make up                         # Bring up a simple software stack
 
 ```bash
 # Windows: Install make
+
 winget install ezwinports.make
 ```
 
