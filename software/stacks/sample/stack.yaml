@@ -107,7 +107,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stack/sample/components/ingress-nginx
+  path: ./software/stacks/sample/components/ingress-nginx
   prune: true
   wait: true
   healthChecks:
@@ -133,7 +133,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stack/sample/applications/website
+  path: ./software/stacks/sample/applications/website
   prune: true
   wait: true
   healthChecks:
@@ -155,7 +155,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stack/sample/applications/api
+  path: ./software/stacks/sample/applications/api
   prune: true
   wait: true
   healthChecks:
