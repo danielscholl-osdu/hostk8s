@@ -82,14 +82,16 @@ make up                         # Bring up a simple software stack
 ## Prerequisites
 
 **Hardware:** 8+ CPU cores, 16GB+ RAM
+
 **OS:** Mac/Linux (bash/zsh) or Windows ([pwsh](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-windows?view=powershell-7.5))
+
 **Package Manager:** [Homebrew](https://brew.sh) (Mac/Linux) or Winget (Windows)
+
 **Containerization:** [Docker Desktop](https://docs.docker.com/get-docker/) v24+
+
 **Software:** [make](https://www.gnu.org/software/make/)
 
 ### Setup
-
-**Mac/Linux**: make installed by default
 
 **Windows**: Install make in powershell core
 ```powershell
