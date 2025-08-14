@@ -21,15 +21,7 @@ function Test-Dependencies {
 
     if ($missingTools.Count -gt 0) {
         Log-Error "Missing required tools: $($missingTools -join ', ')"
-        Log-Debug "Install missing tools:"
-        foreach ($tool in $missingTools) {
-            switch ($tool) {
-                "kind" { Log-Debug "  winget install Kubernetes.kind" }
-                "kubectl" { Log-Debug "  winget install Kubernetes.kubectl" }
-                "helm" { Log-Debug "  winget install Helm.Helm" }
-                "docker" { Log-Debug "  winget install Docker.DockerDesktop" }
-            }
-        }
+        Log-Error "Run 'make install' to install missing dependencies"
         exit 1
     }
 

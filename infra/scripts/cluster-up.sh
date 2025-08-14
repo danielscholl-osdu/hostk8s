@@ -19,13 +19,7 @@ check_dependencies() {
 
     if [ ${#missing_tools[@]} -ne 0 ]; then
         log_error "Missing required tools: ${missing_tools[*]}"
-        log_debug "Install missing tools:"
-        for tool in "${missing_tools[@]}"; do
-            case "$tool" in
-                "kind"|"kubectl"|"helm") log_debug "  brew install $tool" ;;
-                "docker") log_debug "  Install Docker Desktop from docker.com" ;;
-            esac
-        done
+        log_error "Run 'make install' to install missing dependencies"
         exit 1
     fi
 
