@@ -8,6 +8,8 @@ metadata:
     hostk8s.application: api
 spec:
   replicas: 2
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: sample-api
