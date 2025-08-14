@@ -30,15 +30,6 @@ Most importantly, HostK8s bridges the gap between your IDE and distributed servi
 
 When you inevitably hit complexity walls - why didn't that service start? What's wrong with the ingress configuration? - HostK8s includes AI agents that understand your specific setup. Ask natural language questions and get targeted analysis of your deployment, networking issues, or configuration trade-offs without diving into documentation rabbit holes.
 
-### What This Means for You
-
-* **Quicker environment startup** instead of 45-minute waits
-* **Less RAM and Compute usage** instead of burning through 64GB+
-* **Configuration you can version control** instead of fragile scripts that break
-* **Safe experimentation** - keep your data when you rebuild your environment
-* **Real Kubernetes** - test with service mesh, ingress controllers, and enterprise auth patterns
-* **Your IDE, your way** - debug distributed services with the tools you already know
-
 ## Key Concepts
 
 ### Software Stacks
@@ -49,21 +40,20 @@ Pre-configured software stacks (web app + database, microservices + message queu
 
 HostK8s is built on **Kind** (Kubernetes in Docker) - a tool that runs Kubernetes clusters using Docker containers as nodes. Unlike heavy VM-based solutions, HostK8s uses your host Docker daemon directly, eliminating nested Docker layers and VM overhead. This means faster startup, lower resource usage, and seamless integration with standard tools (`make`, `kubectl`, `helm`, etc.).
 
-### Extensibility Points
+[Learn more about the architecture →](docs/architecture.md)
+
+### Software Stacks with Extensibility Points
 
 Built-in extensibility requiring no code changes. Add custom kubernetes configurations, deploy external applications, and configure custom software stacks while leveraging the HostK8s framework.
+
+[Get started with tutorials →](docs/tutorials/README.md)
 
 ### AI Guided Operations
 
 Natural language cluster management and software troubleshooting through specialized AI agents, prompts and MCP servers.
 
-### Learn More
+[Learn about AI capabilities →](docs/ai-guide.md)
 
-For a deeper understanding of the platform's design:
-
-* [Architecture Guide](docs/architecture.md)
-* [AI Guide](docs/ai-guide.md)
-* [Tutorials](docs/tutorials/README.md)
 
 ---
 
