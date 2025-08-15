@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sample-website
+  namespace: sample
+  labels:
+    app: sample-website
+    hostk8s.application: website
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: sample-website
+  template:
+    metadata:
+      labels:
+        app: sample-website
+        hostk8s.application: website
+    spec:
+      containers:
+      - name: website
+        image: mcr.microsoft.com/azurelinux/base/nginx:1.25
+        ports:
+        - containerPort: 80
+        env:
+        - name: API_URL
+          value: "http://sample-api.sample.svc.cluster.local"
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu: "25m"
+          limits:
+            memory: "64Mi"
+            cpu: "50m"
+        volumeMounts:
+        - name: website-content
+          mountPath: /usr/share/nginx/html
+      volumes:
+      - name: website-content
+        configMap:
+          name: sample-website-content

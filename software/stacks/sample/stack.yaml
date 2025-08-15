@@ -107,7 +107,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/sample/components/ingress-nginx
+  path: ./software/stacks/sample/ingress-nginx
   prune: true
   wait: true
   healthChecks:

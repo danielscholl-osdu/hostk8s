@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sample-api-storage-pv
+  labels:
+    hostk8s.application: api
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/data/storage/sample
+    type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sample-api-storage
+  namespace: sample
+  labels:
+    hostk8s.application: api
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  volumeName: sample-api-storage-pv
+  resources:
+    requests:
+      storage: 1Gi
