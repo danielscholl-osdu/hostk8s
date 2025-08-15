@@ -46,3 +46,4 @@ spec:
         publish-status-address: localhost
       config:
         use-forwarded-headers: "true"
+        ssl-redirect-port: "8443"
