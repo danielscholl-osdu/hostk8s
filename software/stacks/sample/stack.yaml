@@ -122,7 +122,7 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: app-sample-website
+  name: app-sample
   namespace: flux-system
 spec:
   dependsOn:
@@ -133,32 +133,13 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/sample/applications/website
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Deployment
-      name: sample-website
-      namespace: sample-website
----
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: app-sample-api
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: component-ingress-nginx
-  interval: 1h
-  retryInterval: 1m
-  timeout: 5m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  path: ./software/stacks/sample/applications/api
+  path: ./software/stacks/sample/app
   prune: true
   wait: true
   healthChecks:
     - kind: Deployment
       name: sample-api
-      namespace: sample-api
+      namespace: sample
+    - kind: Deployment
+      name: sample-website
+      namespace: sample

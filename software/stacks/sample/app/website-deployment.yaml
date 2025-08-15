@@ -90,29 +90,37 @@ data:
             </div>
 
             <h3>🧱 Components</h3>
+
+            <h4>📦 Shared Components</h4>
             <div class="component">
                 <h4>component-metrics-server</h4>
                 <p><strong>Git Source:</strong> flux-system</p>
+                <p><strong>Scope:</strong> <span style="color: #007bff;">Shared across stacks</span></p>
             </div>
 
             <div class="component">
                 <h4>component-certs</h4>
                 <p><strong>Git Source:</strong> flux-system</p>
+                <p><strong>Scope:</strong> <span style="color: #007bff;">Shared across stacks</span></p>
             </div>
 
             <div class="component">
                 <h4>component-certs-ca</h4>
                 <p><strong>Git Source:</strong> flux-system</p>
+                <p><strong>Scope:</strong> <span style="color: #007bff;">Shared across stacks</span></p>
             </div>
 
             <div class="component">
                 <h4>component-certs-issuer</h4>
                 <p><strong>Git Source:</strong> flux-system</p>
+                <p><strong>Scope:</strong> <span style="color: #007bff;">Shared across stacks</span></p>
             </div>
 
+            <h4>🎯 Stack-Specific Components</h4>
             <div class="component">
                 <h4>component-ingress-nginx</h4>
                 <p><strong>Git Source:</strong> flux-system</p>
+                <p><strong>Scope:</strong> <span style="color: #28a745;">Sample stack only</span></p>
             </div>
 
             <h3>🚀 Applications</h3>
