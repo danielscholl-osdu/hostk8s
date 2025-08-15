@@ -110,9 +110,9 @@ data:
           border-radius: 12px;
           font-weight: 600;
           cursor: pointer;
-          border: 1px solid rgba(255,255,255,.25);
-          background: rgba(255,255,255,.12);
-          color: var(--text);
+          border: none;
+          background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+          color: #fff;
           box-shadow: var(--shadow);
           transition: transform .15s ease, opacity .15s ease, border-color .15s ease;
         }
@@ -120,11 +120,6 @@ data:
         .btn:active { transform: translateY(0); opacity: .95; }
         .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-        /* Keep your gradient primary */
-        .btn.primary {
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-          border: none; color: #fff;
-        }
 
         /* Make ghost distinct (transparent, bordered) */
         .btn.ghost {
@@ -168,6 +163,8 @@ data:
 
         .tiny { font-size: 12px; color: var(--muted); }
         .error { color: var(--bad); }
+        .success { color: var(--good); }
+        .git-source { color: rgba(107, 114, 126, 0.9); }
       </style>
     </head>
     <body>
@@ -175,7 +172,7 @@ data:
         <section class="hero">
           <div class="panel">
             <h1>Stack: <strong>Sample</strong></h1>
-            <p class="lead">Interactive demo showing how GitOps shares components across stacks while keeping applications stack-specific.</p>
+            <p class="lead">Interactive GitOps demo showcasing shared components, persistent storage, and stack-specific applications.</p>
             <div class="status">
               <span style="font-weight: 600;">GitOps Resources</span>
               <span class="pill components">5 Components</span>
@@ -223,35 +220,35 @@ data:
             <div class="col-4">
               <div class="card">
                 <h3>component-metrics-server</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-certs</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-certs-ca</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-certs-issuer</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-ingress-nginx</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill stack" style="margin-top:8px">Stack</div>
               </div>
             </div>
@@ -264,16 +261,16 @@ data:
             <div class="col-6">
               <div class="card">
                 <h3>app-sample-website</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="subtle" style="margin-top:4px">Path: <code>/</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
+                <div class="subtle" style="margin-top:4px"><strong>URI Path:</strong> <code>/</code></div>
                 <div class="pill stack" style="margin-top:8px">Stack</div>
               </div>
             </div>
             <div class="col-6">
               <div class="card">
                 <h3>app-sample-api</h3>
-                <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="subtle" style="margin-top:4px">Path: <code>/api</code></div>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
+                <div class="subtle" style="margin-top:4px"><strong>URI Path:</strong> <code>/api</code></div>
                 <div class="pill stack" style="margin-top:8px">Stack</div>
               </div>
             </div>
@@ -292,8 +289,8 @@ data:
         };
 
         function testAPI() {
-          toast('Pinging in‑cluster service…');
-          alert('Testing API connection to:\nhttp://sample-api.sample.svc.cluster.local\n\nIn the GitOps pattern, services communicate via Kubernetes DNS!');
+          toast('Testing API connection…');
+          alert('Testing API connection to:\nhttps://localhost:8443/api');
         }
 
         async function makeAPICall(endpoint, method = 'GET') {
@@ -310,7 +307,7 @@ data:
           document.getElementById('file-status').innerText = 'Writing…';
           const result = await makeAPICall('/storage/test', 'POST');
           if (result.success) {
-            document.getElementById('file-status').innerText = 'File written successfully';
+            document.getElementById('file-status').innerHTML = '<span class="success">File written successfully</span>';
             toast('File written');
           } else {
             document.getElementById('file-status').innerText = `Write failed: ${result.data}`;
@@ -322,7 +319,7 @@ data:
           document.getElementById('file-status').innerText = 'Checking…';
           const result = await makeAPICall('/storage/test', 'GET');
           if (result.success) {
-            document.getElementById('file-status').innerHTML = `File exists<br><strong>Content:</strong><br><pre style="background: var(--code); padding: 10px; border-radius: 10px; margin-top: 6px; border:1px solid rgba(255,255,255,.12); white-space: pre-wrap;">${result.data}</pre>`;
+            document.getElementById('file-status').innerHTML = `<span class="success">File exists</span><br><strong>Content:</strong><br><pre style="background: var(--code); padding: 10px; border-radius: 10px; margin-top: 6px; border:1px solid rgba(255,255,255,.12); white-space: pre-wrap;">${result.data}</pre>`;
             toast('File found');
           } else if (result.status === 404) {
             document.getElementById('file-status').innerHTML = '<span class="error">File not found</span>';
@@ -337,7 +334,7 @@ data:
           document.getElementById('file-status').innerText = 'Deleting…';
           const result = await makeAPICall('/storage/test', 'DELETE');
           if (result.success) {
-            document.getElementById('file-status').innerText = 'File deleted successfully';
+            document.getElementById('file-status').innerHTML = '<span class="success">File deleted successfully</span>';
             toast('File deleted');
           } else {
             document.getElementById('file-status').innerText = `Delete failed: ${result.data}`;

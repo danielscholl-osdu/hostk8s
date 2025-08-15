@@ -6,8 +6,10 @@ resources:
   - api/deployment.yaml
   - api/service.yaml
   - api/ingress.yaml
+  - api/certificate.yaml
   - api/storage.yaml
   - web/deployment.yaml
   - web/service.yaml
   - web/ingress.yaml
+  - web/certificate.yaml
   - web/config-map.yaml

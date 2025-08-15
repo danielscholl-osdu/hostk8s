@@ -846,22 +846,44 @@ function Show-AppIngress {
                         if ($appType -eq "application") {
                             # Get detailed ingress info to show paths for GitOps applications
                             $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            $hasTls = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.tls}' 2>$null
                             if ($LASTEXITCODE -eq 0 -and $path) {
                                 if ($path -eq "/") {
-                                    Write-Host "   Access: http://localhost:8080/ ($name ingress)"
+                                    if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                        Write-Host "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
+                                    } else {
+                                        Write-Host "   Access: http://localhost:8080/ ($name ingress)"
+                                    }
                                 } else {
-                                    Write-Host "   Access: http://localhost:8080$path ($name ingress)"
+                                    if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                        Write-Host "   Access: http://localhost:8080$path, https://localhost:8443$path ($name ingress)"
+                                    } else {
+                                        Write-Host "   Access: http://localhost:8080$path ($name ingress)"
+                                    }
                                 }
                             } else {
-                                Write-Host "   Access: http://localhost:8080/ ($name ingress)"
+                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                    Write-Host "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
+                                } else {
+                                    Write-Host "   Access: http://localhost:8080/ ($name ingress)"
+                                }
                             }
                         } else {
                             # For non-GitOps applications, use simpler format
                             $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            $hasTls = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.tls}' 2>$null
                             if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                Write-Host "   Ingress: $name -> http://localhost:8080$path"
+                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                    Write-Host "   Ingress: $name -> http://localhost:8080$path, https://localhost:8443$path"
+                                } else {
+                                    Write-Host "   Ingress: $name -> http://localhost:8080$path"
+                                }
                             } else {
-                                Write-Host "   Ingress: $name -> http://localhost:8080/"
+                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                    Write-Host "   Ingress: $name -> http://localhost:8080/, https://localhost:8443/"
+                                } else {
+                                    Write-Host "   Ingress: $name -> http://localhost:8080/"
+                                }
                             }
                         }
                     } else {

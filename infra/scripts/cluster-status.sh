@@ -303,10 +303,19 @@ show_app_ingress() {
             if is_ingress_controller_ready; then
                 if [ "$app_type" = "application" ]; then
                     local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                    local has_tls=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.tls}' 2>/dev/null)
                     if [ "$path" = "/" ]; then
-                        echo "   Access: http://localhost:8080/ ($name ingress)"
+                        if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
+                            echo "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
+                        else
+                            echo "   Access: http://localhost:8080/ ($name ingress)"
+                        fi
                     else
-                        echo "   Access: http://localhost:8080$path ($name ingress)"
+                        if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
+                            echo "   Access: http://localhost:8080$path, https://localhost:8443$path ($name ingress)"
+                        else
+                            echo "   Access: http://localhost:8080$path ($name ingress)"
+                        fi
                     fi
                 else
                     local access=$(get_ingress_access "$app_name" "$ns $name $class $hosts $address $ports $age")
@@ -404,10 +413,19 @@ show_helm_app_resources() {
         if [ "$hosts" = "localhost" ] || [ "$hosts" = "*" ]; then
             if is_ingress_controller_ready; then
                 local path=$(kubectl get ingress "$name" -n "$namespace" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                local has_tls=$(kubectl get ingress "$name" -n "$namespace" -o jsonpath='{.spec.tls}' 2>/dev/null)
                 if [ "$path" = "/" ]; then
-                    echo "   Access: http://localhost:8080/ ($name ingress)"
+                    if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
+                        echo "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
+                    else
+                        echo "   Access: http://localhost:8080/ ($name ingress)"
+                    fi
                 else
-                    echo "   Access: http://localhost:8080$path ($name ingress)"
+                    if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
+                        echo "   Access: http://localhost:8080$path, https://localhost:8443$path ($name ingress)"
+                    else
+                        echo "   Access: http://localhost:8080$path ($name ingress)"
+                    fi
                 fi
             else
                 echo "   Ingress: $name (configured but controller not ready)"
