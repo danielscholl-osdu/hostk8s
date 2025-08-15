@@ -110,8 +110,8 @@ data:
           border-radius: 12px;
           font-weight: 600;
           cursor: pointer;
-          border: 1px solid rgba(255,255,255,.18);
-          background: var(--surface);
+          border: 1px solid rgba(255,255,255,.25);
+          background: rgba(255,255,255,.12);
           color: var(--text);
           box-shadow: var(--shadow);
           transition: transform .15s ease, opacity .15s ease, border-color .15s ease;
@@ -142,6 +142,8 @@ data:
         .pill { display:inline-flex; align-items:center; gap:8px; padding: 6px 10px; border-radius: 999px; background: var(--surface); border: 1px solid rgba(255,255,255,.12); font-size: 13px; }
         .pill.shared { background: rgba(124,156,255,.18); border: 1px solid rgba(124,156,255,.35); color: var(--accent); }
         .pill.stack { background: rgba(93,230,194,.18); border: 1px solid rgba(93,230,194,.35); color: var(--accent-2); }
+        .pill.components { background: rgba(124,156,255,.18); border: 1px solid rgba(124,156,255,.35); color: var(--accent); }
+        .pill.applications { background: rgba(93,230,194,.18); border: 1px solid rgba(93,230,194,.35); color: var(--accent-2); }
 
         /* Status pill */
         .pill.ok {
@@ -172,11 +174,12 @@ data:
       <main class="wrap">
         <section class="hero">
           <div class="panel">
-            <h1>Software Stack: <strong>Sample</strong></h1>
-            <p class="lead">A self‑documenting page showcasing the <em>Component</em> and <em>Application</em> separation managed by Flux.</p>
+            <h1>Stack: <strong>Sample</strong></h1>
+            <p class="lead">Interactive demo showing how GitOps shares components across stacks while keeping applications stack-specific.</p>
             <div class="status">
-              <span style="font-weight: 600;">GitOps deployment successful</span>
-              <span class="pill ok">Flux in sync</span>
+              <span style="font-weight: 600;">GitOps Resources</span>
+              <span class="pill components">5 Components</span>
+              <span class="pill applications">2 Applications</span>
             </div>
 
             <div class="grid">
