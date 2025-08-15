@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: sample-api
-  labels:
-    app.kubernetes.io/name: sample-api
-    hostk8s.application: api
