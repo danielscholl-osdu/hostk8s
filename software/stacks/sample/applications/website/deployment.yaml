@@ -74,55 +74,47 @@ data:
                 <p>This demonstrates the <strong>Component/Application</strong> separation pattern managed by Flux.</p>
             </div>
 
-            <h3>🧱 Components (Infrastructure)</h3>
+            <h3>🧱 Components</h3>
             <div class="component">
-                <h4>Metrics Server</h4>
-                <p><strong>Purpose:</strong> Resource monitoring and cluster metrics</p>
-                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
-                <p><strong>Source:</strong> metrics-server.github.io/metrics-server</p>
+                <h4>component-metrics-server</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
             </div>
 
             <div class="component">
-                <h4>Cert Manager</h4>
-                <p><strong>Purpose:</strong> TLS certificate management</p>
-                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
-                <p><strong>Source:</strong> charts.jetstack.io</p>
+                <h4>component-certs</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
             </div>
 
             <div class="component">
-                <h4>Ingress-NGINX Controller</h4>
-                <p><strong>Purpose:</strong> HTTP routing and load balancing</p>
-                <p><strong>Deployment:</strong> HelmRelease via Flux</p>
-                <p><strong>Source:</strong> kubernetes.github.io/ingress-nginx</p>
+                <h4>component-certs-ca</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
             </div>
 
-            <h3>🚀 Applications (Business Logic)</h3>
+            <div class="component">
+                <h4>component-certs-issuer</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
+            </div>
+
+            <div class="component">
+                <h4>component-ingress-nginx</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
+            </div>
+
+            <h3>🚀 Applications</h3>
             <div class="application">
-                <h4>Sample API</h4>
-                <p><strong>Purpose:</strong> Backend service with storage persistence testing</p>
+                <h4>app-sample-api</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
                 <p><strong>Access:</strong> <a href="/api">http://localhost:8080/api</a></p>
-                <p><strong>Storage:</strong> Uses local-path-provisioner for persistent data</p>
+                <p><button class="test-btn" onclick="testAPI()">Test API Connection</button></p>
             </div>
 
             <div class="application">
-                <h4>Sample Website (This Page)</h4>
-                <p><strong>Purpose:</strong> Frontend interface</p>
+                <h4>app-sample-website</h4>
+                <p><strong>Git Source:</strong> flux-system</p>
                 <p><strong>Access:</strong> <a href="/">http://localhost:8080/</a></p>
-                <p><strong>API:</strong> Communicates with API component</p>
             </div>
 
-            <div style="margin-top: 30px; padding: 20px; background: #e9ecef; border-radius: 5px;">
-                <h3>🧪 Test the Architecture</h3>
-                <p>Verify the GitOps stamp pattern:</p>
-                <ul>
-                    <li><code>flux get sources helm</code> - View Helm repositories</li>
-                    <li><code>flux get helmreleases</code> - View component deployments</li>
-                    <li><code>kubectl get pods --all-namespaces</code> - View all resources</li>
-                    <li><button class="test-btn" onclick="testAPI()">Test API Connection</button></li>
-                </ul>
-            </div>
-
-            <div style="margin-top: 20px; padding: 20px; background: #fff3cd; border-radius: 5px;">
+            <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 5px;">
                 <h3>💾 Storage Persistence Test</h3>
                 <p>Test persistent storage using local-path-provisioner:</p>
                 <div id="storage-status" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px;">
