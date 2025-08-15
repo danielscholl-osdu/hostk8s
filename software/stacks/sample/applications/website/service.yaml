@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: sample-website
-  namespace: sample-website
+  namespace: sample
   labels:
     hostk8s.application: website
 spec:

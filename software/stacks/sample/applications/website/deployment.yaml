@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sample-website
-  namespace: sample-website
+  namespace: sample
   labels:
     app: sample-website
     hostk8s.application: website
@@ -24,7 +24,7 @@ spec:
         - containerPort: 80
         env:
         - name: API_URL
-          value: "http://sample-api.sample-api.svc.cluster.local"
+          value: "http://sample-api.sample.svc.cluster.local"
         resources:
           requests:
             memory: "32Mi"
@@ -44,7 +44,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: sample-website-content
-  namespace: sample-website
+  namespace: sample
   labels:
     hostk8s.application: website
 data:
@@ -67,11 +67,26 @@ data:
     </head>
     <body>
         <div class="container">
-            <h1>🏢 Sample Website - GitOps Stamp Pattern</h1>
+            <h1>🏢 Software Stack: Sample</h1>
 
             <div class="stamp-info">
                 <h2>✅ GitOps Stamp Successfully Deployed!</h2>
                 <p>This demonstrates the <strong>Component/Application</strong> separation pattern managed by Flux.</p>
+            </div>
+
+            <h3>💾 Storage</h3>
+            <div style="padding: 20px; background: #e8f4f8; border-radius: 5px; margin: 20px 0;">
+                <p><strong>Storage Provider:</strong> local-path-provisioner</p>
+                <p><strong>Host Path:</strong> <code>data/storage/sample</code></p>
+                <p><strong>Container Path:</strong> <code>/app/storage</code></p>
+                <div id="storage-status" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px;">
+                    <strong>Status:</strong> <span id="file-status">Loading...</span>
+                </div>
+                <div style="margin: 10px 0;">
+                    <button class="test-btn" onclick="writeTestFile()">Write File</button>
+                    <button class="test-btn" onclick="checkTestFile()">Check File</button>
+                    <button class="test-btn" onclick="deleteTestFile()">Remove File</button>
+                </div>
             </div>
 
             <h3>🧱 Components</h3>
@@ -114,26 +129,11 @@ data:
                 <p><strong>Access:</strong> <a href="/">http://localhost:8080/</a></p>
             </div>
 
-            <div style="margin-top: 30px; padding: 20px; background: #fff3cd; border-radius: 5px;">
-                <h3>💾 Storage Persistence Test</h3>
-                <p>Test persistent storage using local-path-provisioner:</p>
-                <div id="storage-status" style="margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 3px;">
-                    <strong>Status:</strong> <span id="file-status">Loading...</span>
-                </div>
-                <div style="margin: 10px 0;">
-                    <button class="test-btn" onclick="writeTestFile()">Write Test File</button>
-                    <button class="test-btn" onclick="checkTestFile()">Check File Status</button>
-                    <button class="test-btn" onclick="deleteTestFile()">Delete Test File</button>
-                </div>
-                <div id="storage-info" style="margin-top: 10px; font-size: 0.9em; color: #6c757d;">
-                    <strong>Info:</strong> Files written to <code>/app/storage/test.txt</code> persist across pod restarts
-                </div>
-            </div>
         </div>
 
         <script>
             function testAPI() {
-                alert('Testing API connection to:\\nhttp://sample-api.sample-api.svc.cluster.local\\n\\nIn the GitOps pattern, services communicate via Kubernetes DNS!');
+                alert('Testing API connection to:\\nhttp://sample-api.sample.svc.cluster.local\\n\\nIn the GitOps pattern, services communicate via Kubernetes DNS!');
             }
 
             async function makeAPICall(endpoint, method = 'GET') {
@@ -160,7 +160,7 @@ data:
                 document.getElementById('file-status').innerText = 'Checking...';
                 const result = await makeAPICall('/storage/test', 'GET');
                 if (result.success) {
-                    document.getElementById('file-status').innerText = `File exists ✅ - Content: ${result.data}`;
+                    document.getElementById('file-status').innerHTML = `File exists ✅<br><strong>Content:</strong><br><pre style="background: #f8f9fa; padding: 10px; border-radius: 3px; margin-top: 5px; white-space: pre-wrap;">${result.data}</pre>`;
                 } else if (result.status === 404) {
                     document.getElementById('file-status').innerText = 'File not found ❌';
                 } else {

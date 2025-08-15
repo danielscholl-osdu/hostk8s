@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: sample-website
-  namespace: sample-website
+  namespace: sample
   labels:
     hostk8s.application: website
   annotations:
