@@ -152,6 +152,22 @@ spec:
           claimName: sample-api-storage
 ---
 apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sample-api-storage-pv
+  labels:
+    hostk8s.application: api
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/data/storage/sample-api-storage
+    type: DirectoryOrCreate
+---
+apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: sample-api-storage
@@ -161,7 +177,8 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: standard
+  storageClassName: ""
+  volumeName: sample-api-storage-pv
   resources:
     requests:
       storage: 1Gi
