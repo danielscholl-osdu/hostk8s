@@ -699,6 +699,18 @@ show_addon_status() {
 
         echo "🔄 Flux (GitOps): $flux_status"
         [ -n "$flux_message" ] && echo "   Status: $flux_message"
+
+        # Show suspended sources count if any
+        if has_flux_cli; then
+            local suspended_count=0
+            local git_output=$(flux get sources git 2>/dev/null)
+            if [ -n "$git_output" ] && echo "$git_output" | grep -q "^NAME"; then
+                suspended_count=$(echo "$git_output" | grep -v "^NAME" | awk -F'\t' '{gsub(/^[ \t]+|[ \t]+$/, "", $3); if($3=="True") count++} END {print count+0}')
+            fi
+            if [ "$suspended_count" -gt 0 ]; then
+                echo "   Sources: $suspended_count suspended ⏸️"
+            fi
+        fi
     fi
 
     # Show MetalLB status if installed

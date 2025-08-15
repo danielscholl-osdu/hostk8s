@@ -18,7 +18,9 @@ Write-Host '  ' -NoNewline; Write-Host 'down' -ForegroundColor Cyan -NoNewline; 
 Write-Host '  ' -NoNewline; Write-Host 'restart' -ForegroundColor Cyan -NoNewline; Write-Host '          Quick cluster reset for development iteration (Usage: make restart [stack-name])'
 Write-Host '  ' -NoNewline; Write-Host 'clean' -ForegroundColor Cyan -NoNewline; Write-Host '            Complete cleanup (destroy cluster and data)'
 Write-Host '  ' -NoNewline; Write-Host 'status' -ForegroundColor Cyan -NoNewline; Write-Host '           Show cluster health and running services'
-Write-Host '  ' -NoNewline; Write-Host 'sync' -ForegroundColor Cyan -NoNewline; Write-Host '             Force Flux reconciliation (Usage: make sync [REPO=name] [KUSTOMIZATION=name])'
+Write-Host '  ' -NoNewline; Write-Host 'sync' -ForegroundColor Cyan -NoNewline; Write-Host '             Force Flux reconciliation (Usage: make sync [stack-name] or REPO=name/KUSTOMIZATION=name make sync)'
+Write-Host '  ' -NoNewline; Write-Host 'suspend' -ForegroundColor Cyan -NoNewline; Write-Host '          Suspend GitOps reconciliation (pause all GitRepository sources)'
+Write-Host '  ' -NoNewline; Write-Host 'resume' -ForegroundColor Cyan -NoNewline; Write-Host '           Resume GitOps reconciliation (restore all GitRepository sources)'
 Write-Host ''
 Write-Host 'Applications' -ForegroundColor White
 Write-Host '  ' -NoNewline; Write-Host 'deploy' -ForegroundColor Cyan -NoNewline; Write-Host '           Deploy application (Usage: make deploy [app-name] [namespace] - defaults to ''simple'')'

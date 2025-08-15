@@ -253,6 +253,27 @@ function Show-AddonStatus {
 
         Write-Host "🔄 Flux (GitOps): $fluxStatus"
         if ($fluxMessage) { Write-Host "   Status: $fluxMessage" }
+
+        # Show suspended sources count if any
+        if (Test-Command "flux") {
+            $suspendedCount = 0
+            try {
+                $cmd = "flux get sources git --no-header 2>`$null"
+                $gitOutput = Invoke-Expression $cmd
+                if ($LASTEXITCODE -eq 0 -and $gitOutput) {
+                    $lines = $gitOutput -split "`n" | Where-Object { $_.Trim() }
+                    foreach ($line in $lines) {
+                        $parts = $line -split "`t"
+                        if ($parts.Count -ge 3 -and $parts[2].Trim() -eq "True") {
+                            $suspendedCount++
+                        }
+                    }
+                }
+            } catch { }
+            if ($suspendedCount -gt 0) {
+                Write-Host "   Sources: $suspendedCount suspended ⏸️"
+            }
+        }
     }
 
     # Show MetalLB status if installed

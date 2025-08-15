@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install start stop up down restart clean status deploy remove sync logs build
+.PHONY: help install start stop up down restart clean status deploy remove sync suspend resume logs build
 
 # OS Detection for cross-platform script execution
 ifeq ($(OS),Windows_NT)
@@ -109,6 +109,12 @@ else ifneq ($(word 2,$(MAKECMDGOALS)),)
 else
 	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT)
 endif
+
+suspend: ## Suspend GitOps reconciliation (pause all GitRepository sources)
+	@$(SCRIPT_RUNNER) ./infra/scripts/flux-suspend$(SCRIPT_EXT) suspend
+
+resume: ## Resume GitOps reconciliation (restore all GitRepository sources)
+	@$(SCRIPT_RUNNER) ./infra/scripts/flux-suspend$(SCRIPT_EXT) resume
 
 ##@ Applications
 
