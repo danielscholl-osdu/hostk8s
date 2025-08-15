@@ -140,6 +140,8 @@ data:
         .link:hover { opacity: .9; }
 
         .pill { display:inline-flex; align-items:center; gap:8px; padding: 6px 10px; border-radius: 999px; background: var(--surface); border: 1px solid rgba(255,255,255,.12); font-size: 13px; }
+        .pill.shared { background: rgba(124,156,255,.18); border: 1px solid rgba(124,156,255,.35); color: var(--accent); }
+        .pill.stack { background: rgba(93,230,194,.18); border: 1px solid rgba(93,230,194,.35); color: var(--accent-2); }
 
         /* Status pill */
         .pill.ok {
@@ -163,13 +165,14 @@ data:
         }
 
         .tiny { font-size: 12px; color: var(--muted); }
+        .error { color: var(--bad); }
       </style>
     </head>
     <body>
       <main class="wrap">
         <section class="hero">
           <div class="panel">
-            <h1>🏢 Software Stack: <strong>Sample</strong></h1>
+            <h1>Software Stack: <strong>Sample</strong></h1>
             <p class="lead">A self‑documenting page showcasing the <em>Component</em> and <em>Application</em> separation managed by Flux.</p>
             <div class="status">
               <span style="font-weight: 600;">GitOps deployment successful</span>
@@ -178,12 +181,12 @@ data:
 
             <div class="grid">
               <div class="col-6">
-                <div class="section-title">🔌 API</div>
+                <div class="section-title">API</div>
                 <div class="card">
                   <p class="subtle">Services communicate via Kubernetes DNS in‑cluster.</p>
                   <div class="kv">
                     <div><strong>Service</strong> <code>sample-api.sample.svc.cluster.local</code></div>
-                    <div><strong>Path</strong> <code>/api</code></div>
+                    <div><strong>URI Path:</strong> <code>/api</code></div>
                   </div>
                   <div class="actions">
                     <button class="btn primary" onclick="testAPI()">Test API</button>
@@ -192,18 +195,18 @@ data:
               </div>
 
               <div class="col-6">
-                <div class="section-title">💾 Storage</div>
+                <div class="section-title">Storage</div>
                 <div class="card">
                   <div class="kv">
                     <div><strong>Provider</strong> <code>local-path-provisioner</code></div>
-                    <div><strong>Host</strong> <code>data/storage/sample</code></div>
-                    <div><strong>Container</strong> <code>/app/storage</code></div>
+                    <div><strong>Host Path:</strong> <code>data/storage/sample</code></div>
+                    <div><strong>Container Path:</strong> <code>/app/storage</code></div>
                   </div>
                   <div id="storage-status" class="subtle" style="margin-top:10px">Status: <span id="file-status" class="mono">Loading…</span></div>
                   <div class="actions">
-                    <button class="btn primary" onclick="writeTestFile()">Write File</button>
+                    <button class="btn" onclick="writeTestFile()">Write File</button>
                     <button class="btn" onclick="checkTestFile()">Check File</button>
-                    <button class="btn ghost" onclick="deleteTestFile()">Remove File</button>
+                    <button class="btn" onclick="deleteTestFile()">Remove File</button>
                   </div>
                 </div>
               </div>
@@ -212,61 +215,63 @@ data:
         </section>
 
         <section style="margin-top:22px">
-          <div class="section-title">🧱 Components</div>
+          <div class="section-title">Components</div>
           <div class="grid">
             <div class="col-4">
               <div class="card">
                 <h3>component-metrics-server</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="pill" style="margin-top:8px">Shared</div>
+                <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-certs</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="pill" style="margin-top:8px">Shared</div>
+                <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-certs-ca</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="pill" style="margin-top:8px">Shared</div>
+                <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-certs-issuer</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="pill" style="margin-top:8px">Shared</div>
+                <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
               <div class="card">
                 <h3>component-ingress-nginx</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="pill" style="margin-top:8px">Stack</div>
+                <div class="pill stack" style="margin-top:8px">Stack</div>
               </div>
             </div>
           </div>
         </section>
 
         <section style="margin-top:22px">
-          <div class="section-title">🚀 Applications</div>
+          <div class="section-title">Applications</div>
           <div class="grid">
             <div class="col-6">
               <div class="card">
                 <h3>app-sample-website</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="subtle" style="margin-top:4px">Path: <code>/</code> • Namespace: <code>sample</code></div>
+                <div class="subtle" style="margin-top:4px">Path: <code>/</code></div>
+                <div class="pill stack" style="margin-top:8px">Stack</div>
               </div>
             </div>
             <div class="col-6">
               <div class="card">
                 <h3>app-sample-api</h3>
                 <div class="subtle">Git Source: <code>flux-system</code></div>
-                <div class="subtle" style="margin-top:4px">Path: <code>/api</code> • Namespace: <code>sample</code></div>
+                <div class="subtle" style="margin-top:4px">Path: <code>/api</code></div>
+                <div class="pill stack" style="margin-top:8px">Stack</div>
               </div>
             </div>
           </div>
@@ -302,7 +307,7 @@ data:
           document.getElementById('file-status').innerText = 'Writing…';
           const result = await makeAPICall('/storage/test', 'POST');
           if (result.success) {
-            document.getElementById('file-status').innerText = 'File written successfully ✅';
+            document.getElementById('file-status').innerText = 'File written successfully';
             toast('File written');
           } else {
             document.getElementById('file-status').innerText = `Write failed: ${result.data}`;
@@ -314,10 +319,10 @@ data:
           document.getElementById('file-status').innerText = 'Checking…';
           const result = await makeAPICall('/storage/test', 'GET');
           if (result.success) {
-            document.getElementById('file-status').innerHTML = `File exists ✅<br><strong>Content:</strong><br><pre style="background: var(--code); padding: 10px; border-radius: 10px; margin-top: 6px; border:1px solid rgba(255,255,255,.12); white-space: pre-wrap;">${result.data}</pre>`;
+            document.getElementById('file-status').innerHTML = `File exists<br><strong>Content:</strong><br><pre style="background: var(--code); padding: 10px; border-radius: 10px; margin-top: 6px; border:1px solid rgba(255,255,255,.12); white-space: pre-wrap;">${result.data}</pre>`;
             toast('File found');
           } else if (result.status === 404) {
-            document.getElementById('file-status').innerText = 'File not found ❌';
+            document.getElementById('file-status').innerHTML = '<span class="error">File not found</span>';
             toast('File not found');
           } else {
             document.getElementById('file-status').innerText = `Check failed: ${result.data}`;
@@ -329,7 +334,7 @@ data:
           document.getElementById('file-status').innerText = 'Deleting…';
           const result = await makeAPICall('/storage/test', 'DELETE');
           if (result.success) {
-            document.getElementById('file-status').innerText = 'File deleted successfully ✅';
+            document.getElementById('file-status').innerText = 'File deleted successfully';
             toast('File deleted');
           } else {
             document.getElementById('file-status').innerText = `Delete failed: ${result.data}`;
