@@ -1,0 +1,80 @@
+######################
+## Certificate Management Component
+## Internal orchestration for cert-manager, CA, and issuers
+## This file provides single entry point abstraction for certificate functionality
+######################
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: certs-manager
+  namespace: flux-system
+  labels:
+    hostk8s.component: certs
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs/manager
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cert-manager
+      namespace: cert-manager
+    - kind: Deployment
+      name: cert-manager-cainjector
+      namespace: cert-manager
+    - kind: Deployment
+      name: cert-manager-webhook
+      namespace: cert-manager
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: certs-ca
+  namespace: flux-system
+  labels:
+    hostk8s.component: certs
+spec:
+  dependsOn:
+    - name: certs-manager
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs/ca
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Secret
+      name: root-ca-secret
+      namespace: cert-manager
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: certs-issuer
+  namespace: flux-system
+  labels:
+    hostk8s.component: certs
+spec:
+  dependsOn:
+    - name: certs-ca
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs/issuer
+  prune: true
+  wait: true

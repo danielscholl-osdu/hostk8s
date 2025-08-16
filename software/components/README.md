@@ -34,32 +34,49 @@ resources:
 
 ## Available Shared Components
 
-### Registry (`software/components/registry/`)
+### 🐳 Container Registry ([📖 Detailed Documentation](registry/README.md))
 
-**Purpose**: Local Docker registry for custom image development
+**Purpose**: Local Docker registry for custom image development and build system integration
 
-**Resources**:
-- `registry` namespace with persistent 10Gi storage
-- Internal service: `registry.registry.svc.cluster.local:5000`
-- External access: NodePort 30500 (http://localhost:30500)
-- Registry UI available via `/v2/_catalog` endpoint
+**Quick Access**:
+- Internal: `registry.registry.svc.cluster.local:5000`
+- External: http://localhost:30500
+- Storage: 10GB persistent volume
 
-**Usage**:
-```bash
-# Include in stamp
-echo "  - ../../../components/registry" >> software/stamp/myapp/components/kustomization.yaml
+**Integration**: Essential for `make build src/APP_NAME` workflows - Kind clusters automatically resolve `localhost:5000` to internal registry service.
 
-# Test registry
-make registry-test
+### 🔐 Certificate Management ([📖 Detailed Documentation](certs/README.md))
 
-# Build custom images
-make registry-build APP=sample/registry-demo
+**Purpose**: Comprehensive TLS certificate management with cert-manager, CA, and Let's Encrypt support
 
-# Push existing images
-make registry-push IMAGE=myapp:latest
-```
+**Available Issuers**:
+- `selfsigned-cluster-issuer` - Quick development certificates
+- `root-ca-cluster-issuer` - Internal CA with consistent certificate chain
+- `letsencrypt-staging` / `letsencrypt-production` - Valid external certificates
 
-**Integration**: Kind clusters automatically resolve `localhost:5000` to internal registry service via containerd configuration.
+**Integration**: Automatic certificate provisioning for Ingress resources with cert-manager annotations.
+
+### 📊 Metrics Server ([📖 Detailed Documentation](metrics-server/README.md))
+
+**Purpose**: Kubernetes resource metrics for monitoring and autoscaling
+
+**Capabilities**:
+- `kubectl top pods/nodes` commands
+- Horizontal Pod Autoscaler (HPA) metrics source
+- Resource usage monitoring and analysis
+
+**Integration**: Essential for cluster resource management and application autoscaling.
+
+### 🗄️ Redis Infrastructure ([📖 Detailed Documentation](redis-infrastructure/README.md))
+
+**Purpose**: Redis server with management interface for caching and data storage
+
+**Services**:
+- Redis Server: `redis.redis-infrastructure.svc.cluster.local:6379`
+- Management UI: http://localhost:30081 (admin/admin)
+- Storage: 1GB persistent volume
+
+**Integration**: Ready-to-use caching layer for applications requiring session storage or data caching.
 
 ## Creating New Shared Components
 
@@ -71,7 +88,7 @@ cd software/components/{component-name}
 
 ### 2. Define Kubernetes Resources
 Create standard Kubernetes manifests:
-- `namespace.yaml` - Dedicated namespace with `osdu-ci.component: {name}` label
+- `namespace.yaml` - Dedicated namespace with `hostk8s.component: {name}` label
 - `deployment.yaml` - Main service deployment
 - `service.yaml` - Service exposure (ClusterIP + NodePort if external access needed)
 - `pvc.yaml` - Persistent storage if required
@@ -109,7 +126,7 @@ Update this README with:
 ### Naming Conventions
 - **Directory**: `software/components/{component-name}/`
 - **Namespace**: `{component-name}` (matches directory name)
-- **Labels**: `osdu-ci.component: {component-name}`
+- **Labels**: `hostk8s.component: {component-name}`
 - **Services**: `{component-name}.{component-name}.svc.cluster.local`
 
 ### Resource Management
