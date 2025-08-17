@@ -1,133 +1,110 @@
-# Sample GitOps Stack
+# Sample Stack
 
-This demonstrates the **Component/Application separation pattern** for GitOps deployments using Flux.
+A complete GitOps demonstration stack showcasing the **component/application separation pattern** for production-ready Kubernetes deployments. This stack provides a complete web application with persistent storage, TLS certificates, and HTTP/HTTPS routing via NGINX ingress.
+
+## Resource Requirements
+
+| Component | Replicas | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
+|-----------|----------|-------------|-----------|----------------|--------------|---------|
+| **Applications** |
+| sample-api | 1 | 50m | 200m | 128Mi | 256Mi | 1Gi PVC |
+| sample-website | 2 | 25m × 2 | 50m × 2 | 32Mi × 2 | 64Mi × 2 | - |
+| **Stack Components** |
+| ingress-nginx-controller | 1 | 50m | 300m | 64Mi | 256Mi | - |
+| **Total Stack Resources** | | **150m** | **600m** | **256Mi** | **640Mi** | **1Gi** |
+
+## Components
+
+| Component | Source Location | Purpose |
+|-----------|----------------|---------|
+| `component-metrics-server` | `software/components/` | Resource monitoring and HPA support |
+| `component-certs` | `software/components/` | TLS certificate management (cert-manager + CA + issuers) |
+| `component-ingress-nginx` | `software/stacks/sample/` | HTTP/HTTPS routing with Kind NodePort config |
 
 ## Architecture
 
 ```
-sample/
-├── kustomization.yaml          # Main orchestrator
-├── repository.yaml             # GitRepository source
-├── stack.yaml                  # Infrastructure components via Flux
-├── ingress-nginx/              # NGINX Ingress Controller
-│   ├── kustomization.yaml
-│   ├── namespace.yaml
-│   ├── source.yaml             # HelmRepository
-│   └── release.yaml            # HelmRelease
-└── app/                        # Application layer
-    ├── kustomization.yaml
-    ├── namespace.yaml          # sample namespace
-    ├── api/                    # Backend API service
-    │   ├── deployment.yaml     #   API with file storage
-    │   ├── service.yaml        #   ClusterIP service
-    │   ├── ingress.yaml        #   /api path routing
-    │   ├── certificate.yaml    #   TLS certificate
-    │   └── storage.yaml        #   Persistent volume claim
-    └── web/                    # Frontend web service
-        ├── deployment.yaml     #   Website deployment
-        ├── service.yaml        #   ClusterIP service
-        ├── ingress.yaml        #   / path routing
-        ├── certificate.yaml    #   TLS certificate
-        └── config-map.yaml     #   Website content
+┌─────────────────────────────────────────────────────────────────────┐
+│                           Traffic Flow                              │
+│         HTTP:8080 / HTTPS:8443 → NGINX Ingress Controller           │
+│                    ├─ / → sample-website (static)                   │
+│                    └─ /api → sample-api (Node.js + storage)         │
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌───────────────────────────────────────────────────────────────────────┐
+│                           Applications                                │
+│  ┌─────────────────────┐           ┌─────────────────────────────────┐│
+│  │   sample-website    │  DNS      │          sample-api             ││
+│  │   (NGINX static)    │◄─────────►│   (Node.js + persistent vol)    ││
+│  │   Namespace: sample │           │      Namespace: sample          ││
+│  └─────────────────────┘           └─────────────────────────────────┘│
+└───────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (depends on)
+┌─────────────────────────────────────────────────────────────────────┐
+│                        Stack Components                             │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │  component-ingress-nginx (HTTP/HTTPS routing + TLS)             ││
+│  │  • NodePort 30080/30443 for Kind compatibility                  ││
+│  │  • Automatic certificate integration                            ││
+│  └─────────────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼ (depends on)
+┌────────────────────────────────────────────────────────────────────────┐
+│                           Shared Components                            │
+│  ┌─────────────────┐    ┌─────────────────────────────────────────────┐│
+│  │component-metrics│    │             component-certs                 ││
+│  │server           │    │  ┌─────────────────────────────────────────┐││
+│  │• HPA support    │    │  │ manager → ca → issuer (nested deps)     │││
+│  │• Resource mon   │    │  │ • cert-manager installation             │││
+│  │                 │    │  │ • Root CA certificate                   │││
+│  │                 │    │  │ • ClusterIssuer for auto-TLS            │││
+│  │                 │    │  └─────────────────────────────────────────┘││
+│  └─────────────────┘    └─────────────────────────────────────────────┘│
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-## Components (Infrastructure)
+## Applications
 
-Deployed as Flux Kustomizations in `stack.yaml` with proper dependency ordering:
+### Sample Web Interface
+- **Path**: `/` (HTTP: 8080, HTTPS: 8443)
+- **Purpose**: Interactive dashboard showing GitOps resources and testing capabilities
+- **Runtime**: NGINX serving static HTML/CSS/JavaScript from ConfigMap
+- **Features**: Real-time API testing, storage operations, GitOps resource visualization
 
-### Core Infrastructure
-- **Metrics Server**: Resource monitoring capabilities (`kube-system`)
-- **Cert-Manager**: TLS certificate management (`cert-manager`)
-- **Root CA**: Self-signed certificate authority for development
-- **Certificate Issuer**: CA issuer for automatic certificate generation
-
-### Ingress-NGINX Controller
-- **Purpose**: HTTP routing and load balancing
-- **Deployment**: HelmRelease from kubernetes.github.io/ingress-nginx
-- **Configuration**: NodePort 30080/30443 for Kind compatibility
-- **Namespace**: `ingress-nginx`
-- **Dependencies**: Requires cert-manager for TLS certificates
-
-## Applications (Business Logic)
-
-### Sample API
-- **Purpose**: Backend service demonstrating file storage and persistence
-- **Runtime**: Node.js Express server with embedded code
-- **Namespace**: `sample`
-- **Access**: http://localhost:8080/api
-- **Storage**: Persistent volume at `/app/storage` for file operations
+### Sample API Service
+- **Path**: `/api` (HTTP: 8080, HTTPS: 8443)
+- **Purpose**: Backend service demonstrating persistent storage and health monitoring
+- **Runtime**: Node.js Express server with file system operations
+- **Storage**: Persistent volume mounted at `/app/storage`
 - **Endpoints**:
-  - `GET /` - API service information page
-  - `GET /health` - Health check
-  - `POST /storage/test` - Create test file
-  - `GET /storage/test` - Read test file
-  - `DELETE /storage/test` - Delete test file
-
-### Sample Website
-- **Purpose**: Frontend interface demonstrating the stack pattern
-- **Runtime**: NGINX serving static content from ConfigMap
-- **Namespace**: `sample`
-- **Access**: http://localhost:8080/
-- **API Integration**: Communicates with `sample-api.sample.svc.cluster.local`
+  - `GET /api/` - Service information
+  - `GET /api/health` - Health check endpoint
+  - `POST /api/storage/test` - Create test file
+  - `GET /api/storage/test` - Read test file content
+  - `DELETE /api/storage/test` - Remove test file
 
 ## Deployment
 
-### Option 1: Via Make Commands (Recommended)
-```bash
-export FLUX_ENABLED=true
-make start                      # Start cluster with Flux
-make up sample                  # Deploy sample stack via GitOps
-make status                     # Monitor deployment progress
-```
+### GitOps Files
+| File | Purpose |
+|------|---------|
+| `kustomization.yaml` | Main orchestrator - defines what gets deployed |
+| `repository.yaml` | GitOps source configuration - points to Git repository |
+| `stack.yaml` | Component inventory - lists infrastructure components to deploy |
+| `app/` | Application definitions - business logic services |
 
-### Option 2: Direct Kustomize
-```bash
-kubectl apply -k software/stacks/sample/
-```
+### Deployment Flow
+| Step | File | Flux Action | Result |
+|------|------|-------------|---------|
+| 1 | `repository.yaml` | Connects to Git source | GitOps source established |
+| 2 | `kustomization.yaml` | Orchestrates deployment order | Dependencies resolved |
+| 3 | `stack.yaml` | Deploys infrastructure components | Foundation ready |
+| 4 | `app/` | Deploys application services | Business logic running |
 
-### Option 3: Via Flux GitOps
-```bash
-# Deploy via Flux bootstrap pattern
-kubectl apply -f software/stacks/bootstrap.yaml
-```
+### Platform Integration
+This stack is designed to integrate with the **HostK8s platform** and requires environment variable substitution (`${GITOPS_REPO}`, `${GITOPS_BRANCH}`) for GitOps deployment. It cannot be deployed directly with kubectl alone.
 
-## Testing
-
-```bash
-# Check infrastructure components
-kubectl get kustomization -n flux-system
-kubectl get pods -n cert-manager
-kubectl get pods -n ingress-nginx
-
-# Check applications
-kubectl get pods -n sample
-kubectl get pvc -n sample
-
-# Test endpoints
-curl http://localhost:8080/           # Website
-curl http://localhost:8080/api        # API info page
-curl http://localhost:8080/api/health # Health check
-
-# Test storage functionality
-curl -X POST http://localhost:8080/api/storage/test    # Create file
-curl http://localhost:8080/api/storage/test            # Read file
-curl -X DELETE http://localhost:8080/api/storage/test  # Delete file
-
-# Monitor GitOps
-flux get sources git
-flux get kustomizations
-flux logs --follow
-```
-
-## Key Benefits
-
-1. **Separation of Concerns**: Infrastructure components vs. business applications
-2. **Certificate Management**: Automatic TLS certificates via cert-manager
-3. **Dependency Management**: Proper deployment ordering via Flux dependencies
-4. **Persistent Storage**: File-based persistence instead of database complexity
-5. **Service Discovery**: Applications communicate via Kubernetes DNS
-6. **GitOps Ready**: Fully declarative deployment via Flux
-7. **Development Friendly**: Works with both GitOps and direct kubectl
-8. **Resource Efficiency**: Lightweight Node.js API with minimal resource usage
-
-This pattern demonstrates how to build production-ready environments without database overhead!
+Use HostK8s commands to deploy and manage this stack across all supported platforms (Mac, Linux, Windows). All components are deployed and removed together as part of this stack's lifecycle.

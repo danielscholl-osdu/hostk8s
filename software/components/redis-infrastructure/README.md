@@ -1,38 +1,59 @@
 # Redis Infrastructure Component
 
-Shared Redis infrastructure component providing caching and data storage services for HostK8s applications.
+Shared Redis infrastructure component providing caching and data storage services with web-based management interface for HostK8s applications.
 
-## Services
+## Resource Requirements
 
-- **Redis Server**: High-performance in-memory data store with persistence
-- **Redis Commander**: Web-based management interface for Redis
+| Component | Replicas | CPU Request | CPU Limit | Memory Request | Memory Limit |
+|-----------|----------|-------------|-----------|----------------|--------------|
+| redis | 1 | 50m | 200m | 128Mi | 256Mi |
+| redis-commander | 1 | 25m | 100m | 64Mi | 128Mi |
+| **Total Component Resources** | | **75m** | **300m** | **192Mi** | **384Mi** |
 
-## Access
+## Services & Access
 
-- **Applications**: `redis.redis-infrastructure.svc.cluster.local:6379`
-- **Management UI**: http://localhost:30081 (admin/admin)
-- **Password**: `devpassword` (development only)
+| Service | Endpoint | Port | Purpose |
+|---------|----------|------|---------|
+| Redis Server | `redis.redis-infrastructure.svc.cluster.local` | 6379 | Application data store |
+| Management UI | `localhost` | 30081 | Web interface for Redis management |
+
+### Authentication
+- **Redis Password**: `devpassword` (development only)
+- **Management UI**: Login `admin/admin`
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│           Redis Infrastructure              │
-│                                             │
-│  ┌─────────────┐      ┌─────────────────┐  │
-│  │    Redis    │      │     Redis       │  │
-│  │   Server    │◄────►│   Commander     │  │
-│  │  (Internal) │      │   (External)    │  │
-│  └─────────────┘      └─────────────────┘  │
-│         │                       │          │
-│    ClusterIP                NodePort       │
-│     :6379                   :30081         │
-└─────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                Redis Infrastructure Component               │
+│                                                             │
+│  ┌─────────────────┐    ┌─────────────────┐                │
+│  │                 │    │                 │                │
+│  │   Redis Server  │◄──►│ Redis Commander │                │
+│  │  (data store)   │    │  (management)   │                │
+│  │                 │    │                 │                │
+│  └─────────────────┘    └─────────────────┘                │
+│           │                       │                        │
+│           ▼                       ▼                        │
+│    ClusterIP :6379         NodePort :30081                 │
+│                                                             │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │              Persistent Storage (1GB)                  ││
+│  └─────────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-## Usage from Applications
+## Integration
 
-Applications can connect to Redis using the internal service:
+Stacks reference this component in their `stack.yaml`:
+
+```yaml
+- name: component-redis-infrastructure
+  namespace: flux-system
+  path: ./software/components/redis-infrastructure
+```
+
+Applications connect using the internal service:
 
 ```yaml
 env:
@@ -42,42 +63,32 @@ env:
 
 ## Storage
 
-- **Persistent Volume**: 1GB storage for Redis data
-- **Persistence**: Automatic snapshots for data durability
-- **Retention**: Data survives pod restarts and updates
+| Resource | Size | Purpose | Retention |
+|----------|------|---------|-----------|
+| Persistent Volume | 1GB | Redis data persistence | Survives pod restarts and updates |
+| Snapshot Policy | Automatic | Data durability | Configured for development workloads |
 
-## Monitoring
+## Deployment
 
-- Health checks on both Redis server and Commander
-- Resource limits prevent excessive resource usage
-- Management UI provides real-time Redis statistics
+| Property | Value |
+|----------|-------|
+| Namespace | `redis-infrastructure` |
+| Configuration | Development-optimized with persistent storage |
+| Health Check | Redis ping command and HTTP health checks |
+| Key Features | In-memory data store, web management UI, data persistence |
 
-## Configuration
-
-Basic Redis configuration optimized for development:
-- 256MB memory limit with LRU eviction
-- Automatic persistence snapshots
-- Password authentication enabled
-- Logging level: notice
-
-## Commands
-
+### Basic Operations
 ```bash
-# Deploy component
-kubectl apply -k software/components/redis-infrastructure/
-
 # Check component status
-kubectl get all -n redis-infrastructure
+kubectl get pods -n redis-infrastructure
+kubectl get pvc -n redis-infrastructure
+
+# Test Redis connectivity
+kubectl exec -n redis-infrastructure deployment/redis -- redis-cli -a devpassword ping
+
+# Access management UI
+open http://localhost:30081  # Login: admin/admin
 
 # View Redis logs
 kubectl logs -n redis-infrastructure deployment/redis
-
-# View Commander logs
-kubectl logs -n redis-infrastructure deployment/redis-commander
-
-# Connect to Redis CLI
-kubectl exec -n redis-infrastructure deployment/redis -it -- redis-cli -a devpassword
-
-# Remove component
-kubectl delete -k software/components/redis-infrastructure/
 ```

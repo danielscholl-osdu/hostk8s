@@ -8,7 +8,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: certs-manager
+  name: component-certs-manager
   namespace: flux-system
   labels:
     hostk8s.component: certs
@@ -37,13 +37,13 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: certs-ca
+  name: component-certs-ca
   namespace: flux-system
   labels:
     hostk8s.component: certs
 spec:
   dependsOn:
-    - name: certs-manager
+    - name: component-certs-manager
   interval: 1h
   retryInterval: 1m
   timeout: 5m
@@ -62,13 +62,13 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: certs-issuer
+  name: component-certs-issuer
   namespace: flux-system
   labels:
     hostk8s.component: certs
 spec:
   dependsOn:
-    - name: certs-ca
+    - name: component-certs-ca
   interval: 1h
   retryInterval: 1m
   timeout: 5m
