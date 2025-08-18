@@ -92,9 +92,21 @@ data:
         @media (max-width: 960px){ .col-4,.col-6,.col-8{ grid-column: span 12; } }
 
         .section-title { display:flex; align-items:center; gap:10px; margin: 6px 0 6px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing:.14em; }
-        .card { background: var(--bg-card); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); transition: transform .18s ease, box-shadow .18s ease; }
+        .card { background: var(--bg-card); border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 16px; box-shadow: var(--shadow); transition: transform .18s ease, box-shadow .18s ease; position: relative; }
         .card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,.22); }
         .card h3 { margin: 6px 0 4px; font-size: 18px; }
+        .card.parent-component { border-left: 3px solid var(--accent); }
+        .card.parent-component::after { content: "P"; position: absolute; bottom: 8px; right: 8px; width: 20px; height: 20px; background: var(--accent); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .card.sub-component { margin-left: 12px; }
+        .card.sub-component h3 { font-size: 16px; color: var(--muted); }
+        .card.sub-component h3::before { content: "└─ "; color: var(--accent-2); font-weight: normal; }
+        .card.sub-component::after { content: "C"; position: absolute; bottom: 8px; right: 8px; width: 20px; height: 20px; background: var(--accent-2); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; }
+        .card.ssl-enabled::after { content: "SSL"; position: absolute; bottom: 8px; right: 8px; padding: 3px 6px; background: rgba(220, 38, 38, 0.15); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; }
+        .ingress-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+        .ingress-card { background: var(--surface); border: 1px solid rgba(255,255,255,.08); border-left: 3px solid var(--good); border-radius: 12px; padding: 12px; position: relative; }
+        .ingress-card h4 { margin: 0 0 6px; font-size: 14px; color: var(--text); }
+        .ingress-card .ingress-details { font-size: 12px; color: var(--muted); }
+        .ingress-card.ssl-enabled::after { content: "SSL"; position: absolute; top: 8px; right: 8px; padding: 2px 5px; background: rgba(220, 38, 38, 0.15); color: #dc2626; border: 1px solid rgba(220, 38, 38, 0.3); border-radius: 6px; font-size: 9px; font-weight: 600; letter-spacing: 0.5px; }
         .subtle { color: var(--muted); font-size: 14px; }
 
         .kv { display:flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 8px; }
@@ -152,7 +164,7 @@ data:
 
         .mono { font-variant-ligatures: none; }
 
-        .toast { position: fixed; right: 18px; bottom: 18px; background: var(--bg-card); border: 1px solid rgba(255,255,255,.14); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 14px; display:none; }
+        .toast { position: fixed; right: 18px; bottom: 18px; background: var(--bg-card); border: 1px solid rgba(255,255,255,.25); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 14px; display:none; }
         .toast.show { display:block; animation: fadein .2s ease; }
         @keyframes fadein { from{ opacity:.2; transform: translateY(6px);} to{opacity:1; transform: translateY(0);} }
 
@@ -175,8 +187,8 @@ data:
             <p class="lead">Interactive GitOps demo showcasing shared components, persistent storage, and stack-specific applications.</p>
             <div class="status">
               <span style="font-weight: 600;">GitOps Resources</span>
-              <span class="pill components">5 Components</span>
-              <span class="pill applications">2 Applications</span>
+              <span class="pill applications">1 Application</span>
+              <span class="pill components">6 Components</span>
             </div>
 
             <div class="grid">
@@ -215,6 +227,35 @@ data:
         </section>
 
         <section style="margin-top:22px">
+          <div class="section-title">Applications</div>
+          <div class="grid">
+            <div class="col-12">
+              <div class="card">
+                <h3>app-sample</h3>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
+                <div class="ingress-cards">
+                  <div class="ingress-card ssl-enabled">
+                    <h4>Website</h4>
+                    <div class="ingress-details">
+                      <div><strong>Path:</strong> <code>/</code></div>
+                      <div><strong>Ports:</strong> <code>8080 / 8443</code></div>
+                    </div>
+                  </div>
+                  <div class="ingress-card ssl-enabled">
+                    <h4>API</h4>
+                    <div class="ingress-details">
+                      <div><strong>Path:</strong> <code>/api</code></div>
+                      <div><strong>Ports:</strong> <code>8080 / 8443</code></div>
+                    </div>
+                  </div>
+                </div>
+                <div class="pill stack" style="margin-top:12px">Stack</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section style="margin-top:22px">
           <div class="section-title">Components</div>
           <div class="grid">
             <div class="col-4">
@@ -226,52 +267,37 @@ data:
             </div>
             <div class="col-4">
               <div class="card">
+                <h3>component-ingress-nginx</h3>
+                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
+                <div class="pill stack" style="margin-top:8px">Stack</div>
+              </div>
+            </div>
+            <div class="col-4">
+              <div class="card parent-component">
                 <h3>component-certs</h3>
                 <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
-              <div class="card">
-                <h3>component-certs-ca</h3>
+              <div class="card sub-component">
+                <h3>component-certs/manager</h3>
                 <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
-              <div class="card">
-                <h3>component-certs-issuer</h3>
+              <div class="card sub-component">
+                <h3>component-certs/ca</h3>
                 <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
                 <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
             <div class="col-4">
-              <div class="card">
-                <h3>component-ingress-nginx</h3>
+              <div class="card sub-component">
+                <h3>component-certs/issuer</h3>
                 <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
-                <div class="pill stack" style="margin-top:8px">Stack</div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section style="margin-top:22px">
-          <div class="section-title">Applications</div>
-          <div class="grid">
-            <div class="col-6">
-              <div class="card">
-                <h3>app-sample-website</h3>
-                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
-                <div class="subtle" style="margin-top:4px"><strong>URI Path:</strong> <code>/</code></div>
-                <div class="pill stack" style="margin-top:8px">Stack</div>
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="card">
-                <h3>app-sample-api</h3>
-                <div class="git-source"><strong>Git Source:</strong> <code>flux-system</code></div>
-                <div class="subtle" style="margin-top:4px"><strong>URI Path:</strong> <code>/api</code></div>
-                <div class="pill stack" style="margin-top:8px">Stack</div>
+                <div class="pill shared" style="margin-top:8px">Shared</div>
               </div>
             </div>
           </div>
