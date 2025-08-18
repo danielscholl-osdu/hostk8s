@@ -42,25 +42,38 @@ Automated TLS certificate management for Kubernetes clusters using cert-manager 
 │  └─────────────────┘    └─────────────────┘    └──────────┘ │
 │          │                       │                    │     │
 │          ▼                       ▼                    ▼     │
-│      manager/                   ca/                issuer/   │
+│      manager/                   ca/               issuer/   │
 │                                                             │
 │  Internal Flux orchestration with dependency management     │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Integration
+## Usage
 
-Stacks reference this component in their `stack.yaml`:
-
+**Stack Integration:**
 ```yaml
 - name: component-certs
   namespace: flux-system
   path: ./software/components/certs
 ```
 
-Applications automatically receive TLS certificates by creating Certificate resources:
+**Expected Kustomizations:**
+- `component-certs` (parent component)
+- `component-certs-manager` (cert-manager installation)
+- `component-certs-ca` (root CA certificate)
+- `component-certs-issuer` (ClusterIssuer configuration)
 
+**Available ClusterIssuers:**
+
+| Issuer | Purpose | Use Case |
+|--------|---------|----------|
+| `root-ca-cluster-issuer` | Internal CA authority | Local development, internal services |
+| `letsencrypt-staging` | Let's Encrypt staging | Testing external certificates |
+| `letsencrypt-production` | Let's Encrypt production | Production external certificates |
+
+**Certificate Examples:**
 ```yaml
+# Internal development certificate
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
@@ -68,37 +81,22 @@ metadata:
 spec:
   secretName: my-app-tls-secret
   issuerRef:
-    name: cluster-ca-issuer
+    name: root-ca-cluster-issuer
     kind: ClusterIssuer
   dnsNames:
   - localhost
-```
-
-## Deployment
-
-| Property | Value |
-|----------|-------|
-| Namespace | `cert-manager` |
-| Configuration | Internal Flux orchestration with dependency management |
-| Health Check | Certificate manager pod readiness |
-| Key Features | Nested component architecture, automatic TLS certificates |
-
-### Deployment Flow
-| Step | Component | Result |
-|------|-----------|---------|
-| 1 | `manager/` | cert-manager controllers ready |
-| 2 | `ca/` | Root CA certificate created |
-| 3 | `issuer/` | ClusterIssuer available for use |
-
-### Basic Operations
-```bash
-# Check component status
-kubectl get pods -n cert-manager
-kubectl get clusterissuers
-
-# Verify certificate creation
-kubectl get certificates --all-namespaces
-
-# Check ClusterIssuer status
-kubectl describe clusterissuer cluster-ca-issuer
+  - my-app.local
+---
+# External certificate (staging)
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: my-app-external-tls
+spec:
+  secretName: my-app-external-tls-secret
+  issuerRef:
+    name: letsencrypt-staging
+    kind: ClusterIssuer
+  dnsNames:
+  - my-app.example.com
 ```
