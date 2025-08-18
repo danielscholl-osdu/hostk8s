@@ -29,10 +29,12 @@ function Apply-StampYaml {
 
     if (Test-Path $YamlFile) {
         Log-Info $Description
-        # Check if this is an extension stack that needs template processing
-        if ($YamlFile -match "extension/") {
-            Log-Debug "Processing template variables for extension stack"
-            # For now, simple apply - template processing can be added later if needed
+        # Check if this file needs template processing (extension stacks or files with environment variables)
+        $needsTemplateProcessing = ($YamlFile -match "extension/") -or ((Get-Content $YamlFile -Raw) -match '\$\{')
+        if ($needsTemplateProcessing) {
+            Log-Debug "Processing template variables for stack file"
+            # TODO: Implement proper envsubst equivalent for PowerShell
+            # For now, simple apply - template processing needs to be implemented
             kubectl apply -f $YamlFile
             if ($LASTEXITCODE -ne 0) {
                 Log-Info "WARNING: Failed to apply $Description"

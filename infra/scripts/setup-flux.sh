@@ -108,9 +108,9 @@ apply_stamp_yaml() {
 
     if [ -f "$yaml_file" ]; then
         log_info "$description"
-        # Check if this is an extension stack that needs template processing
-        if [[ "$yaml_file" == *"extension/"* ]]; then
-            log_debug "Processing template variables for extension stack"
+        # Check if this file needs template processing (extension stacks or files with environment variables)
+        if [[ "$yaml_file" == *"extension/"* ]] || grep -q '${' "$yaml_file" 2>/dev/null; then
+            log_debug "Processing template variables for stack file"
             envsubst < "$yaml_file" | kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f - || log_info "WARNING: Failed to apply $description"
         else
             kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "$yaml_file" || log_info "WARNING: Failed to apply $description"
