@@ -44,7 +44,7 @@ make build src/sample-app
 
 **What happens:**
 - Builds vote, result, and worker services from source
-- Pushes to local registry at `localhost:5000/hostk8s-*:latest`
+- Pushes to local registry at `localhost:5001/hostk8s-*:latest`
 - Images available for Kubernetes deployment
 
 ### 4. Applications Auto-Deploy
@@ -54,10 +54,10 @@ Since the stack is already deployed via GitOps, the applications will automatica
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Vote** | http://localhost:30080 | Cast votes between options |
-| **Result** | http://localhost:30081 | View real-time results |
-| **Redis Commander** | http://localhost:30500 | Monitor Redis data |
-| **Registry** | http://localhost:30500 | Container registry management |
+| **Vote** | http://localhost:8080/vote | Cast votes between options |
+| **Result** | http://localhost:8080/result | View real-time results |
+| **Redis Commander** | http://localhost:30081 | Monitor Redis data |
+| **Registry** | http://localhost:5001 | Container registry management |
 
 ## Component Integration
 
@@ -69,9 +69,9 @@ Applications connect to shared components via Kubernetes DNS:
 ### Image Sources
 ```yaml
 # Built from source code
-vote: localhost:5000/hostk8s-vote:latest
-result: localhost:5000/hostk8s-result:latest
-worker: localhost:5000/hostk8s-worker:latest
+vote: localhost:5001/hostk8s-vote:latest
+result: localhost:5001/hostk8s-result:latest
+worker: localhost:5001/hostk8s-worker:latest
 
 # Standard images
 postgres: postgres:15-alpine
@@ -179,8 +179,8 @@ make sync voting-app
 ## Troubleshooting
 
 ### Images Not Pulling
-1. **Check registry accessibility**: `curl http://localhost:30500/v2/_catalog`
-2. **Verify images exist**: `curl http://localhost:30500/v2/hostk8s-vote/tags/list`
+1. **Check registry accessibility**: `curl http://localhost:5001/v2/_catalog`
+2. **Verify images exist**: `curl http://localhost:5001/v2/hostk8s-vote/tags/list`
 3. **Rebuild if needed**: `make build src/sample-app`
 
 ### Services Can't Connect

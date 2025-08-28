@@ -762,6 +762,35 @@ show_addon_status() {
         [ -n "$ingress_message" ] && echo "   Status: $ingress_message"
     fi
 
+    # Show Registry status if installed
+    if has_registry; then
+        local registry_status="NotReady"
+        local registry_message=""
+
+        # Check if registry-core deployment is ready
+        local core_ready=$(kubectl get deployment registry-core -n registry --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print a[1] "/" a[2]}' || echo "not found")
+
+        if [ "$core_ready" = "ready" ]; then
+            registry_status="Ready"
+            registry_message="Access registry API at http://localhost:5001"
+
+            # Check if registry UI is also running
+            local ui_ready=$(kubectl get deployment registry-ui -n registry --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
+            if [ "$ui_ready" = "ready" ]; then
+                registry_message="${registry_message}, Web UI: Available at http://registry.localhost:8080"
+            fi
+        elif [ "$core_ready" = "not found" ]; then
+            registry_status="NotReady"
+            registry_message="Registry deployment not found"
+        else
+            registry_status="Pending"
+            registry_message="Registry deployment $core_ready ready"
+        fi
+
+        echo "📦 Registry: $registry_status"
+        [ -n "$registry_message" ] && echo "   Status: $registry_message"
+    fi
+
     echo
 }
 

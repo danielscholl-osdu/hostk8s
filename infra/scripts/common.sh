@@ -226,6 +226,9 @@ has_metallb() {
 has_ingress() {
     kubectl get namespace ingress-nginx >/dev/null 2>&1
 }
+has_registry() {
+    kubectl get namespace registry >/dev/null 2>&1
+}
 
 # Argument parsing helpers
 parse_make_args() {

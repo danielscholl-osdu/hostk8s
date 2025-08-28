@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: result
-        image: 10.111.130.183:5000/hostk8s-result:latest
+        image: dockersamples/examplevotingapp_result:latest
         ports:
         - containerPort: 80
           name: http
@@ -35,15 +35,3 @@ spec:
           limits:
             memory: "128Mi"
             cpu: "100m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 80
-          initialDelaySeconds: 5
-          periodSeconds: 5
