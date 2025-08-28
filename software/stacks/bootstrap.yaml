@@ -1,6 +1,6 @@
 ######################
-## Bootstrap for Sample Stack
-## This kustomization applies the sample stack kustomization.yaml
+## Bootstrap for Dynamic Stack
+## This kustomization applies the specified stack kustomization.yaml
 ## Apply once during cluster setup, then git sync handles everything
 ######################
 apiVersion: kustomize.toolkit.fluxcd.io/v1
@@ -15,7 +15,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/sample
+  path: ./software/stacks/${SOFTWARE_STACK}
   targetNamespace: flux-system
   prune: true
   wait: false

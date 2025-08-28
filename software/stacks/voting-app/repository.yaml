@@ -5,9 +5,9 @@ metadata:
   namespace: flux-system
 spec:
   interval: 5m
-  url: ${GITOPS_REPO}
+  url: https://community.opengroup.org/danielscholl/hostk8s
   ref:
-    branch: ${GITOPS_BRANCH}
+    branch: build-sample
   ignore: |
     # exclude all
     /*
