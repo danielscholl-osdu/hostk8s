@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+  namespace: voting-app
+  labels:
+    app: vote
+    hostk8s.app: voting-app
+    hostk8s.component: vote-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vote
+  template:
+    metadata:
+      labels:
+        app: vote
+        hostk8s.app: voting-app
+        hostk8s.component: vote-service
+    spec:
+      containers:
+      - name: vote
+        image: localhost:5000/hostk8s-vote:latest
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: OPTION_A
+          value: "Kubernetes"
+        - name: OPTION_B
+          value: "Docker Swarm"
+        - name: REDIS_HOST
+          value: "redis.redis-infrastructure.svc.cluster.local"
+        - name: REDIS_PORT
+          value: "6379"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5

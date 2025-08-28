@@ -1,0 +1,20 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: voting-app
+  labels:
+    hostk8s.app: voting-app
+
+resources:
+  - namespace.yaml
+  - vote-deployment.yaml
+  - vote-service.yaml
+  - result-deployment.yaml
+  - result-service.yaml
+  - worker-deployment.yaml
+  - db-deployment.yaml
+  - db-service.yaml
+
+commonLabels:
+  hostk8s.app: voting-app

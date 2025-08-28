@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result
+  namespace: voting-app
+  labels:
+    app: result
+    hostk8s.app: voting-app
+    hostk8s.component: result-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: result
+  template:
+    metadata:
+      labels:
+        app: result
+        hostk8s.app: voting-app
+        hostk8s.component: result-service
+    spec:
+      containers:
+      - name: result
+        image: localhost:5000/hostk8s-result:latest
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: DATABASE_URL
+          value: "postgres://postgres:postgres@db.voting-app.svc.cluster.local:5432/votes"
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "50m"
+          limits:
+            memory: "128Mi"
+            cpu: "100m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 80
+          initialDelaySeconds: 5
+          periodSeconds: 5
