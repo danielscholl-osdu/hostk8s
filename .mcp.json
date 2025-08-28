@@ -2,21 +2,21 @@
   "mcpServers": {
     "kubernetes": {
       "command": "npx",
-      "args": ["mcp-server-kubernetes"],
+      "args": [
+        "mcp-server-kubernetes"
+      ],
       "env": {
         "KUBECONFIG_PATH": "./data/kubeconfig/config"
       }
     },
     "flux-operator-mcp": {
       "command": "flux-operator-mcp",
-      "args": ["serve"],
+      "args": [
+        "serve"
+      ],
       "env": {
         "KUBECONFIG": "./data/kubeconfig/config"
       }
-    },
-    "Context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
     }
   }
 }
