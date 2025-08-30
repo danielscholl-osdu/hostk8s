@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: vote
-        image: registry-api.hostk8s.svc.cluster.local:5000/hostk8s-vote:latest
+        image: 10.101.23.191:5000/hostk8s-vote:latest
         ports:
         - containerPort: 80
           name: http

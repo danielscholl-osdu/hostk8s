@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: worker
-        image: registry-api.hostk8s.svc.cluster.local:5000/hostk8s-worker:latest
+        image: 10.101.23.191:5000/hostk8s-worker:latest
         env:
         - name: REDIS_HOST
           value: "redis.redis-infrastructure.svc.cluster.local"
