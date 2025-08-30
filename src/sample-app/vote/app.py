@@ -12,17 +12,13 @@ hostname = socket.gethostname()
 
 app = Flask(__name__)
 
-# Enhanced logging for development
-logging.basicConfig(level=logging.INFO)
 gunicorn_error_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers.extend(gunicorn_error_logger.handlers)
 app.logger.setLevel(logging.INFO)
 
 def get_redis():
     if not hasattr(g, 'redis'):
-        redis_host = os.getenv('REDIS_HOST', 'redis')
-        app.logger.info(f'Connecting to Redis at {redis_host}')
-        g.redis = Redis(host=redis_host, db=0, socket_timeout=5)
+        g.redis = Redis(host="redis", db=0, socket_timeout=5)
     return g.redis
 
 @app.route("/", methods=['POST','GET'])
@@ -36,7 +32,7 @@ def hello():
     if request.method == 'POST':
         redis = get_redis()
         vote = request.form['vote']
-        app.logger.info('Received vote for %s from %s', vote, voter_id)
+        app.logger.info('Received vote for %s', vote)
         data = json.dumps({'voter_id': voter_id, 'vote': vote})
         redis.rpush('votes', data)
 
@@ -50,20 +46,6 @@ def hello():
     resp.set_cookie('voter_id', voter_id)
     return resp
 
-@app.route("/health")
-def health():
-    """Health check endpoint for development"""
-    try:
-        redis = get_redis()
-        redis.ping()
-        return {"status": "healthy", "redis": "connected", "hostname": hostname}
-    except Exception as e:
-        app.logger.error(f'Health check failed: {e}')
-        return {"status": "unhealthy", "error": str(e)}, 503
 
 if __name__ == "__main__":
-    # Development server with hot reload
-    port = int(os.getenv('PORT', 5000))
-    debug = os.getenv('FLASK_DEBUG', 'true').lower() == 'true'
-    app.logger.info(f'Starting development server on port {port}, debug={debug}')
-    app.run(host='0.0.0.0', port=port, debug=debug, threaded=True)
+    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)

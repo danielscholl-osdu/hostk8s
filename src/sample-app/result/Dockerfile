@@ -1,46 +1,25 @@
-# Multi-stage build using Bun for faster Node.js development
-FROM oven/bun:1 AS base
+FROM node:18-slim
+
+# add curl for healthcheck
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends curl tini && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/local/app
 
-# Copy package files
-COPY package.json ./
-COPY bun.lockb* ./
+# have nodemon available for local dev use (file watching)
+RUN npm install -g nodemon
 
-# Install dependencies with bun (much faster than npm)
-RUN bun install --frozen-lockfile
+COPY package*.json ./
 
-# Development stage with hot reload
-FROM base AS dev
+RUN npm ci && \
+ npm cache clean --force && \
+ mv /usr/local/app/node_modules /node_modules
 
-# Install development dependencies
-RUN bun install --frozen-lockfile --dev
-
-# Copy source code for development
 COPY . .
 
-# Development environment variables
-ENV NODE_ENV=development
-ENV PORT=4000
-
-# Expose development port
-EXPOSE 4000
-
-# Development command with hot reload using bun --watch
-CMD ["bun", "--watch", "server.js"]
-
-# Production stage
-FROM base AS prod
-
-# Copy source code
-COPY . .
-
-# Production environment variables
-ENV NODE_ENV=production
 ENV PORT=80
-
-# Make port 80 available
 EXPOSE 80
 
-# Production command
-CMD ["bun", "server.js"]
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["node", "server.js"]

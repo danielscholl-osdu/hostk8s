@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: localhost
+  namespace: default
+  labels:
+    app: localhost-registry-alias
+spec:
+  type: ExternalName
+  externalName: registry.registry.svc.cluster.local
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: TCP

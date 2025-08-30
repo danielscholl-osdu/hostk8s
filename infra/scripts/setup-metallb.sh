@@ -33,21 +33,26 @@ detect_kubeconfig
 log "Setting up MetalLB LoadBalancer..."
 
 # Check if MetalLB is already installed
-if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace metallb-system >/dev/null 2>&1; then
-    log "MetalLB namespace already exists, checking if installation is complete..."
-    if kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n metallb-system -l app=metallb | grep -q Running; then
-        log "MetalLB appears to already be running"
-        exit 0
+if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace hostk8s >/dev/null 2>&1; then
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment speaker -n hostk8s >/dev/null 2>&1; then
+        log "MetalLB already installed, checking if running..."
+        if kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n hostk8s -l app=metallb | grep -q Running; then
+            log "MetalLB appears to already be running"
+            # Skip installation but continue with configuration
+            skip_metallb_creation=true
+        fi
     fi
 fi
 
-# Install MetalLB
-log "Installing MetalLB..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f https://raw.githubusercontent.com/metallb/metallb/v0.13.12/config/manifests/metallb-native.yaml || error_exit "Failed to install MetalLB"
+# Install MetalLB (if not skipped)
+if [ "${skip_metallb_creation:-false}" != "true" ]; then
+    log "Installing MetalLB..."
+    kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "${PWD}/infra/manifests/metallb.yaml" || error_exit "Failed to install MetalLB"
+fi
 
 # Wait for MetalLB pods to be ready
 log "Waiting for MetalLB pods to be ready..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app=metallb -n metallb-system --timeout=300s || error_exit "MetalLB pods failed to become ready"
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=condition=ready pod -l app=metallb -n hostk8s --timeout=300s || error_exit "MetalLB pods failed to become ready"
 
 # Get Docker network subnet for MetalLB IP pool
 log "Detecting Docker network subnet..."
@@ -73,7 +78,7 @@ apiVersion: metallb.io/v1beta1
 kind: IPAddressPool
 metadata:
   name: kind-pool
-  namespace: metallb-system
+  namespace: hostk8s
 spec:
   addresses:
   - $IP_POOL_START-$IP_POOL_END
@@ -82,7 +87,7 @@ apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
 metadata:
   name: kind-l2
-  namespace: metallb-system
+  namespace: hostk8s
 spec:
   ipAddressPools:
   - kind-pool

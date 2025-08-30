@@ -667,12 +667,72 @@ show_cluster_nodes() {
     done
 }
 
+# Function to show Docker services status
+show_docker_services() {
+    log_info "Docker Services"
+
+    local docker_services_found=false
+
+    # Check for hostk8s-registry container
+    if docker inspect hostk8s-registry >/dev/null 2>&1; then
+        local container_status=$(docker inspect -f '{{.State.Status}}' hostk8s-registry 2>/dev/null)
+        local port_info=$(docker port hostk8s-registry 2>/dev/null | head -1 | cut -d' ' -f3 || echo "localhost:5002")
+
+        if [ "$container_status" = "running" ]; then
+            echo "📦 Registry Container: Ready"
+            echo "   Status: Running on $port_info"
+            echo "   Network: Connected to Kind cluster"
+        else
+            echo "📦 Registry Container: $container_status"
+        fi
+        docker_services_found=true
+    fi
+
+    # Check for other hostk8s-* containers (future extensions, excluding Kind cluster nodes)
+    local other_containers=$(docker ps -a --filter "name=hostk8s-*" --format "{{.Names}}" | grep -v "hostk8s-registry" | grep -v "hostk8s-control-plane" | grep -v "hostk8s-worker" 2>/dev/null || true)
+    if [ -n "$other_containers" ]; then
+        while IFS= read -r container; do
+            local status=$(docker inspect -f '{{.State.Status}}' "$container" 2>/dev/null)
+            echo "🔧 $container: $status"
+            docker_services_found=true
+        done <<< "$other_containers"
+    fi
+
+    if [ "$docker_services_found" = false ]; then
+        echo "   No Docker services running"
+    fi
+    echo
+}
+
 show_addon_status() {
-    # Always show addons section since control plane is always present
-    log_info "Cluster Addons"
+    # Always show services section since control plane is always present
+    log_info "Cluster Services"
 
     # Show all cluster nodes
     show_cluster_nodes
+
+    # Metrics Server status (core cluster infrastructure)
+    if [[ "${METRICS_DISABLED:-false}" != "true" ]]; then
+        metrics_status=""
+        metrics_message=""
+
+        if has_metrics; then
+            # Check if metrics API is available
+            if kubectl top nodes >/dev/null 2>&1; then
+                metrics_status="Ready"
+                metrics_message="Resource metrics available (kubectl top)"
+            else
+                metrics_status="Starting"
+                metrics_message="Metrics API not yet available"
+            fi
+        else
+            metrics_status="NotReady"
+            metrics_message="Deployment not found in kube-system namespace"
+        fi
+
+        echo "📊 Metrics Server: $metrics_status"
+        [ -n "$metrics_message" ] && echo "   Status: $metrics_message"
+    fi
 
     # Show Flux status if installed
     if has_flux; then
@@ -719,7 +779,7 @@ show_addon_status() {
         local metallb_message=""
 
         # Check if MetalLB pods are running
-        local metallb_pods=$(kubectl get pods -n metallb-system -l app=metallb --no-headers 2>/dev/null | awk '{print $3}' | tr '\n' ' ')
+        local metallb_pods=$(kubectl get pods -n hostk8s -l app=metallb --no-headers 2>/dev/null | awk '{print $3}' | tr '\n' ' ')
         if echo "$metallb_pods" | grep -q "Running"; then
             local running_count=$(echo "$metallb_pods" | grep -o "Running" | wc -l | tr -d ' ')
             local total_count=$(echo "$metallb_pods" | wc -w | tr -d ' ')
@@ -745,7 +805,7 @@ show_addon_status() {
         local ingress_message=""
 
         # Check if ingress controller deployment is ready
-        local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print a[1] "/" a[2]}' || echo "not found")
+        local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print a[1] "/" a[2]}' || echo "not found")
 
         if [ "$ingress_ready" = "ready" ]; then
             ingress_status="Ready"
@@ -762,34 +822,52 @@ show_addon_status() {
         [ -n "$ingress_message" ] && echo "   Status: $ingress_message"
     fi
 
-    # Show Registry status if installed
+    # Show Registry status if installed (hybrid Docker/K8s)
     if has_registry; then
         local registry_status="NotReady"
         local registry_message=""
 
-        # Check if registry-core deployment is ready
-        local core_ready=$(kubectl get deployment registry-core -n registry --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print a[1] "/" a[2]}' || echo "not found")
+        # Check Docker registry first (preferred)
+        if has_registry_docker; then
+            # Check if Kubernetes registry UI is also running
+            local ui_ready=$(kubectl get deployment registry-ui -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
 
-        if [ "$core_ready" = "ready" ]; then
-            registry_status="Ready"
-            registry_message="Access registry API at http://localhost:5001"
-
-            # Check if registry UI is also running
-            local ui_ready=$(kubectl get deployment registry-ui -n registry --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
             if [ "$ui_ready" = "ready" ]; then
-                registry_message="${registry_message}, Web UI: Available at http://registry.localhost:8080"
+                registry_status="Ready"
+                registry_message="Docker registry with Web UI at http://localhost:8080/registry"
+            else
+                registry_status="Ready"
+                registry_message="Docker registry API at http://localhost:5002 (UI not deployed)"
             fi
-        elif [ "$core_ready" = "not found" ]; then
-            registry_status="NotReady"
-            registry_message="Registry deployment not found"
+        elif has_registry_k8s; then
+            # Fallback to Kubernetes registry
+            local core_ready=$(kubectl get deployment registry-core -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print a[1] "/" a[2]}' || echo "not found")
+
+            if [ "$core_ready" = "ready" ]; then
+                registry_status="Ready"
+                registry_message="Kubernetes registry at http://localhost:5001"
+
+                # Check if registry UI is also running
+                local ui_ready=$(kubectl get deployment registry-ui -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
+                if [ "$ui_ready" = "ready" ]; then
+                    registry_message="${registry_message}, Web UI: Available at http://registry.localhost:8080"
+                fi
+            elif [ "$core_ready" = "not found" ]; then
+                registry_status="NotReady"
+                registry_message="Registry deployment not found"
+            else
+                registry_status="Pending"
+                registry_message="Registry deployment $core_ready ready"
+            fi
         else
-            registry_status="Pending"
-            registry_message="Registry deployment $core_ready ready"
+            registry_status="NotReady"
+            registry_message="No registry found (Docker or Kubernetes)"
         fi
 
         echo "📦 Registry: $registry_status"
         [ -n "$registry_message" ] && echo "   Status: $registry_message"
     fi
+
 
     echo
 }
@@ -809,6 +887,7 @@ main() {
     fi
 
     show_kubeconfig_info
+    show_docker_services
     show_addon_status
     show_gitops_resources
     show_gitops_applications

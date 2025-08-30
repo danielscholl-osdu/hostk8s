@@ -12,7 +12,7 @@ show_usage() {
     echo ""
     echo "Requirements:"
     echo "  - Directory must exist"
-    echo "  - Must contain docker-compose.yml"
+    echo "  - Must contain docker-bake.hcl or docker-compose.yml"
     echo "  - Cluster must be running"
     echo ""
     list_available_source_apps
@@ -23,9 +23,37 @@ show_usage() {
 
 list_available_source_apps() {
     echo "Available applications:"
-    if find src/ -name "docker-compose.yml" -exec dirname {} \; 2>/dev/null | sort; then
-        :
-    else
+    local found_apps=false
+    local shown_dirs=()
+
+    # Look for bake files first (preferred)
+    while IFS= read -r -d '' bake_file; do
+        local app_dir=$(dirname "$bake_file")
+        echo "  $app_dir (docker-bake.hcl)"
+        shown_dirs+=("$app_dir")
+        found_apps=true
+    done < <(find src/ -name "docker-bake.hcl" -print0 2>/dev/null | sort -z)
+
+    # Then look for docker-compose files, but skip if bake file already exists
+    while IFS= read -r -d '' compose_file; do
+        local app_dir=$(dirname "$compose_file")
+
+        # Skip if this directory already has a bake file (already shown)
+        local already_shown=false
+        for shown_dir in "${shown_dirs[@]}"; do
+            if [ "$shown_dir" = "$app_dir" ]; then
+                already_shown=true
+                break
+            fi
+        done
+
+        if [ "$already_shown" = false ]; then
+            echo "  $app_dir (docker-compose.yml)"
+            found_apps=true
+        fi
+    done < <(find src/ -name "docker-compose.yml" -print0 2>/dev/null | sort -z)
+
+    if [ "$found_apps" = false ]; then
         echo "  No applications found in src/"
     fi
 }
@@ -45,9 +73,14 @@ validate_app_path() {
         return 1
     fi
 
-    if [ ! -f "$app_path/docker-compose.yml" ]; then
-        log_error "No docker-compose.yml found in $app_path"
-        log_info "Expected: $app_path/docker-compose.yml"
+    # Check for bake file first (preferred), then docker-compose.yml
+    if [ -f "$app_path/docker-bake.hcl" ]; then
+        return 0
+    elif [ -f "$app_path/docker-compose.yml" ]; then
+        return 0
+    else
+        log_error "No docker-bake.hcl or docker-compose.yml found in $app_path"
+        log_info "Expected: $app_path/docker-bake.hcl or $app_path/docker-compose.yml"
         return 1
     fi
 
@@ -75,17 +108,31 @@ build_and_push_app() {
     log_info "Build date: $build_date"
     log_info "Version: $build_version"
 
-    # Build the application
-    log_info "Building Docker images..."
-    if ! docker compose build; then
-        log_error "Docker build failed"
-        return 1
-    fi
+    # Determine build method and build the application
+    if [ -f "docker-bake.hcl" ]; then
+        log_info "Using docker-bake.hcl for build and push..."
+        log_info "Building and pushing Docker images..."
+        if ! docker buildx bake --push; then
+            log_error "Docker bake build and push failed"
+            return 1
+        fi
+    elif [ -f "docker-compose.yml" ]; then
+        log_info "Using docker-compose.yml for build and push..."
+        # Build the application
+        log_info "Building Docker images..."
+        if ! docker compose build; then
+            log_error "Docker build failed"
+            return 1
+        fi
 
-    # Push to registry
-    log_info "Pushing to registry..."
-    if ! docker compose push; then
-        log_error "Docker push failed"
+        # Push to registry
+        log_info "Pushing to registry..."
+        if ! docker compose push; then
+            log_error "Docker push failed"
+            return 1
+        fi
+    else
+        log_error "No build configuration found"
         return 1
     fi
 

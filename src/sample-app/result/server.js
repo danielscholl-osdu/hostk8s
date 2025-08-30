@@ -1,145 +1,77 @@
-import express from 'express';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import { Pool } from 'pg';
-import cookieParser from 'cookie-parser';
-import path from 'path';
-import { fileURLToPath } from 'url';
+var express = require('express'),
+    async = require('async'),
+    { Pool } = require('pg'),
+    cookieParser = require('cookie-parser'),
+    app = express(),
+    server = require('http').Server(app),
+    io = require('socket.io')(server);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+var port = process.env.PORT || 4000;
 
-const app = express();
-const server = createServer(app);
-const io = new Server(server);
+io.on('connection', function (socket) {
 
-const port = process.env.PORT || 4000;
-const dbUrl = process.env.DATABASE_URL || 'postgres://postgres:postgres@db/postgres';
+  socket.emit('message', { text : 'Welcome!' });
 
-console.log(`Starting result service on port ${port}`);
-console.log(`Database URL: ${dbUrl}`);
-
-// Socket.io connection handling
-io.on('connection', (socket) => {
-  console.log('Client connected:', socket.id);
-
-  socket.emit('message', { text: 'Welcome to real-time results!' });
-
-  socket.on('subscribe', (data) => {
+  socket.on('subscribe', function (data) {
     socket.join(data.channel);
-    console.log(`Client ${socket.id} subscribed to ${data.channel}`);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('Client disconnected:', socket.id);
   });
 });
 
-// PostgreSQL connection with enhanced error handling
-const pool = new Pool({
-  connectionString: dbUrl,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
+var pool = new Pool({
+  connectionString: 'postgres://postgres:postgres@db/postgres'
 });
 
-// Enhanced database connection with retry logic
-async function connectToDatabase(retries = 1000) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      const client = await pool.connect();
-      console.log('Connected to database successfully');
-      client.release();
-      return true;
-    } catch (err) {
-      console.error(`Database connection attempt ${i + 1}/${retries} failed:`, err.message);
-      if (i < retries - 1) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+async.retry(
+  {times: 1000, interval: 1000},
+  function(callback) {
+    pool.connect(function(err, client, done) {
+      if (err) {
+        console.error("Waiting for db");
       }
+      callback(err, client);
+    });
+  },
+  function(err, client) {
+    if (err) {
+      return console.error("Giving up");
     }
+    console.log("Connected to db");
+    getVotes(client);
   }
-  console.error('Failed to connect to database after all retries');
-  return false;
-}
+);
 
-// Enhanced vote polling with better error handling
-async function getVotes() {
-  try {
-    const result = await pool.query('SELECT vote, COUNT(id) AS count FROM votes GROUP BY vote');
-    const votes = collectVotesFromResult(result);
+function getVotes(client) {
+  client.query('SELECT vote, COUNT(id) AS count FROM votes GROUP BY vote', [], function(err, result) {
+    if (err) {
+      console.error("Error performing query: " + err);
+    } else {
+      var votes = collectVotesFromResult(result);
+      io.sockets.emit("scores", JSON.stringify(votes));
+    }
 
-    // Emit to all connected clients
-    io.sockets.emit('scores', JSON.stringify(votes));
-
-    // Log current vote counts for debugging
-    console.log('Current votes:', votes);
-  } catch (err) {
-    console.error('Error performing query:', err.message);
-
-    // Emit error state to clients
-    io.sockets.emit('error', { message: 'Database connection lost' });
-  }
-
-  // Continue polling
-  setTimeout(getVotes, 1000);
+    setTimeout(function() {getVotes(client) }, 1000);
+  });
 }
 
 function collectVotesFromResult(result) {
-  const votes = { a: 0, b: 0 };
+  var votes = {a: 0, b: 0};
 
-  result.rows.forEach((row) => {
-    votes[row.vote] = parseInt(row.count, 10);
+  result.rows.forEach(function (row) {
+    votes[row.vote] = parseInt(row.count);
   });
 
   return votes;
 }
 
-// Middleware
 app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'views')));
+app.use(express.urlencoded());
+app.use(express.static(__dirname + '/views'));
 
-// Routes
-app.get('/', (req, res) => {
-  res.sendFile(path.resolve(__dirname, 'views', 'index.html'));
+app.get('/', function (req, res) {
+  res.sendFile(path.resolve(__dirname + '/views/index.html'));
 });
 
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    service: 'result',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
+server.listen(port, function () {
+  var port = server.address().port;
+  console.log('App running on port ' + port);
 });
-
-// Graceful shutdown handling
-process.on('SIGTERM', () => {
-  console.log('Received SIGTERM, shutting down gracefully');
-  server.close(() => {
-    pool.end(() => {
-      process.exit(0);
-    });
-  });
-});
-
-// Start the application
-async function startApplication() {
-  const dbConnected = await connectToDatabase();
-
-  if (dbConnected) {
-    // Start polling for votes
-    getVotes();
-
-    // Start the server
-    server.listen(port, () => {
-      console.log(`Result service running on port ${port}`);
-      console.log(`Health check available at http://localhost:${port}/health`);
-    });
-  } else {
-    console.error('Could not establish database connection. Exiting.');
-    process.exit(1);
-  }
-}
-
-startApplication();

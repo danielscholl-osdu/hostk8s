@@ -1,0 +1,15 @@
+---
+# Core hostk8s namespace - always present regardless of installed addons
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hostk8s
+  labels:
+    name: hostk8s
+    hostk8s.io/core: "true"
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/warn: privileged
+  annotations:
+    hostk8s.io/description: "Core namespace for all HostK8s infrastructure addons"
+    hostk8s.io/created-by: "hostk8s-infrastructure"
