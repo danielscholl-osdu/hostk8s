@@ -23,6 +23,7 @@ target "vote" {
   ]
   target = "final"
   platforms = ["linux/arm64"]
+  output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
     "org.opencontainers.image.version" = "${BUILD_VERSION}"
