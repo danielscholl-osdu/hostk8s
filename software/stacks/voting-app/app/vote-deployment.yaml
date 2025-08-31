@@ -27,9 +27,9 @@ spec:
           name: http
         env:
         - name: OPTION_A
-          value: "Kubernetes"
+          value: "HostK8s Stack"
         - name: OPTION_B
-          value: "Docker Swarm"
+          value: "HostK8s App"
         - name: REDIS_HOST
           value: "redis.redis-infrastructure.svc.cluster.local"
         - name: REDIS_PORT
