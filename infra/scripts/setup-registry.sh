@@ -28,7 +28,7 @@ if ! kubectl cluster-info >/dev/null 2>&1; then
 fi
 
 # Create host directory for registry storage if it doesn't exist
-registry_data_dir="${PWD}/data/storage/registry"
+registry_data_dir="${PWD}/data/registry"
 if [ ! -d "$registry_data_dir" ]; then
     log_info "[Registry] Creating registry storage directory..."
     mkdir -p "$registry_data_dir"

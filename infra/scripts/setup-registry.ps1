@@ -42,7 +42,7 @@ try {
 }
 
 # Create host directory for registry storage if it doesn't exist
-$registryDataDir = "$(Get-Location)/data/storage/registry"
+$registryDataDir = "$(Get-Location)/data/registry"
 if (-not (Test-Path $registryDataDir)) {
     Write-Host "[$timestamp] [Registry] Creating registry storage directory..."
     New-Item -ItemType Directory -Force -Path $registryDataDir >$null
