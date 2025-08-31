@@ -24,8 +24,8 @@ data:
     maxmemory 256mb
     maxmemory-policy allkeys-lru
 
-    # Security (basic for development)
-    requirepass devpassword
+    # Security disabled for development sample
+    # No password required for local development
 
     # Logging
     loglevel notice
