@@ -304,24 +304,58 @@ show_app_ingress() {
         if [ "$hosts" = "localhost" ] || [ "$hosts" = "*" ]; then
             if is_ingress_controller_ready; then
                 if [ "$app_type" = "application" ]; then
-                    local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
+                    local paths=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>/dev/null)
                     local has_tls=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.tls}' 2>/dev/null)
-                    if [ "$path" = "/" ]; then
-                        if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
-                            echo "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
-                        else
-                            echo "   Access: http://localhost:8080/ ($name ingress)"
-                        fi
+
+                    # Format paths for display
+                    local formatted_paths=""
+                    if [ "$paths" = "/" ]; then
+                        formatted_paths="/"
                     else
+                        # Convert space-separated paths to comma-separated for display
+                        formatted_paths=$(echo "$paths" | tr ' ' ',' | sed 's/,/, /g')
+                        # For URLs, show each path separately
+                        local url_list=""
+                        for path in $paths; do
+                            if [ -z "$url_list" ]; then
+                                url_list="http://localhost:8080$path"
+                            else
+                                url_list="$url_list, http://localhost:8080$path"
+                            fi
+                        done
                         if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
-                            echo "   Access: http://localhost:8080$path, https://localhost:8443$path ($name ingress)"
-                        else
-                            echo "   Access: http://localhost:8080$path ($name ingress)"
+                            for path in $paths; do
+                                url_list="$url_list, https://localhost:8443$path"
+                            done
                         fi
+                        echo "   Access: $url_list ($name ingress)"
+                        continue
+                    fi
+
+                    # Handle single root path
+                    if [ -n "$has_tls" ] && [ "$has_tls" != "null" ]; then
+                        echo "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
+                    else
+                        echo "   Access: http://localhost:8080/ ($name ingress)"
                     fi
                 else
-                    local access=$(get_ingress_access "$app_name" "$ns $name $class $hosts $address $ports $age")
-                    echo "   Ingress: $name -> $access"
+                    # Handle other app types with multi-path support
+                    local paths=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>/dev/null)
+                    if [ "$paths" = "/" ]; then
+                        echo "   Ingress: $name -> http://localhost:8080/"
+                    else
+                        local url_list=""
+                        for path in $paths; do
+                            # Clean up regex patterns for display
+                            local clean_path=$(echo "$path" | sed 's|(.*)||' | sed 's|/$||')
+                            if [ -z "$url_list" ]; then
+                                url_list="http://localhost:8080$clean_path"
+                            else
+                                url_list="$url_list, http://localhost:8080$clean_path"
+                            fi
+                        done
+                        echo "   Ingress: $name -> $url_list"
+                    fi
                 fi
             else
                 echo "   Ingress: $name (configured but controller not ready)"
@@ -331,11 +365,20 @@ show_app_ingress() {
             # Handle namespace-based hostnames (e.g., test.localhost)
             if is_ingress_controller_ready; then
                 if [ "$app_type" = "application" ] && [[ "$hosts" == *.localhost ]]; then
-                    local path=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>/dev/null)
-                    if [ "$path" = "/" ]; then
+                    local paths=$(kubectl get ingress "$name" -n "$ns" -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>/dev/null)
+                    if [ "$paths" = "/" ]; then
                         echo "   Access: http://$hosts:8080/ ($name ingress)"
                     else
-                        echo "   Access: http://$hosts:8080$path ($name ingress)"
+                        # Show all paths
+                        local url_list=""
+                        for path in $paths; do
+                            if [ -z "$url_list" ]; then
+                                url_list="http://$hosts:8080$path"
+                            else
+                                url_list="$url_list, http://$hosts:8080$path"
+                            fi
+                        done
+                        echo "   Access: $url_list ($name ingress)"
                     fi
                 else
                     echo "   Ingress: $name (hosts: $hosts)"

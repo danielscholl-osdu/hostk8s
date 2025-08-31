@@ -66,10 +66,24 @@ function collectVotesFromResult(result) {
 
 app.use(cookieParser());
 app.use(express.urlencoded());
-app.use(express.static(__dirname + '/views'));
+// Serve static files but exclude index.html from static serving
+app.use(express.static(__dirname + '/views', { index: false }));
 
 app.get('/', function (req, res) {
-  res.sendFile(path.resolve(__dirname + '/views/index.html'));
+  var fs = require('fs');
+  var template = fs.readFileSync(__dirname + '/views/index.html', 'utf8');
+
+  var optionA = process.env.OPTION_A || 'Cats';
+  var optionB = process.env.OPTION_B || 'Dogs';
+
+  console.log('Template replacement - OPTION_A:', optionA, 'OPTION_B:', optionB);
+
+  template = template.replace(/__OPTION_A__/g, optionA);
+  template = template.replace(/__OPTION_B__/g, optionB);
+
+  console.log('Template contains HostK8s:', template.includes('HostK8s'));
+
+  res.send(template);
 });
 
 server.listen(port, function () {

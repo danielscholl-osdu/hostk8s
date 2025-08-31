@@ -12,7 +12,7 @@ This application consists of five main components that work together to create a
 
 #### **Vote Service** 🗳️
 - **Technology**: Python 3.11 + Flask
-- **Port**: 5010 (development)
+- **Port**: Internal (via nginx)
 - **Purpose**: Frontend voting interface
 - **Features**:
   - Web form for vote submission
@@ -22,7 +22,7 @@ This application consists of five main components that work together to create a
 
 #### **Result Service** 📊
 - **Technology**: Node.js 18 + Socket.IO
-- **Port**: 5011 (development)
+- **Port**: Internal (via nginx)
 - **Purpose**: Real-time results dashboard
 - **Features**:
   - Live vote tallies with WebSocket updates
@@ -58,6 +58,16 @@ This application consists of five main components that work together to create a
   - ACID transaction support
   - Volume-backed data persistence
 
+#### **Nginx Proxy** 🌐
+- **Technology**: Nginx Alpine
+- **Port**: 8080 (external access)
+- **Purpose**: Local development reverse proxy
+- **Features**:
+  - Mimics HostK8s ingress routing exactly
+  - Path-based routing: `/vote/` → vote service, `/result/` → result service
+  - WebSocket support for real-time Socket.IO connections
+  - Identical URL structure between local dev and HostK8s deployment
+
 ### Data Flow
 
 ```
@@ -90,10 +100,13 @@ docker-compose up -d
 
 ### Access the Application
 
-- **Vote Interface**: http://localhost:5010
-- **Results Dashboard**: http://localhost:5011
+- **Vote Interface**: http://localhost:8081/vote/
+- **Results Dashboard**: http://localhost:8081/result/
+- **Nginx Proxy**: http://localhost:8081/health
 - **PostgreSQL**: localhost:5432 (postgres/password)
 - **Redis**: localhost:6379
+
+> **🎯 Identical URLs**: Local development uses the same URL structure as HostK8s deployment (different port to avoid conflicts)!
 
 ## 🛠️ Development
 
@@ -160,12 +173,12 @@ docker-compose down -v
 ### Manual Testing
 
 1. **Vote Submission**:
-   - Visit http://localhost:5010
+   - Visit http://localhost:8081/vote/
    - Click voting buttons to submit votes
    - Verify votes are recorded (check browser cookies)
 
 2. **Real-time Results**:
-   - Open http://localhost:5011 in multiple browser tabs
+   - Open http://localhost:8081/result/ in multiple browser tabs
    - Submit votes and observe real-time updates
    - Verify percentages update correctly
 
@@ -188,8 +201,9 @@ docker-compose run --rm seed-data
 
 ```bash
 # Check service health
-curl http://localhost:5010/  # Vote service
-curl http://localhost:5011/  # Result service
+curl http://localhost:8081/vote/    # Vote service via nginx
+curl http://localhost:8081/result/  # Result service via nginx
+curl http://localhost:8081/health   # Nginx proxy health
 
 # Check database connectivity
 docker-compose exec db pg_isready -U postgres

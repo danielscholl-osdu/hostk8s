@@ -3,30 +3,40 @@
 # Purpose: Develop and test sample-app without HostK8s
 
 services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8081:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - vote
+      - result
+
   vote:
     build:
       context: ./vote
       target: dev
-    ports:
-      - "5010:80"
     volumes:
       - ./vote:/usr/local/app
     environment:
       - FLASK_ENV=development
       - REDIS_HOST=redis
+      - OPTION_A=HostK8s Stack
+      - OPTION_B=HostK8s App
     depends_on:
       - redis
 
   result:
     build: ./result
-    ports:
-      - "5011:80"
     volumes:
       - ./result:/usr/local/app
       - /usr/local/app/node_modules  # Protect node_modules
     environment:
       - NODE_ENV=development
       - DATABASE_URL=postgres://postgres:password@db:5432/votes
+      - OPTION_A=HostK8s Stack
+      - OPTION_B=HostK8s App
     depends_on:
       - db
     command: ["nodemon", "server.js"]
