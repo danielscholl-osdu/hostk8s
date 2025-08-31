@@ -1,5 +1,6 @@
 var express = require('express'),
     async = require('async'),
+    path = require('path'),
     { Pool } = require('pg'),
     cookieParser = require('cookie-parser'),
     app = express(),
