@@ -159,12 +159,14 @@ show_gitops_applications() {
 }
 
 is_ingress_controller_ready() {
-    local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
+    # Check hostk8s namespace first (HostK8s default), then ingress-nginx namespace (standard)
+    local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' 2>/dev/null || kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
     [ "$ingress_ready" = "ready" ]
 }
 
 show_ingress_controller_status() {
-    local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
+    # Check hostk8s namespace first (HostK8s default), then ingress-nginx namespace (standard)
+    local ingress_ready=$(kubectl get deployment ingress-nginx-controller -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' 2>/dev/null || kubectl get deployment ingress-nginx-controller -n ingress-nginx --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
 
     if [ "$ingress_ready" = "ready" ]; then
         echo "🌐 Ingress Controller: ingress-nginx (Ready ✅)"
