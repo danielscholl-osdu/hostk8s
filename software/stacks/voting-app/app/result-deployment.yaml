@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: result
-        image: localhost:5000/hostk8s-result:latest
+        image: localhost:5000/hostk8s-result:no-auth
         ports:
         - containerPort: 80
           name: http
