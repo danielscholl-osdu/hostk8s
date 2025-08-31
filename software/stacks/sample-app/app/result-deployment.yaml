@@ -2,10 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: result
-  namespace: voting-app
+  namespace: sample-app
   labels:
     app: result
-    hostk8s.app: voting-app
+    hostk8s.app: sample-app
     hostk8s.component: result-service
 spec:
   replicas: 1
@@ -16,7 +16,7 @@ spec:
     metadata:
       labels:
         app: result
-        hostk8s.app: voting-app
+        hostk8s.app: sample-app
         hostk8s.component: result-service
     spec:
       containers:
@@ -27,7 +27,7 @@ spec:
           name: http
         env:
         - name: DATABASE_URL
-          value: "postgres://postgres:postgres@db.voting-app.svc.cluster.local:5432/votes"
+          value: "postgres://postgres:postgres@db.sample-app.svc.cluster.local:5432/votes"
         resources:
           requests:
             memory: "64Mi"

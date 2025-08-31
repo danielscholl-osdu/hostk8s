@@ -2,10 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: worker
-  namespace: voting-app
+  namespace: sample-app
   labels:
     app: worker
-    hostk8s.app: voting-app
+    hostk8s.app: sample-app
     hostk8s.component: worker-service
 spec:
   replicas: 1
@@ -16,7 +16,7 @@ spec:
     metadata:
       labels:
         app: worker
-        hostk8s.app: voting-app
+        hostk8s.app: sample-app
         hostk8s.component: worker-service
     spec:
       containers:
@@ -28,7 +28,7 @@ spec:
         - name: REDIS_PORT
           value: "6379"
         - name: POSTGRES_HOST
-          value: "db.voting-app.svc.cluster.local"
+          value: "db.sample-app.svc.cluster.local"
         - name: POSTGRES_USER
           value: "postgres"
         - name: POSTGRES_PASSWORD

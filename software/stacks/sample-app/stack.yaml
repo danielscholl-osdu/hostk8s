@@ -33,7 +33,7 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: app-voting
+  name: app-sample
   namespace: flux-system
 spec:
   dependsOn:
@@ -44,19 +44,19 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/voting-app/app
+  path: ./software/stacks/sample-app/app
   prune: true
   wait: true
   healthChecks:
     - kind: Deployment
       name: vote
-      namespace: voting-app
+      namespace: sample-app
     - kind: Deployment
       name: result
-      namespace: voting-app
+      namespace: sample-app
     - kind: Deployment
       name: worker
-      namespace: voting-app
+      namespace: sample-app
     - kind: Deployment
       name: db
-      namespace: voting-app
+      namespace: sample-app

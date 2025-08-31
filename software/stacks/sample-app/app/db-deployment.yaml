@@ -2,10 +2,10 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: db
-  namespace: voting-app
+  namespace: sample-app
   labels:
     app: db
-    hostk8s.app: voting-app
+    hostk8s.app: sample-app
     hostk8s.component: database
 spec:
   replicas: 1
@@ -16,7 +16,7 @@ spec:
     metadata:
       labels:
         app: db
-        hostk8s.app: voting-app
+        hostk8s.app: sample-app
         hostk8s.component: database
     spec:
       containers:

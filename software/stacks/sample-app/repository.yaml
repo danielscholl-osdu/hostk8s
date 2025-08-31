@@ -13,4 +13,4 @@ spec:
     /*
     # include shared components and this stack
     !/software/components/
-    !/software/stacks/voting-app/
+    !/software/stacks/sample-app/

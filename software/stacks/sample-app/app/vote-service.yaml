@@ -2,10 +2,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: vote
-  namespace: voting-app
+  namespace: sample-app
   labels:
     app: vote
-    hostk8s.app: voting-app
+    hostk8s.app: sample-app
     hostk8s.component: vote-service
 spec:
   selector:
