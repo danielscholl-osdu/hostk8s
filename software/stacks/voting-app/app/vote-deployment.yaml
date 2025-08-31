@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: vote
-        image: localhost:5000/hostk8s-vote:fixed
+        image: localhost:5000/hostk8s-vote:latest
         ports:
         - containerPort: 80
           name: http

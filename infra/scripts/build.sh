@@ -137,14 +137,6 @@ build_and_push_app() {
     fi
 
     log_success "Build and push complete"
-
-    # Show next steps
-    local app_name=$(basename "$app_path")
-    echo ""
-    log_info "Next steps:"
-    echo "1. Deploy: make deploy sample/$app_name"
-    echo "2. Status: make status"
-    echo "3. Access: check software/apps/sample/$app_name/README.md"
 }
 
 # Main function
