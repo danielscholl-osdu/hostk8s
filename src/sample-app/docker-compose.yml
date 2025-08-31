@@ -8,7 +8,7 @@ services:
       context: ./vote
       target: dev
     ports:
-      - "5000:80"
+      - "5010:80"
     volumes:
       - ./vote:/usr/local/app
     environment:
@@ -20,7 +20,7 @@ services:
   result:
     build: ./result
     ports:
-      - "5001:80"
+      - "5011:80"
     volumes:
       - ./result:/usr/local/app
       - /usr/local/app/node_modules  # Protect node_modules

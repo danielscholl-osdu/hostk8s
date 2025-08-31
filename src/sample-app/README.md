@@ -12,7 +12,7 @@ This application consists of five main components that work together to create a
 
 #### **Vote Service** 🗳️
 - **Technology**: Python 3.11 + Flask
-- **Port**: 5000 (development)
+- **Port**: 5010 (development)
 - **Purpose**: Frontend voting interface
 - **Features**:
   - Web form for vote submission
@@ -22,7 +22,7 @@ This application consists of five main components that work together to create a
 
 #### **Result Service** 📊
 - **Technology**: Node.js 18 + Socket.IO
-- **Port**: 5001 (development)
+- **Port**: 5011 (development)
 - **Purpose**: Real-time results dashboard
 - **Features**:
   - Live vote tallies with WebSocket updates
@@ -90,8 +90,8 @@ docker-compose up -d
 
 ### Access the Application
 
-- **Vote Interface**: http://localhost:5000
-- **Results Dashboard**: http://localhost:5001
+- **Vote Interface**: http://localhost:5010
+- **Results Dashboard**: http://localhost:5011
 - **PostgreSQL**: localhost:5432 (postgres/password)
 - **Redis**: localhost:6379
 
@@ -160,12 +160,12 @@ docker-compose down -v
 ### Manual Testing
 
 1. **Vote Submission**:
-   - Visit http://localhost:5000
+   - Visit http://localhost:5010
    - Click voting buttons to submit votes
    - Verify votes are recorded (check browser cookies)
 
 2. **Real-time Results**:
-   - Open http://localhost:5001 in multiple browser tabs
+   - Open http://localhost:5011 in multiple browser tabs
    - Submit votes and observe real-time updates
    - Verify percentages update correctly
 
@@ -188,8 +188,8 @@ docker-compose run --rm seed-data
 
 ```bash
 # Check service health
-curl http://localhost:5000/  # Vote service
-curl http://localhost:5001/  # Result service
+curl http://localhost:5010/  # Vote service
+curl http://localhost:5011/  # Result service
 
 # Check database connectivity
 docker-compose exec db pg_isready -U postgres
