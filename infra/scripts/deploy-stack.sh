@@ -128,7 +128,12 @@ remove_stack() {
 
         # Check if any remaining kustomizations still reference flux-system
         log_info "Checking if flux-system GitRepository is still needed..."
-        remaining_flux_system_users=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get kustomizations -n flux-system -o jsonpath='{.items[*].spec.sourceRef.name}' 2>/dev/null | tr ' ' '\n' | grep -c "^flux-system$" || echo "0")
+        source_refs=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get kustomizations -n flux-system -o jsonpath='{.items[*].spec.sourceRef.name}' 2>/dev/null || echo "")
+        remaining_flux_system_users=0
+
+        if [ -n "$source_refs" ]; then
+            remaining_flux_system_users=$(echo "$source_refs" | tr ' ' '\n' | grep -c "^flux-system$" 2>/dev/null || echo "0")
+        fi
 
         if [ "$remaining_flux_system_users" -eq 0 ]; then
             log_info "No remaining kustomizations reference flux-system, removing shared GitRepository"

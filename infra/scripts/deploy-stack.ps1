@@ -128,7 +128,11 @@ function Remove-Stack {
         Log-Info "Checking if flux-system GitRepository is still needed..."
         try {
             $sourceRefs = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -o jsonpath='{.items[*].spec.sourceRef.name}' 2>$null
-            $remainingFluxSystemUsers = ($sourceRefs -split ' ' | Where-Object { $_ -eq 'flux-system' }).Count
+            $remainingFluxSystemUsers = 0
+
+            if ($sourceRefs -and $sourceRefs.Trim()) {
+                $remainingFluxSystemUsers = ($sourceRefs -split ' ' | Where-Object { $_ -eq 'flux-system' }).Count
+            }
 
             if ($remainingFluxSystemUsers -eq 0) {
                 Log-Info "No remaining kustomizations reference flux-system, removing shared GitRepository"
