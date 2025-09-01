@@ -90,6 +90,8 @@ load_environment() {
     export KIND_CONFIG=${KIND_CONFIG:-}
     export METALLB_ENABLED=${METALLB_ENABLED:-false}
     export INGRESS_ENABLED=${INGRESS_ENABLED:-false}
+    export REGISTRY_ENABLED=${REGISTRY_ENABLED:-false}
+    export METRICS_DISABLED=${METRICS_DISABLED:-false}
     export FLUX_ENABLED=${FLUX_ENABLED:-false}
     export PACKAGE_MANAGER=${PACKAGE_MANAGER:-}
     export KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"
@@ -220,11 +222,28 @@ get_flux_version() {
 
 # Addon detection functions
 has_metallb() {
-    kubectl get namespace metallb-system >/dev/null 2>&1
+    kubectl get namespace hostk8s >/dev/null 2>&1 && kubectl get deployment speaker -n hostk8s >/dev/null 2>&1
 }
 
 has_ingress() {
-    kubectl get namespace ingress-nginx >/dev/null 2>&1
+    kubectl get namespace hostk8s >/dev/null 2>&1 && kubectl get deployment ingress-nginx-controller -n hostk8s >/dev/null 2>&1
+}
+has_registry() {
+    # Check for Docker registry container OR K8s namespace
+    has_registry_docker || has_registry_k8s
+}
+
+has_metrics() {
+    kubectl get deployment metrics-server -n kube-system >/dev/null 2>&1
+}
+
+has_registry_docker() {
+    docker inspect hostk8s-registry >/dev/null 2>&1 && \
+    [ "$(docker inspect -f '{{.State.Status}}' hostk8s-registry 2>/dev/null)" = "running" ]
+}
+
+has_registry_k8s() {
+    kubectl get namespace hostk8s >/dev/null 2>&1 && kubectl get deployment registry-ui -n hostk8s >/dev/null 2>&1
 }
 
 # Argument parsing helpers

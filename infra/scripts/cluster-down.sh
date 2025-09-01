@@ -19,6 +19,14 @@ fi
 log_debug "Deleting Kind cluster '${CYAN}${CLUSTER_NAME}${NC}'..."
 kind delete cluster --name "${CLUSTER_NAME}"
 
+# Clean up registry container if it exists
+REGISTRY_NAME="hostk8s-registry"
+if docker inspect "${REGISTRY_NAME}" >/dev/null 2>&1; then
+    log_debug "Removing registry container '${CYAN}${REGISTRY_NAME}${NC}'..."
+    docker rm -f "${REGISTRY_NAME}" >/dev/null 2>&1 || true
+    log_debug "Registry container removed"
+fi
+
 # Note: Preserving kubeconfig for 'make start' (use 'make clean' for complete removal)
 
 log_success "Cluster '${CYAN}${CLUSTER_NAME}${NC}' deleted successfully"

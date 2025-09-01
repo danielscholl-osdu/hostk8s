@@ -1,8 +1,5 @@
-# Multi-stage build using uv for faster Python dependency management
+# base defines a base stage that uses the official python runtime base image
 FROM python:3.11-slim AS base
-
-# Install uv for faster Python package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
 
 # Add curl for healthcheck
 RUN apt-get update && \
@@ -12,49 +9,24 @@ RUN apt-get update && \
 # Set the application directory
 WORKDIR /usr/local/app
 
-# Copy Python project files
-COPY pyproject.toml ./
-COPY requirements.txt ./
+# Install our requirements.txt
+COPY requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Install dependencies with uv (much faster than pip)
-RUN uv pip install --system --no-cache -r requirements.txt
-
-# Development stage with hot reload and debugging tools
+# dev defines a stage for development, where it'll watch for filesystem changes
 FROM base AS dev
-
-# Install development dependencies
-RUN uv pip install --system --no-cache \
-    watchdog \
-    pytest \
-    pytest-flask
-
-# Copy source code for development
-COPY . .
-
-# Development environment variables
-ENV FLASK_DEBUG=true
+RUN pip install watchdog
 ENV FLASK_ENV=development
-ENV PORT=5000
-
-# Expose development port
-EXPOSE 5000
-
-# Development command with hot reload
 CMD ["python", "app.py"]
 
-# Production stage
-FROM base AS prod
+# final defines the stage that will bundle the application for production
+FROM base AS final
 
-# Copy source code
+# Copy our code from the current folder to the working directory inside the container
 COPY . .
 
-# Production environment variables
-ENV FLASK_DEBUG=false
-ENV FLASK_ENV=production
-ENV PORT=80
-
-# Make port 80 available
+# Make port 80 available for links and/or publish
 EXPOSE 80
 
-# Production command with gunicorn
+# Define our command to be run when launching the container
 CMD ["gunicorn", "app:app", "-b", "0.0.0.0:80", "--log-file", "-", "--access-logfile", "-", "--workers", "4", "--keep-alive", "0"]

@@ -11,6 +11,7 @@ spec:
   ignore: |
     # exclude all
     /*
-    # include shared components and this stack
+    # include shared components and both stacks
     !/software/components/
     !/software/stacks/sample/
+    !/software/stacks/sample-app/

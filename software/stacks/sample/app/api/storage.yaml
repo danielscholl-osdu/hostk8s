@@ -11,7 +11,7 @@ spec:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
   hostPath:
-    path: /mnt/data/storage/sample
+    path: /mnt/pv/sample
     type: DirectoryOrCreate
 ---
 apiVersion: v1

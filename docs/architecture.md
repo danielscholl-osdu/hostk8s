@@ -225,6 +225,64 @@ Extension points preserve the platform's automation benefits while enabling:
 
 (Contract specifications and design rationale in [ADR-004](adr/004-extension-system-architecture.md))
 
+### Infrastructure Addon Architecture
+
+**The Development Infrastructure Challenge:**
+Local Kubernetes development requires supporting infrastructure (load balancers, ingress controllers, container registries, metrics collection) that operates reliably across cluster lifecycle events. Traditional approaches using individual namespaces create operational complexity and discovery challenges in development environments.
+
+**Addon vs Software Component Distinction:**
+The platform distinguishes between **infrastructure addons** (platform foundation services) and **software components** (application-supporting services). Infrastructure addons provide core platform capabilities and are managed as part of the cluster lifecycle, while software components are deployed via GitOps as part of application stacks.
+
+**Infrastructure Addon Principles:**
+- **Unified Namespace Strategy** - All infrastructure addons deploy to `hostk8s` namespace for operational simplicity
+- **Environment-Driven Configuration** - Enable/disable via environment variables (METALLB_ENABLED, INGRESS_ENABLED, etc.)
+- **Cross-Platform Script Parity** - Both .sh and .ps1 implementations for all addon setup scripts
+- **Lifecycle Integration** - Addon setup integrated into cluster startup sequence
+- **Component Labeling** - Consistent resource labels (`hostk8s.component: <name>`) for identification
+
+**Addon Integration Pattern:**
+```bash
+# cluster-up.sh integration pattern
+if [[ "${ADDON_ENABLED}" == "true" ]]; then
+    log_info "Setting up Addon..."
+    if [ -f "infra/scripts/setup-addon.sh" ]; then
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-addon.sh || log_warn "Addon setup failed, continuing..."
+    else
+        log_warn "Addon setup script not found, skipping..."
+    fi
+fi
+```
+
+**Core Infrastructure Addons:**
+
+**MetalLB LoadBalancer**
+- **Purpose**: Provides LoadBalancer service type functionality in development clusters
+- **Deployment**: Unified `hostk8s` namespace with custom IP pool configuration
+- **Integration**: Automatic detection by ingress controllers for LoadBalancer service creation
+
+**NGINX Ingress Controller**
+- **Purpose**: HTTP/HTTPS ingress capabilities with localhost port mapping
+- **Deployment**: `hostk8s` namespace with MetalLB integration or NodePort fallback
+- **Configuration**: Automatic service type selection based on MetalLB availability
+
+**Hybrid Container Registry**
+- **Purpose**: Local image storage and deployment for development workflows
+- **Architecture**: Docker container API + Kubernetes UI deployment with ingress proxy
+- **Integration**: Containerd configuration for Kind nodes, NGINX ingress for web UI
+
+**Metrics Server**
+- **Purpose**: Resource metrics collection for `kubectl top` functionality
+- **Deployment**: Standard `kube-system` namespace following Kubernetes conventions
+- **Configuration**: Kind-specific settings for kubelet certificate handling
+
+**Architectural Benefits:**
+- **Operational Simplification** - Single namespace discovery point for infrastructure
+- **Development Velocity** - Fast cluster creation with complete infrastructure
+- **Cross-Platform Consistency** - Identical functionality across Mac, Linux, Windows
+- **Resource Efficiency** - Consolidated resource allocation and monitoring
+- **Debugging Simplicity** - Unified infrastructure status and troubleshooting
+
+(Design decisions detailed in [ADR-010](adr/010-infrastructure-addon-namespace-consolidation.md) and [ADR-011](adr/011-hybrid-container-registry-architecture.md))
 
 ## Integration Architecture
 
@@ -383,3 +441,18 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Comprehensive source code build system enabling developers to build, containerize, and deploy applications directly from source code
 - **Benefits**: Rapid development velocity, multi-language support, educational value, registry integration, GitOps compatibility
 - **Tradeoffs**: Build dependencies, registry complexity, disk usage, build time, platform dependencies
+
+**[ADR-009: Cross-Platform Implementation Strategy](adr/009-cross-platform-implementation-strategy.md)**
+- **Decision**: Implement dual script architecture with functional parity between platform-native scripts (.sh/.ps1) rather than cross-platform scripting solutions
+- **Benefits**: Native platform integration, developer familiarity, performance, architecture preservation, feature parity
+- **Tradeoffs**: Dual maintenance burden, functional parity verification, testing complexity, synchronization risk
+
+**[ADR-010: Infrastructure Addon Namespace Consolidation](adr/010-infrastructure-addon-namespace-consolidation.md)**
+- **Decision**: Consolidate infrastructure addons into unified hostk8s namespace while preserving component isolation through labels and resource naming conventions
+- **Benefits**: Operational simplicity, developer productivity, unified resource management, simplified RBAC
+- **Tradeoffs**: Deviation from upstream conventions, reduced namespace isolation, naming conflict risk
+
+**[ADR-011: Hybrid Container Registry Architecture](adr/011-hybrid-container-registry-architecture.md)**
+- **Decision**: Adopt hybrid container registry architecture combining Docker container deployment for registry API with Kubernetes deployment for web UI, connected through ingress proxy
+- **Benefits**: Reliability, CORS elimination, container-native performance, persistent storage, debugging access
+- **Tradeoffs**: Architectural complexity, hybrid deployment pattern, network configuration overhead, documentation complexity

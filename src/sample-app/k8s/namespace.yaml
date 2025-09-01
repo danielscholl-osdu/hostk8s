@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: sample-voting
-  labels:
-    hostk8s.app: sample-voting
-    hostk8s.component: voting-system
-    hostk8s.tutorial: level-100-500

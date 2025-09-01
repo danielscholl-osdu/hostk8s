@@ -230,6 +230,16 @@ fi
 log_debug "Cluster status:"
 kubectl get nodes
 
+# Setup core hostk8s namespace (always present regardless of addons)
+log_info "Setting up core hostk8s namespace..."
+if [ -f "infra/manifests/namespace.yaml" ]; then
+    kubectl apply -f infra/manifests/namespace.yaml
+    log_success "HostK8s namespace ready"
+else
+    log_warn "HostK8s namespace manifest not found, creating namespace directly..."
+    kubectl create namespace hostk8s --dry-run=client -o yaml | kubectl apply -f -
+fi
+
 # Setup add-ons if enabled (using host-installed kubectl/helm)
 if [[ "${METALLB_ENABLED}" == "true" ]]; then
     log_info "Setting up MetalLB..."
@@ -246,6 +256,24 @@ if [[ "${INGRESS_ENABLED}" == "true" ]]; then
         KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-ingress.sh || log_warn "Ingress setup failed, continuing..."
     else
         log_warn "Ingress setup script not found, skipping..."
+    fi
+fi
+
+if [[ "${REGISTRY_ENABLED}" == "true" ]]; then
+    log_info "Setting up Container Registry..."
+    if [ -f "infra/scripts/setup-registry.sh" ]; then
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-registry.sh || log_warn "Registry setup failed, continuing..."
+    else
+        log_warn "Registry setup script not found, skipping..."
+    fi
+fi
+
+if [[ "${METRICS_DISABLED}" != "true" ]]; then
+    log_info "Setting up Metrics Server..."
+    if [ -f "infra/scripts/setup-metrics.sh" ]; then
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-metrics.sh || log_warn "Metrics Server setup failed, continuing..."
+    else
+        log_warn "Metrics Server setup script not found, skipping..."
     fi
 fi
 
