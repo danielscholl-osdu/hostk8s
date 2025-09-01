@@ -53,21 +53,64 @@ function Remove-Stack {
         exit 1
     }
 
-    Log-Info "Removing bootstrap kustomization for stack: $StackName"
+    # First check if the stack is actually deployed
+    Log-Info "Checking if stack '$StackName' is deployed..."
 
-    # Remove the bootstrap kustomization - Flux will automatically clean up all deployed resources
-    try {
-        kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization bootstrap-stack -n flux-system 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Log-Success "Bootstrap kustomization deleted - Flux will clean up all stack resources"
-        } else {
-            Log-Warn "Bootstrap kustomization not found (stack may already be removed)"
-        }
-    } catch {
-        Log-Warn "Bootstrap kustomization not found (stack may already be removed)"
+    $bootstrapExists = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomization bootstrap-$StackName -n flux-system --no-headers 2>$null
+
+    # Check if bootstrap kustomization exists
+    if (-not $bootstrapExists) {
+        Log-Info "Stack '$StackName' is not currently deployed"
+        Log-Info "Nothing to remove - stack is already clean"
+        return
     }
 
-    # Optionally clean up the GitRepository (be careful with shared repos)
+    Log-Info "Stack '$StackName' found - proceeding with removal"
+
+    # Get all kustomizations BEFORE deleting bootstrap to know what was created by this stack
+    # This captures all kustomizations that the stack created (components, apps, etc.)
+    $allKustomizationsBefore = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system --no-headers -o custom-columns="NAME:.metadata.name" 2>$null
+
+    # Remove the bootstrap kustomization first
+    Log-Info "Removing bootstrap kustomization: bootstrap-$StackName"
+    try {
+        kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization bootstrap-$StackName -n flux-system 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Log-Success "Bootstrap kustomization deleted"
+        }
+    } catch {
+        Log-Warn "Failed to delete bootstrap kustomization"
+    }
+
+    # Wait a moment for Flux to start garbage collection
+    Start-Sleep -Seconds 2
+
+    # Get remaining kustomizations after bootstrap deletion
+    $allKustomizationsAfter = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system --no-headers -o custom-columns="NAME:.metadata.name" 2>$null
+
+    # Find kustomizations that still exist (these were created by the stack but not garbage collected yet)
+    # We'll delete any kustomization that starts with "app-${StackName}" or "component-"
+    if ($allKustomizationsAfter) {
+        Log-Info "Cleaning up remaining stack kustomizations..."
+        $allKustomizationsAfter -split "`n" | ForEach-Object {
+            $kustomizationName = $_.Trim()
+            if ($kustomizationName) {
+                # Delete app-specific kustomizations for this stack
+                if ($kustomizationName -like "app-$StackName*") {
+                    Log-Info "Removing application kustomization: $kustomizationName"
+                    kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization "$kustomizationName" -n flux-system 2>$null
+                }
+                # Delete component kustomizations (these are typically shared but created by stacks)
+                elseif ($kustomizationName -like "component-*") {
+                    Log-Info "Removing component kustomization: $kustomizationName"
+                    kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization "$kustomizationName" -n flux-system 2>$null
+                }
+            }
+        }
+    }
+
+    # Clean up the GitRepository (it was created by the stack, not by Flux installation)
+    # Now using unique names per stack: flux-system-${StackName}
     if ($StackName -match "^extension/") {
         Log-Info "Cleaning up extension GitRepository..."
         try {
@@ -76,7 +119,12 @@ function Remove-Stack {
             Log-Debug "Extension GitRepository already cleaned up"
         }
     } else {
-        Log-Info "Keeping main GitRepository (shared with HostK8s)"
+        Log-Info "Cleaning up GitRepository: flux-system-$StackName"
+        try {
+            kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete gitrepository "flux-system-$StackName" -n flux-system 2>$null
+        } catch {
+            Log-Debug "GitRepository already cleaned up"
+        }
     }
 
     Log-Success "Software stack '$StackName' removal initiated"
@@ -258,8 +306,8 @@ function Main {
     $env:REPO_NAME = (Split-Path $env:GITOPS_REPO -Leaf) -replace '\.git$', ''
     $env:SOFTWARE_STACK = $StackName
 
-    # Apply stack GitRepository first
-    Apply-StackYaml "software/stacks/$StackName/repository.yaml" "Configuring GitOps repository for stack: $StackName"
+    # Apply shared GitRepository template with stack-specific name
+    Apply-StackYaml "software/stacks/repository.yaml" "Configuring GitOps repository for stack: $StackName"
 
     # Apply bootstrap kustomization - different for extension vs local stacks
     if ($StackName -match "^extension/") {

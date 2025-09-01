@@ -1,0 +1,21 @@
+######################
+## GitRepository Template for Stacks
+## This creates a unique GitRepository for each stack: flux-system-${SOFTWARE_STACK}
+## Applied by deploy-stack script with environment variable substitution
+######################
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system-${SOFTWARE_STACK}
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: ${GITOPS_REPO}
+  ref:
+    branch: ${GITOPS_BRANCH}
+  ignore: |
+    # exclude all
+    /*
+    # include components and the specific stack
+    !/software/components/
+    !/software/stacks/${SOFTWARE_STACK}/
