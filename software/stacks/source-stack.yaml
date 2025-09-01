@@ -1,0 +1,13 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system-${SOFTWARE_STACK}
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: ${GITOPS_REPO}
+  ref:
+    branch: ${GITOPS_BRANCH}
+  ignore: |
+    exclude all
+    !/software/stacks/${SOFTWARE_STACK}/

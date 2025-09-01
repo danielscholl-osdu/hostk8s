@@ -108,7 +108,7 @@ function Remove-Stack {
         }
     }
 
-    # Clean up only the stack-specific GitRepository, keep flux-system for shared components
+    # Clean up the stack-specific GitRepository
     if ($StackName -match "^extension/") {
         Log-Info "Cleaning up extension GitRepository..."
         try {
@@ -123,7 +123,26 @@ function Remove-Stack {
         } catch {
             Log-Debug "Stack GitRepository already cleaned up"
         }
-        Log-Info "Keeping flux-system GitRepository (shared components repository)"
+
+        # Check if any remaining kustomizations still reference flux-system
+        Log-Info "Checking if flux-system GitRepository is still needed..."
+        try {
+            $sourceRefs = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -o jsonpath='{.items[*].spec.sourceRef.name}' 2>$null
+            $remainingFluxSystemUsers = ($sourceRefs -split ' ' | Where-Object { $_ -eq 'flux-system' }).Count
+
+            if ($remainingFluxSystemUsers -eq 0) {
+                Log-Info "No remaining kustomizations reference flux-system, removing shared GitRepository"
+                try {
+                    kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete gitrepository flux-system -n flux-system 2>$null
+                } catch {
+                    Log-Debug "flux-system GitRepository already cleaned up"
+                }
+            } else {
+                Log-Info "Found $remainingFluxSystemUsers kustomization(s) still using flux-system, keeping shared GitRepository"
+            }
+        } catch {
+            Log-Debug "Error checking flux-system usage, keeping GitRepository to be safe"
+        }
     }
 
     Log-Success "Software stack '$StackName' removal initiated"
@@ -301,12 +320,35 @@ function Main {
         $env:GITOPS_BRANCH = "main"
     }
 
+    # Set component repository defaults (can be overridden for component development)
+    if (-not $env:COMPONENTS_REPO) {
+        $env:COMPONENTS_REPO = $env:GITOPS_REPO
+    }
+    if (-not $env:COMPONENTS_BRANCH) {
+        $env:COMPONENTS_BRANCH = $env:GITOPS_BRANCH
+    }
+
     # Export variables for template substitution
     $env:REPO_NAME = (Split-Path $env:GITOPS_REPO -Leaf) -replace '\.git$', ''
     $env:SOFTWARE_STACK = $StackName
 
-    # Apply shared GitRepository template with stack-specific name
-    Apply-StackYaml "software/stacks/repository.yaml" "Configuring GitOps repository for stack: $StackName"
+    # Check if the stack uses components by looking for ./software/components/ paths
+    $stackUsesComponents = $false
+    $stackFile = "software/stacks/$StackName/stack.yaml"
+    if (Test-Path $stackFile) {
+        $content = Get-Content $stackFile -Raw
+        if ($content -match "path: \./software/components/") {
+            $stackUsesComponents = $true
+        }
+    }
+
+    # Apply component GitRepository if stack uses components
+    if ($stackUsesComponents) {
+        Apply-StackYaml "software/stacks/source-component.yaml" "Configuring components repository for stack: $StackName"
+    }
+
+    # Always apply stack-specific GitRepository
+    Apply-StackYaml "software/stacks/source-stack.yaml" "Configuring stack repository for stack: $StackName"
 
     # Apply bootstrap kustomization - different for extension vs local stacks
     if ($StackName -match "^extension/") {

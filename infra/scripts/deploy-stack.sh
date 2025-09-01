@@ -118,14 +118,24 @@ remove_stack() {
         done
     fi
 
-    # Clean up only the stack-specific GitRepository, keep flux-system for shared components
+    # Clean up the stack-specific GitRepository
     if [[ "$SOFTWARE_STACK" == extension/* ]]; then
         log_info "Cleaning up extension GitRepository..."
         kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository extension-stack-system -n flux-system 2>/dev/null || log_debug "Extension GitRepository already cleaned up"
     else
         log_info "Cleaning up stack-specific GitRepository: flux-system-${SOFTWARE_STACK}"
         kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository "flux-system-${SOFTWARE_STACK}" -n flux-system 2>/dev/null || log_debug "Stack GitRepository already cleaned up"
-        log_info "Keeping flux-system GitRepository (shared components repository)"
+
+        # Check if any remaining kustomizations still reference flux-system
+        log_info "Checking if flux-system GitRepository is still needed..."
+        remaining_flux_system_users=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get kustomizations -n flux-system -o jsonpath='{.items[*].spec.sourceRef.name}' 2>/dev/null | tr ' ' '\n' | grep -c "^flux-system$" || echo "0")
+
+        if [ "$remaining_flux_system_users" -eq 0 ]; then
+            log_info "No remaining kustomizations reference flux-system, removing shared GitRepository"
+            kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository flux-system -n flux-system 2>/dev/null || log_debug "flux-system GitRepository already cleaned up"
+        else
+            log_info "Found $remaining_flux_system_users kustomization(s) still using flux-system, keeping shared GitRepository"
+        fi
     fi
 
     log_success "Software stack '$SOFTWARE_STACK' removal initiated"
@@ -180,9 +190,13 @@ log_info "Deploying software stack '${SOFTWARE_STACK}'..."
 GITOPS_REPO=${GITOPS_REPO:-"https://community.opengroup.org/danielscholl/hostk8s"}
 GITOPS_BRANCH=${GITOPS_BRANCH:-"main"}
 
+# Set component repository defaults (can be overridden for component development)
+COMPONENTS_REPO=${COMPONENTS_REPO:-"$GITOPS_REPO"}
+COMPONENTS_BRANCH=${COMPONENTS_BRANCH:-"$GITOPS_BRANCH"}
+
 # Export variables for template substitution
 REPO_NAME=$(basename "$GITOPS_REPO" .git)
-export REPO_NAME GITOPS_REPO GITOPS_BRANCH SOFTWARE_STACK KUBECONFIG_PATH
+export REPO_NAME GITOPS_REPO GITOPS_BRANCH SOFTWARE_STACK KUBECONFIG_PATH COMPONENTS_REPO COMPONENTS_BRANCH
 
 # Function to apply stamp YAML files with template substitution support
 apply_stack_yaml() {
@@ -206,8 +220,21 @@ apply_stack_yaml() {
     fi
 }
 
-# Apply shared GitRepository template with stack-specific name
-apply_stack_yaml "software/stacks/repository.yaml" "Configuring GitOps repository for stack: ${SOFTWARE_STACK}"
+# Check if the stack uses components by looking for ./software/components/ paths
+stack_uses_components=false
+if [ -f "software/stacks/$SOFTWARE_STACK/stack.yaml" ]; then
+    if grep -q "path: \./software/components/" "software/stacks/$SOFTWARE_STACK/stack.yaml"; then
+        stack_uses_components=true
+    fi
+fi
+
+# Apply component GitRepository if stack uses components
+if [ "$stack_uses_components" = true ]; then
+    apply_stack_yaml "software/stacks/source-component.yaml" "Configuring components repository for stack: ${SOFTWARE_STACK}"
+fi
+
+# Always apply stack-specific GitRepository
+apply_stack_yaml "software/stacks/source-stack.yaml" "Configuring stack repository for stack: ${SOFTWARE_STACK}"
 
 # Apply bootstrap kustomization - different for extension vs local stacks
 if [[ "$SOFTWARE_STACK" == extension/* ]]; then

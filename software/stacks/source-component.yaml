@@ -1,0 +1,13 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: ${COMPONENTS_REPO}
+  ref:
+    branch: ${COMPONENTS_BRANCH}
+  ignore: |
+    exclude all
+    !/software/components/
