@@ -34,7 +34,7 @@ services:
       - /usr/local/app/node_modules  # Protect node_modules
     environment:
       - NODE_ENV=development
-      - DATABASE_URL=postgres://postgres:password@db:5432/votes
+      - DATABASE_URL=postgres://postgres@db:5432/votes
       - OPTION_A=HostK8s Stack
       - OPTION_B=HostK8s App
     depends_on:
@@ -45,7 +45,9 @@ services:
     build: ./worker
     environment:
       - REDIS_HOST=redis
-      - DATABASE_URL=postgres://postgres:password@db:5432/votes
+      - POSTGRES_HOST=db
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=votes
     depends_on:
       - redis
       - db
@@ -59,8 +61,8 @@ services:
     image: postgres:15
     environment:
       - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=password
       - POSTGRES_DB=votes
+      - POSTGRES_HOST_AUTH_METHOD=trust
     ports:
       - "5432:5432"
     volumes:
