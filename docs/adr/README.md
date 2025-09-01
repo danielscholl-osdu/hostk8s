@@ -15,6 +15,8 @@ Optimized ADR Index for Agent Context
 | 007 | Kind Configuration Fallback System | acc    | [ADR-007](007-kind-configuration-fallback-system.md) |
 | 008 | Source Code Build System Architecture | acc    | [ADR-008](008-source-code-build-system.md) |
 | 009 | Cross-Platform Implementation Strategy | acc    | [ADR-009](009-cross-platform-implementation-strategy.md) |
+| 010 | Infrastructure Addon Namespace Consolidation | acc    | [ADR-010](010-infrastructure-addon-namespace-consolidation.md) |
+| 011 | Hybrid Container Registry Architecture | acc    | [ADR-011](011-hybrid-container-registry-architecture.md) |
 
 ---
 
@@ -174,4 +176,38 @@ why: |
 tradeoffs:
 positive: [native platform integration, developer familiarity, performance, architecture preservation, feature parity]
 negative: [dual maintenance burden, functional parity verification, testing complexity, synchronization risk]
+```
+
+--------------------------------------------
+```yaml
+id: 010
+title: Infrastructure Addon Namespace Consolidation
+status: accepted
+date: 2025-08-29
+decision: Consolidate infrastructure addons into unified hostk8s namespace while preserving component isolation through labels and resource naming conventions.
+why: |
+• Operational simplification: Single discovery point for all infrastructure components
+• Developer experience: Reduced cognitive load and simplified kubectl commands
+• Resource organization: Logical grouping of infrastructure with shared lifecycle
+• RBAC simplification: Single namespace reduces permission complexity for development
+tradeoffs:
+positive: [operational simplicity, developer productivity, unified resource management, simplified RBAC]
+negative: [deviation from upstream conventions, reduced namespace isolation, naming conflict risk]
+```
+
+--------------------------------------------
+```yaml
+id: 011
+title: Hybrid Container Registry Architecture
+status: accepted
+date: 2025-08-29
+decision: Adopt hybrid container registry architecture combining Docker container deployment for registry API with Kubernetes deployment for web UI, connected through ingress proxy.
+why: |
+• Container-native reliability: Docker registry runs natively on host daemon, eliminating orchestration overhead
+• CORS resolution: Ingress proxy eliminates cross-origin requests by serving UI and API from same origin
+• Containerd integration: Direct Kind node configuration for seamless image pulling
+• Persistent storage: Host directory mounting survives cluster recreate/restart operations
+tradeoffs:
+positive: [reliability, CORS elimination, container-native performance, persistent storage, debugging access]
+negative: [architectural complexity, hybrid deployment pattern, network configuration overhead, documentation complexity]
 ```

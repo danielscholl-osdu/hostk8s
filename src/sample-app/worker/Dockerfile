@@ -1,50 +1,28 @@
-# Multi-stage build for Spring Boot Java 17 application
-FROM eclipse-temurin:17-jdk AS build
+# because of dotnet, we always build on amd64, and target platforms in cli
+# dotnet doesn't support QEMU for building or running.
+# (errors common in arm/v7 32bit) https://github.com/dotnet/dotnet-docker/issues/1537
+# https://hub.docker.com/_/microsoft-dotnet
+# hadolint ignore=DL3029
+# to build for a different platform than your host, use --platform=<platform>
+# for example, if you were on Intel (amd64) and wanted to build for ARM, you would use:
+# docker buildx build --platform "linux/arm64/v8" .
 
-# Install Maven
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
+# build compiles the program for the builder's local platform
+FROM --platform=${BUILDPLATFORM} mcr.microsoft.com/dotnet/sdk:7.0 AS build
+ARG TARGETPLATFORM
+ARG TARGETARCH
+ARG BUILDPLATFORM
+RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM"
 
-# Set working directory
-WORKDIR /workspace/app
+WORKDIR /source
+COPY *.csproj .
+RUN dotnet restore -a $TARGETARCH
 
-# Copy Maven files for dependency resolution
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY . .
+RUN dotnet publish -c release -o /app -a $TARGETARCH --self-contained false --no-restore
 
-# Copy source code and build
-COPY src src
-RUN mvn clean package -DskipTests
-
-# Extract JAR layers for better caching
-RUN mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
-
-# Production runtime stage
-FROM eclipse-temurin:17-jre AS prod
-
-# Create non-root user for security
-RUN groupadd -g 1001 appuser && \
-    useradd -u 1001 -g appuser -m appuser
-
-# Set working directory
+# app image
+FROM mcr.microsoft.com/dotnet/runtime:7.0
 WORKDIR /app
-
-# Copy application layers from build stage
-COPY --from=build --chown=appuser:appuser /workspace/app/target/dependency/BOOT-INF/lib /app/lib
-COPY --from=build --chown=appuser:appuser /workspace/app/target/dependency/META-INF /app/META-INF
-COPY --from=build --chown=appuser:appuser /workspace/app/target/dependency/BOOT-INF/classes /app
-
-# Switch to non-root user
-USER appuser
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/actuator/health || exit 1
-
-# JVM optimization for containers
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
-
-# Expose actuator port
-EXPOSE 8080
-
-# Run the application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -cp app:app/lib/* com.hostk8s.worker.WorkerApplication"]
+COPY --from=build /app .
+ENTRYPOINT ["dotnet", "Worker.dll"]

@@ -1,0 +1,17 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://community.opengroup.org/danielscholl/hostk8s
+  ref:
+    branch: build-sample
+  ignore: |
+    # exclude all
+    /*
+    # include shared components and both stacks
+    !/software/components/
+    !/software/stacks/sample/
+    !/software/stacks/sample-app/

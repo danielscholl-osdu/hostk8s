@@ -33,27 +33,32 @@ detect_kubeconfig
 log "Setting up NGINX Ingress Controller..."
 
 # Check if NGINX Ingress is already installed
-if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace ingress-nginx >/dev/null 2>&1; then
-    log "NGINX Ingress namespace already exists, checking if installation is complete..."
-    if kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx | grep -q Running; then
-        log "NGINX Ingress appears to already be running"
-        exit 0
+if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace hostk8s >/dev/null 2>&1; then
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment ingress-nginx-controller -n hostk8s >/dev/null 2>&1; then
+        log "NGINX Ingress already installed, checking if running..."
+        if kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n hostk8s -l app.kubernetes.io/name=ingress-nginx | grep -q Running; then
+            log "NGINX Ingress appears to already be running"
+            # Skip container creation but continue with configuration
+            skip_nginx_creation=true
+        fi
     fi
 fi
 
-# Install NGINX Ingress Controller for Kind
-log "Installing NGINX Ingress Controller..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.8.2/deploy/static/provider/kind/deploy.yaml || error_exit "Failed to install NGINX Ingress Controller"
+# Install NGINX Ingress Controller for Kind (if not skipped)
+if [ "${skip_nginx_creation:-false}" != "true" ]; then
+    log "Installing NGINX Ingress Controller..."
+    kubectl --kubeconfig="$KUBECONFIG_PATH" apply -f "${PWD}/infra/manifests/nginx-ingress.yaml" || error_exit "Failed to install NGINX Ingress Controller"
+fi
 
 # Check if MetalLB is installed and configure LoadBalancer service
-if kubectl --kubeconfig="$KUBECONFIG_PATH" get namespace metallb-system >/dev/null 2>&1; then
+if kubectl --kubeconfig="$KUBECONFIG_PATH" get deployment speaker -n hostk8s >/dev/null 2>&1; then
     log "MetalLB detected, configuring NGINX Ingress for LoadBalancer integration..."
 
     # Wait for the ingress controller service to be created first
-    kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n ingress-nginx --timeout=60s || log "WARNING: Ingress service not found"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n hostk8s --timeout=60s || log "WARNING: Ingress service not found"
 
     # Patch the service to use LoadBalancer type with correct NodePorts for Kind
-    kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n ingress-nginx -p '{
+    kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n hostk8s -p '{
         "spec": {
             "type": "LoadBalancer",
             "ports": [
@@ -68,10 +73,10 @@ else
     log "MetalLB not detected, configuring NodePort for Kind port mapping..."
 
     # Wait for the ingress controller service to be created first
-    kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n ingress-nginx --timeout=60s || log "WARNING: Ingress service not found"
+    kubectl --kubeconfig="$KUBECONFIG_PATH" wait --for=jsonpath='{.metadata.name}' service/ingress-nginx-controller -n hostk8s --timeout=60s || log "WARNING: Ingress service not found"
 
     # Patch the service to use specific NodePorts that match Kind port mapping (30080->8080, 30443->8443)
-    kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n ingress-nginx -p '{
+    kubectl --kubeconfig="$KUBECONFIG_PATH" patch service ingress-nginx-controller -n hostk8s -p '{
         "spec": {
             "type": "NodePort",
             "ports": [
@@ -95,29 +100,29 @@ if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then
 fi
 
 # First, wait for the deployment to be ready
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace ingress-nginx \
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace hostk8s \
   --for=condition=available deployment/ingress-nginx-controller \
   --timeout=$INGRESS_TIMEOUT || {
     log "WARNING: Ingress deployment not ready, checking pod status..."
-    kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n ingress-nginx
-    kubectl --kubeconfig="$KUBECONFIG_PATH" describe pods -n ingress-nginx
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n hostk8s
+    kubectl --kubeconfig="$KUBECONFIG_PATH" describe pods -n hostk8s
 }
 
 # Then wait for pods to be ready
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace ingress-nginx \
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace hostk8s \
   --for=condition=ready pod \
   --selector=app.kubernetes.io/component=controller \
   --timeout=$INGRESS_TIMEOUT || {
     log "WARNING: NGINX Ingress Controller failed to become ready within $INGRESS_TIMEOUT"
     log "Checking ingress controller status..."
-    kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n ingress-nginx
-    kubectl --kubeconfig="$KUBECONFIG_PATH" logs -n ingress-nginx -l app.kubernetes.io/component=controller --tail=50
+    kubectl --kubeconfig="$KUBECONFIG_PATH" get pods -n hostk8s
+    kubectl --kubeconfig="$KUBECONFIG_PATH" logs -n hostk8s -l app.kubernetes.io/component=controller --tail=50
     log "Continuing without waiting for ingress readiness..."
 }
 
 # Wait for admission webhook jobs to complete
 log "Waiting for admission webhook setup jobs to complete..."
-kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace ingress-nginx \
+kubectl --kubeconfig="$KUBECONFIG_PATH" wait --namespace hostk8s \
   --for=condition=complete job \
   --selector=app.kubernetes.io/component=admission-webhook \
   --timeout=120s || log "WARNING: Admission webhook jobs did not complete in time, continuing..."

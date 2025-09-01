@@ -1,0 +1,62 @@
+######################
+## Voting App Stack Components
+## Registry and Redis infrastructure must be ready before applications
+######################
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-redis-infrastructure
+  namespace: flux-system
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/redis-infrastructure
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: redis
+      namespace: redis-infrastructure
+    - kind: Deployment
+      name: redis-commander
+      namespace: redis-infrastructure
+---
+######################
+## Voting App Applications
+## Deployed after infrastructure components are ready
+######################
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-sample-app
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-redis-infrastructure
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stacks/sample-app/app
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: vote
+      namespace: sample-app
+    - kind: Deployment
+      name: result
+      namespace: sample-app
+    - kind: Deployment
+      name: worker
+      namespace: sample-app
+    - kind: Deployment
+      name: db
+      namespace: sample-app

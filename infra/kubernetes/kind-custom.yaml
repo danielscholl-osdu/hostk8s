@@ -13,11 +13,7 @@ networking:
 containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
-      endpoint = ["https://registry.registry.svc.cluster.local:5443", "http://registry.registry.svc.cluster.local:5000"]
-    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5443"]
-      endpoint = ["https://registry.registry.svc.cluster.local:5443"]
-    [plugins."io.containerd.grpc.v1.cri".registry.configs."registry.registry.svc.cluster.local:5443".tls]
-      insecure_skip_verify = true
+      endpoint = ["http://hostk8s-registry:5000"]
 
 nodes:
   - role: control-plane
@@ -54,7 +50,13 @@ nodes:
         containerPath: /mnt/local-storage
         readOnly: false
       - hostPath: ./data/storage
-        containerPath: /mnt/data
+        containerPath: /mnt/storage
+        readOnly: false
+      - hostPath: ./data/pv
+        containerPath: /mnt/pv
+        readOnly: false
+      - hostPath: ./data/postgres
+        containerPath: /mnt/postgres
         readOnly: false
 
   # - role: worker
