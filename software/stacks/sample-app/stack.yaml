@@ -8,6 +8,9 @@ kind: Kustomization
 metadata:
   name: component-redis-infrastructure
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample-app
+    hostk8s.type: component
 spec:
   interval: 1h
   retryInterval: 1m
@@ -35,6 +38,9 @@ kind: Kustomization
 metadata:
   name: app-sample-app
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample-app
+    hostk8s.type: application
 spec:
   dependsOn:
     - name: component-redis-infrastructure

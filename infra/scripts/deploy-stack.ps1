@@ -53,59 +53,36 @@ function Remove-Stack {
         exit 1
     }
 
-    # First check if the stack is actually deployed
-    Log-Info "Checking if stack '$StackName' is deployed..."
+    # Check if any kustomizations exist for this stack
+    Log-Info "Checking for stack '$StackName' kustomizations..."
 
-    $bootstrapExists = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomization bootstrap-$StackName -n flux-system --no-headers 2>$null
+    $stackKustomizations = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -l "hostk8s.stack=$StackName" --no-headers -o custom-columns="NAME:.metadata.name" 2>$null
 
-    # Check if bootstrap kustomization exists
-    if (-not $bootstrapExists) {
-        Log-Info "Stack '$StackName' is not currently deployed"
+    if (-not $stackKustomizations -or $stackKustomizations.Trim() -eq "") {
+        Log-Info "No kustomizations found for stack '$StackName'"
         Log-Info "Nothing to remove - stack is already clean"
         return
     }
 
-    Log-Info "Stack '$StackName' found - proceeding with removal"
+    Log-Info "Found kustomizations for stack '$StackName' - proceeding with removal"
 
-    # Get all kustomizations BEFORE deleting bootstrap to know what was created by this stack
-    # This captures all kustomizations that the stack created (components, apps, etc.)
-    $allKustomizationsBefore = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system --no-headers -o custom-columns="NAME:.metadata.name" 2>$null
-
-    # Remove the bootstrap kustomization first
-    Log-Info "Removing bootstrap kustomization: bootstrap-$StackName"
-    try {
-        kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization bootstrap-$StackName -n flux-system 2>$null
-        if ($LASTEXITCODE -eq 0) {
-            Log-Success "Bootstrap kustomization deleted"
+    # Remove the bootstrap kustomization first (if it exists)
+    $bootstrapExists = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomization bootstrap-$StackName -n flux-system --no-headers 2>$null
+    if ($bootstrapExists) {
+        Log-Info "Removing bootstrap kustomization: bootstrap-$StackName"
+        try {
+            kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization bootstrap-$StackName -n flux-system 2>$null
+        } catch {
+            Log-Debug "Bootstrap already removed"
         }
-    } catch {
-        Log-Warn "Failed to delete bootstrap kustomization"
     }
 
-    # Wait a moment for Flux to start garbage collection
-    Start-Sleep -Seconds 2
-
-    # Get remaining kustomizations after bootstrap deletion
-    $allKustomizationsAfter = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system --no-headers -o custom-columns="NAME:.metadata.name" 2>$null
-
-    # Find kustomizations that still exist (these were created by the stack but not garbage collected yet)
-    # We'll delete any kustomization that starts with "app-${StackName}" or "component-"
-    if ($allKustomizationsAfter) {
-        Log-Info "Cleaning up remaining stack kustomizations..."
-        $allKustomizationsAfter -split "`n" | ForEach-Object {
-            $kustomizationName = $_.Trim()
-            if ($kustomizationName) {
-                # Delete app-specific kustomizations for this stack
-                if ($kustomizationName -like "app-$StackName*") {
-                    Log-Info "Removing application kustomization: $kustomizationName"
-                    kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization "$kustomizationName" -n flux-system 2>$null
-                }
-                # Skip component kustomizations - they are shared across stacks
-                elseif ($kustomizationName -like "component-*") {
-                    Log-Debug "Skipping shared component kustomization: $kustomizationName"
-                }
-            }
-        }
+    # Remove all kustomizations labeled with this stack
+    Log-Info "Removing all kustomizations for stack '$StackName'..."
+    try {
+        kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomizations -n flux-system -l "hostk8s.stack=$StackName" 2>$null
+    } catch {
+        Log-Debug "Stack kustomizations already cleaned up"
     }
 
     # Clean up the stack-specific GitRepository
@@ -124,28 +101,28 @@ function Remove-Stack {
             Log-Debug "Stack GitRepository already cleaned up"
         }
 
-        # Check if any remaining kustomizations still reference flux-system
+        # Check if any component kustomizations remain (from any stack)
         Log-Info "Checking if flux-system GitRepository is still needed..."
         try {
-            $sourceRefs = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -o jsonpath='{.items[*].spec.sourceRef.name}' 2>$null
-            $remainingFluxSystemUsers = 0
+            $componentKustomizations = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -l "hostk8s.type=component" --no-headers 2>$null
+            $componentCount = 0
 
-            if ($sourceRefs -and $sourceRefs.Trim()) {
-                $remainingFluxSystemUsers = ($sourceRefs -split ' ' | Where-Object { $_ -eq 'flux-system' }).Count
+            if ($componentKustomizations -and $componentKustomizations.Trim() -ne "") {
+                $componentCount = ($componentKustomizations -split "`n" | Where-Object { $_.Trim() -ne "" }).Count
             }
 
-            if ($remainingFluxSystemUsers -eq 0) {
-                Log-Info "No remaining kustomizations reference flux-system, removing shared GitRepository"
+            if ($componentCount -eq 0) {
+                Log-Info "No component kustomizations remaining, removing shared GitRepository"
                 try {
                     kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete gitrepository flux-system -n flux-system 2>$null
                 } catch {
                     Log-Debug "flux-system GitRepository already cleaned up"
                 }
             } else {
-                Log-Info "Found $remainingFluxSystemUsers kustomization(s) still using flux-system, keeping shared GitRepository"
+                Log-Info "Found $componentCount component kustomization(s) remaining, keeping shared GitRepository"
             }
         } catch {
-            Log-Debug "Error checking flux-system usage, keeping GitRepository to be safe"
+            Log-Debug "Error checking component kustomizations, keeping GitRepository to be safe"
         }
     }
 

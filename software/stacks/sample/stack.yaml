@@ -8,6 +8,9 @@ kind: Kustomization
 metadata:
   name: component-certs
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample
+    hostk8s.type: component
 spec:
   interval: 1h
   retryInterval: 1m
@@ -28,6 +31,9 @@ kind: Kustomization
 metadata:
   name: app-sample
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample
+    hostk8s.type: application
 spec:
   dependsOn:
     - name: component-certs
