@@ -72,6 +72,7 @@ These decisions work together to create a platform that prioritizes developer pr
 │  │    • Direct Container Access (No Nested Virtualization) ││
 │  │    • Progressive Complexity (Minimal → Full Featured)   ││
 │  │    • Software Stack Deployments                         ││
+│  │    • Persistent Data Architecture                       ││
 │  │    • Extension Points for Customization                 ││
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
@@ -413,9 +414,9 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Tradeoffs**: Abstraction layer, Make dependency, argument limitations
 
 **[ADR-003: GitOps Stack Pattern](adr/003-gitops-stack-pattern.md)**
-- **Decision**: Implement stack pattern for deploying complete environments via Flux with component/application separation
-- **Benefits**: Complete environments, platform agnostic, dependency management, reusability
-- **Tradeoffs**: Learning curve, debugging complexity, bootstrap dependency
+- **Decision**: Implement stack pattern for deploying complete environments via Flux with dual-source architecture and component/application separation
+- **Benefits**: Repository isolation, multi-team scalability, complete environments, platform agnostic, lifecycle management
+- **Tradeoffs**: Learning curve, repository coordination, debugging complexity, configuration complexity
 
 **[ADR-004: Extension System Architecture](adr/004-extension-system-architecture.md)**
 - **Decision**: Implement comprehensive extension system using dedicated extension/ directories with template processing for dynamic configuration
@@ -456,3 +457,8 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Adopt hybrid container registry architecture combining Docker container deployment for registry API with Kubernetes deployment for web UI, connected through ingress proxy
 - **Benefits**: Reliability, CORS elimination, container-native performance, persistent storage, debugging access
 - **Tradeoffs**: Architectural complexity, hybrid deployment pattern, network configuration overhead, documentation complexity
+
+**[ADR-012: Host-Mode Data Persistence Architecture](adr/012-host-mode-data-persistence-architecture.md)**
+- **Decision**: Organized host-mode data persistence using dedicated directory structure with service-specific isolation and Kind extraMounts integration
+- **Benefits**: Data persistence, service isolation, stack organization, debugging access, cross-platform consistency
+- **Tradeoffs**: Directory complexity, host filesystem dependency, manual cleanup, storage capacity limits

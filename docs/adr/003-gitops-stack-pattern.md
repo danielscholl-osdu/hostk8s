@@ -7,15 +7,17 @@
 HostK8s needed a way to deploy complete, declarative environments that go beyond simple application deployment. Users require consistent patterns for deploying infrastructure components (databases, ingress, certificates) alongside applications, with clear dependency management and environment-specific configurations. The solution must be platform-agnostic and reusable across different domain contexts.
 
 ## Decision
-Implement the **GitOps Stack Pattern** - a declarative template system for deploying complete environments via Flux, with component/application separation and dependency management.
+Implement the **GitOps Stack Pattern** - a declarative template system for deploying complete environments via Flux, with component/application separation, dual-source repository architecture, and dependency management.
 
 ## Rationale
 1. **Complete Environments**: Deploy infrastructure + applications as cohesive units
 2. **Platform Agnostic**: Pattern works for any software stack (OSDU, microservices, etc.)
 3. **Dependency Management**: Clear component ordering and health checks
-4. **Reusability**: Stacks can be shared and evolved independently
-5. **GitOps Native**: Leverages Flux's reconciliation and drift detection
-6. **Selective Sync**: Efficient Git synchronization with ignore patterns
+4. **Repository Separation**: Components and stacks maintained in independent repositories
+5. **Reusability**: Stacks can be shared and evolved independently
+6. **GitOps Native**: Leverages Flux's reconciliation and drift detection
+7. **Selective Sync**: Efficient Git synchronization with ignore patterns
+8. **Lifecycle Management**: Standardized labels enable stack-aware operations
 
 ## Stack Architecture
 
@@ -35,27 +37,48 @@ software/stack/
         └── website/       # Sample website service
 ```
 
-### Deployment Flow
+### Dual-Source Architecture
 ```
-1. Bootstrap Kustomization (bootstrap.yaml)
+1. Component Source (source-component.yaml)
+   ├── COMPONENTS_REPO     # Infrastructure components repository
+   ├── COMPONENTS_BRANCH   # Components branch (main/develop)
+   └── Syncs: /software/components/
+
+2. Stack Source (source-stack.yaml)
+   ├── GITOPS_REPO         # Stack-specific repository
+   ├── GITOPS_BRANCH       # Stack branch
+   └── Syncs: /software/stacks/{STACK_NAME}/
+
+3. Bootstrap Kustomization (bootstrap.yaml)
    └── Points to specific stack path
 
-2. Stack Kustomization (kustomization.yaml)
-   ├── repository.yaml     # Creates GitRepository source
-   └── stack.yaml          # Deploys infrastructure components
+4. Stack Kustomization (kustomization.yaml)
+   ├── source-component.yaml  # Components GitRepository
+   ├── source-stack.yaml      # Stack GitRepository
+   └── stack.yaml             # Infrastructure + applications
+```
 
-3. Component Dependencies (stack.yaml)
+### Deployment Flow
+```
+1. Component Dependencies (stack.yaml with labels)
    ├── component-certs     # Certificate management
-   ├── component-certs-ca  # Root CA certificate
-   └── component-certs-issuer # Certificate issuer
+   │   └── labels: hostk8s.stack={name}, hostk8s.type=component
+   ├── component-redis     # Redis infrastructure
+   │   └── labels: hostk8s.stack={name}, hostk8s.type=component
+   └── Sourced from: flux-system (components repo)
 
-4. Infrastructure Components (components/)
-   ├── database/           # PostgreSQL via Helm
-   └── ingress-nginx/      # NGINX Ingress via Helm
+2. Applications (stack.yaml with labels)
+   ├── app-{stack-name}    # Application deployment
+   │   └── labels: hostk8s.stack={name}, hostk8s.type=application
+   └── Sourced from: flux-system-{stack-name} (stack repo)
 
-5. Applications (applications/)
-   ├── api/               # GitOps-managed API
-   └── website/           # GitOps-managed website
+3. Infrastructure Components (/software/components/)
+   ├── certs/             # Certificate management via Helm
+   └── redis-infrastructure/ # Redis + Commander
+
+4. Applications (/software/stacks/{name}/app/)
+   ├── api/              # Stack-specific API
+   └── website/          # Stack-specific website
 ```
 
 ## Alternatives Considered
@@ -82,45 +105,103 @@ software/stack/
 
 ## Implementation Pattern
 
-### Bootstrap Integration
+### Dual-Source Integration
 ```yaml
-# bootstrap.yaml - Universal entry point
+# source-component.yaml - Infrastructure components
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: ${COMPONENTS_REPO}
+  ref:
+    branch: ${COMPONENTS_BRANCH}
+  ignore: |
+    exclude all
+    !/software/components/
+---
+# source-stack.yaml - Stack-specific applications
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: flux-system-${SOFTWARE_STACK}
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: ${GITOPS_REPO}
+  ref:
+    branch: ${GITOPS_BRANCH}
+  ignore: |
+    exclude all
+    !/software/stacks/${SOFTWARE_STACK}/
+```
+
+### Stack Contract with Labels
+```yaml
+# stack.yaml - Infrastructure with required labels
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: bootstrap-stack
+  name: component-certs
+  namespace: flux-system
+  labels:
+    hostk8s.stack: sample          # Stack ownership (required)
+    hostk8s.type: component        # Resource type (required)
 spec:
-  path: ./software/stack/sample  # Configurable stack path
   sourceRef:
     kind: GitRepository
-    name: flux-system
-```
-
-### Component Dependencies
-```yaml
-# stack.yaml - Infrastructure with dependencies
+    name: flux-system              # Components source
+  path: ./software/components/certs
+  healthChecks:
+    - kind: Secret
+      name: root-ca-secret         # Health validation
+---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-certs-ca
+  name: app-sample
+  namespace: flux-system
+  labels:
+    hostk8s.stack: sample          # Stack ownership (required)
+    hostk8s.type: application      # Resource type (required)
 spec:
   dependsOn:
-    - name: component-certs  # Explicit dependency ordering
-  healthChecks:
-    - kind: Secret
-      name: root-ca-secret   # Health validation
+    - name: component-certs        # Explicit dependency ordering
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-sample       # Stack source
+  path: ./software/stacks/sample/app
 ```
 
-### Selective Git Sync
+### Repository Isolation Benefits
 ```yaml
-# repository.yaml - Efficient synchronization
+# Component Repository (COMPONENTS_REPO)
 spec:
   ignore: |
-    # exclude all
-    /*
-    # include only relevant paths
-    !/software/components/
-    !/software/stack/sample/
+    exclude all
+    !/software/components/         # Only infrastructure components
+
+# Stack Repository (GITOPS_REPO)
+spec:
+  ignore: |
+    exclude all
+    !/software/stacks/${SOFTWARE_STACK}/  # Only specific stack
+```
+
+### Lifecycle Management
+```bash
+# Stack deployment with dual sources
+make up sample                     # Creates both component and stack sources
+
+# Stack removal using labels
+make down sample                   # Removes all resources with hostk8s.stack=sample
+kubectl delete kustomization -l hostk8s.stack=sample -n flux-system
+
+# Component vs Application isolation
+flux get kustomization -l hostk8s.type=component    # Infrastructure only
+flux get kustomization -l hostk8s.type=application  # Applications only
 ```
 
 ## Consequences
@@ -128,16 +209,20 @@ spec:
 **Positive:**
 - **Environment Consistency**: Identical patterns across dev/staging/prod
 - **Platform Agnostic**: Works with any application stack
+- **Repository Isolation**: Components and stacks maintained independently
+- **Multi-Team Scalability**: Different teams can own infrastructure vs applications
 - **Dependency Safety**: Components deploy in correct order with health checks
-- **Git Efficiency**: Selective sync reduces bandwidth and reconciliation time
-- **Reusability**: Stacks shareable across teams and projects
+- **Lifecycle Management**: Stack-aware operations via standardized labels
+- **Git Efficiency**: Dual-source selective sync optimizes bandwidth
+- **Reusability**: Stacks and components shareable across teams and projects
 - **Observability**: Clear GitOps status and reconciliation tracking
 
 **Negative:**
-- **Learning Curve**: Developers must understand GitOps concepts
-- **Debugging Complexity**: Multi-layer abstraction can complicate troubleshooting
-- **Bootstrap Dependency**: Universal bootstrap creates single point of failure
-- **Git Repository Coupling**: Stacks tied to specific repository structure
+- **Learning Curve**: Developers must understand GitOps and dual-source concepts
+- **Debugging Complexity**: Multi-layer abstraction and dual sources complicate troubleshooting
+- **Repository Coordination**: Must maintain consistency between component and stack repositories
+- **Label Contract Enforcement**: Stack deletion requires proper label application
+- **Configuration Complexity**: Additional environment variables for dual-source setup
 
 ## Usage Patterns
 

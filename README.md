@@ -185,5 +185,7 @@ Duplicate `.env.example` to `.env` and customize as needed.
 | `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
+| `COMPONENTS_REPO` | Git repository URL for infrastructure components | *(none)*  |
+| `COMPONENTS_BRANCH` | Git branch for components repository         | `main`    |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
 | `NAMESPACE`       | Default namespace for app deployments         | `default` |

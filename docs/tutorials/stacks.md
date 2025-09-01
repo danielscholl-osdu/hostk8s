@@ -198,6 +198,9 @@ kind: Kustomization
 metadata:
   name: component-certs
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample                    # Stack identification (required)
+    hostk8s.type: component                  # Resource type (required)
 spec:
   path: ./software/components/certs
   wait: true                                 # Must be healthy before continuing
@@ -207,6 +210,9 @@ kind: Kustomization
 metadata:
   name: component-certs-ca
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample                    # Stack identification (required)
+    hostk8s.type: component                  # Resource type (required)
 spec:
   dependsOn:
     - name: component-certs                  # Wait for cert-manager first
@@ -218,6 +224,9 @@ kind: Kustomization
 metadata:
   name: component-certs-issuer
   namespace: flux-system
+  labels:
+    hostk8s.stack: sample                    # Stack identification (required)
+    hostk8s.type: component                  # Resource type (required)
 spec:
   dependsOn:
     - name: component-certs-ca               # Wait for certificate authority
@@ -227,12 +236,13 @@ spec:
 
 ### How Dependency Declarations Work
 
-Looking at the certificate chain example above, notice how each Flux Kustomization declares two critical properties:
+Looking at the certificate chain example above, notice how each Flux Kustomization declares three critical properties:
 
 | Property | Purpose | Example |
 |----------|---------|---------|
 | path | Where to find the component | `./software/components/certs-ca` |
 | dependsOn | What must be healthy first | `component-certs` |
+| labels | Stack identification for lifecycle management | `hostk8s.stack: sample` |
 
 This declarative approach eliminates the coordination chaos you experienced manually. Instead of guessing timing and deployment order, each component simply declares its dependencies and Flux automatically creates the execution plan: `certs → certs-ca → certs-issuer`.
 
@@ -276,6 +286,8 @@ Now let's remove the stack you deployed:
 make down sample
 make status
 ```
+
+The `make down` command uses the `hostk8s.stack: sample` labels you saw in the stack configuration to cleanly remove all components and applications belonging to this specific stack.
 
 ## Ready for Real Development
 

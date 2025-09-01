@@ -17,6 +17,7 @@ Optimized ADR Index for Agent Context
 | 009 | Cross-Platform Implementation Strategy | acc    | [ADR-009](009-cross-platform-implementation-strategy.md) |
 | 010 | Infrastructure Addon Namespace Consolidation | acc    | [ADR-010](010-infrastructure-addon-namespace-consolidation.md) |
 | 011 | Hybrid Container Registry Architecture | acc    | [ADR-011](011-hybrid-container-registry-architecture.md) |
+| 012 | Host-Mode Data Persistence Architecture | acc    | [ADR-012](012-host-mode-data-persistence-architecture.md) |
 
 ---
 
@@ -210,4 +211,22 @@ why: |
 tradeoffs:
 positive: [reliability, CORS elimination, container-native performance, persistent storage, debugging access]
 negative: [architectural complexity, hybrid deployment pattern, network configuration overhead, documentation complexity]
+```
+
+--------------------------------------------
+```yaml
+id: 012
+title: Host-Mode Data Persistence Architecture
+status: accepted
+date: 2025-09-01
+decision: Adopt organized host-mode data persistence architecture using dedicated directory structure with service-specific isolation and Kind extraMounts integration.
+why: |
+• Service isolation: Dedicated directories for each infrastructure service prevent conflicts
+• Stack organization: Stack-specific directories under data/pv/ enable multi-environment isolation
+• Cross-cluster survival: Data persists across cluster recreation and development iterations
+• Host-mode integration: Direct filesystem access with standardized mount point contracts
+• Developer experience: Clear directory structure with predictable application integration patterns
+tradeoffs:
+positive: [data persistence, service isolation, stack organization, debugging access, cross-platform consistency]
+negative: [directory complexity, host filesystem dependency, manual cleanup, storage capacity limits]
 ```
