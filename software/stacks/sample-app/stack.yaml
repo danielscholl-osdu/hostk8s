@@ -14,7 +14,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system-${SOFTWARE_STACK}
+    name: flux-system-sample-app
   path: ./software/components/redis-infrastructure
   prune: true
   wait: true
@@ -43,7 +43,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system-${SOFTWARE_STACK}
+    name: flux-system-sample-app
   path: ./software/stacks/sample-app/app
   prune: true
   wait: true
