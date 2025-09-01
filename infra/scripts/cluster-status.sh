@@ -47,8 +47,9 @@ show_git_repositories() {
 
         echo "$git_output" | grep -v "^NAME" | while IFS=$'\t' read -r name revision suspended ready message; do
             [ -z "$name" ] && continue
-            local repo_url=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name" -n flux-system -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown")
-            local branch=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name" -n flux-system -o jsonpath='{.spec.ref.branch}' 2>/dev/null || echo "unknown")
+            local name_trimmed=$(echo "$name" | tr -d ' ')
+            local repo_url=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name_trimmed" -n flux-system -o jsonpath='{.spec.url}' 2>/dev/null || echo "unknown")
+            local branch=$(kubectl get gitrepository.source.toolkit.fluxcd.io "$name_trimmed" -n flux-system -o jsonpath='{.spec.ref.branch}' 2>/dev/null || echo "unknown")
 
             echo "📁 Repository: $name"
             echo "   URL: $repo_url"
