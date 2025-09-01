@@ -91,7 +91,7 @@ show_kustomizations() {
         local name_trimmed=$(echo "$name" | tr -d ' ')
         [ -z "$name_trimmed" ] && continue
 
-        local source_ref=$(kubectl get kustomization.kustomize.toolkit.fluxcd.io "$name" -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown")
+        local source_ref=$(kubectl get kustomization.kustomize.toolkit.fluxcd.io "$name_trimmed" -n flux-system -o jsonpath='{.spec.sourceRef.name}' 2>/dev/null || echo "unknown")
         local suspended_trim=$(echo "$suspended" | tr -d ' ')
         local ready_trim=$(echo "$ready" | tr -d ' ')
 
