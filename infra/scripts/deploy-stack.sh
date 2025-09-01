@@ -73,10 +73,26 @@ remove_stack() {
     log_info "Removing bootstrap kustomization for stack: $SOFTWARE_STACK"
 
     # Remove the bootstrap kustomization - Flux will automatically clean up all deployed resources
-    if kubectl --kubeconfig="$KUBECONFIG_PATH" delete kustomization bootstrap-stack -n flux-system 2>/dev/null; then
+    if kubectl --kubeconfig="$KUBECONFIG_PATH" delete kustomization bootstrap-${SOFTWARE_STACK} -n flux-system 2>/dev/null; then
         log_success "Bootstrap kustomization deleted - Flux will clean up all stack resources"
     else
         log_warn "Bootstrap kustomization not found (stack may already be removed)"
+    fi
+
+    # Remove any stack-specific kustomizations (app-* and component-* if unique to this stack)
+    log_info "Removing stack-specific kustomizations..."
+    # Get all kustomizations that might belong to this stack
+    kustomizations_to_remove=$(kubectl --kubeconfig="$KUBECONFIG_PATH" get kustomizations -n flux-system --no-headers -o custom-columns="NAME:.metadata.name" 2>/dev/null | grep -E "^(app-${SOFTWARE_STACK}|component-.*-${SOFTWARE_STACK})$" || true)
+
+    if [ -n "$kustomizations_to_remove" ]; then
+        echo "$kustomizations_to_remove" | while read -r kustomization_name; do
+            if [ -n "$kustomization_name" ]; then
+                log_info "Removing kustomization: $kustomization_name"
+                kubectl --kubeconfig="$KUBECONFIG_PATH" delete kustomization "$kustomization_name" -n flux-system 2>/dev/null || log_debug "Kustomization $kustomization_name already removed"
+            fi
+        done
+    else
+        log_debug "No stack-specific kustomizations found to remove"
     fi
 
     # Optionally clean up the GitRepository (be careful with shared repos)
@@ -212,16 +228,7 @@ fi
 
 # Show deployment status
 log_info "Software stack '${SOFTWARE_STACK}' deployment completed!"
-log_info "GitOps Status:"
 export KUBECONFIG="$KUBECONFIG_PATH"
-
-# Show filtered GitOps status (only sources and kustomizations)
-if flux get sources git 2>/dev/null; then
-    echo
-    flux get kustomizations 2>/dev/null || true
-else
-    log_warn "Could not get flux status"
-fi
 
 log_success "Software stack '${SOFTWARE_STACK}' deployed successfully!"
 log_info "Monitor deployment: make status"
