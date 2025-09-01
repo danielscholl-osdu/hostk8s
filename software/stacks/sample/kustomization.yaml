@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
   - stack.yaml
+  - repository.yaml
