@@ -6,6 +6,20 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
 metadata:
+  name: flux-system
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://community.opengroup.org/danielscholl/hostk8s
+  ref:
+    branch: main
+  ignore: |
+    exclude all
+    !/software/components/
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
   name: flux-system-${SOFTWARE_STACK}
   namespace: flux-system
 spec:
@@ -14,8 +28,5 @@ spec:
   ref:
     branch: ${GITOPS_BRANCH}
   ignore: |
-    # exclude all
-    /*
-    # include components and the specific stack
-    !/software/components/
+    exclude all
     !/software/stacks/${SOFTWARE_STACK}/

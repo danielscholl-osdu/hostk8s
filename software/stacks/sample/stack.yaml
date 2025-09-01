@@ -14,7 +14,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system-sample
+    name: flux-system
   path: ./software/components/certs
   prune: true
   wait: true

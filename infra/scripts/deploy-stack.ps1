@@ -100,17 +100,15 @@ function Remove-Stack {
                     Log-Info "Removing application kustomization: $kustomizationName"
                     kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization "$kustomizationName" -n flux-system 2>$null
                 }
-                # Delete component kustomizations (these are typically shared but created by stacks)
+                # Skip component kustomizations - they are shared across stacks
                 elseif ($kustomizationName -like "component-*") {
-                    Log-Info "Removing component kustomization: $kustomizationName"
-                    kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomization "$kustomizationName" -n flux-system 2>$null
+                    Log-Debug "Skipping shared component kustomization: $kustomizationName"
                 }
             }
         }
     }
 
-    # Clean up the GitRepository (it was created by the stack, not by Flux installation)
-    # Now using unique names per stack: flux-system-${StackName}
+    # Clean up only the stack-specific GitRepository, keep flux-system for shared components
     if ($StackName -match "^extension/") {
         Log-Info "Cleaning up extension GitRepository..."
         try {
@@ -119,12 +117,13 @@ function Remove-Stack {
             Log-Debug "Extension GitRepository already cleaned up"
         }
     } else {
-        Log-Info "Cleaning up GitRepository: flux-system-$StackName"
+        Log-Info "Cleaning up stack-specific GitRepository: flux-system-$StackName"
         try {
             kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete gitrepository "flux-system-$StackName" -n flux-system 2>$null
         } catch {
-            Log-Debug "GitRepository already cleaned up"
+            Log-Debug "Stack GitRepository already cleaned up"
         }
+        Log-Info "Keeping flux-system GitRepository (shared components repository)"
     }
 
     Log-Success "Software stack '$StackName' removal initiated"

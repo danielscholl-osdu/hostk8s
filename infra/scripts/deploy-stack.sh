@@ -110,23 +110,22 @@ remove_stack() {
                 if [[ "$kustomization_name" == "app-${SOFTWARE_STACK}"* ]]; then
                     log_info "Removing application kustomization: $kustomization_name"
                     kubectl --kubeconfig="$KUBECONFIG_PATH" delete kustomization "$kustomization_name" -n flux-system 2>/dev/null || log_debug "Kustomization $kustomization_name already removed"
-                # Delete component kustomizations (these are typically shared but created by stacks)
+                # Skip component kustomizations - they are shared across stacks
                 elif [[ "$kustomization_name" == "component-"* ]]; then
-                    log_info "Removing component kustomization: $kustomization_name"
-                    kubectl --kubeconfig="$KUBECONFIG_PATH" delete kustomization "$kustomization_name" -n flux-system 2>/dev/null || log_debug "Kustomization $kustomization_name already removed"
+                    log_debug "Skipping shared component kustomization: $kustomization_name"
                 fi
             fi
         done
     fi
 
-    # Clean up the GitRepository (it was created by the stack, not by Flux installation)
-    # Now using unique names per stack: flux-system-${SOFTWARE_STACK}
+    # Clean up only the stack-specific GitRepository, keep flux-system for shared components
     if [[ "$SOFTWARE_STACK" == extension/* ]]; then
         log_info "Cleaning up extension GitRepository..."
         kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository extension-stack-system -n flux-system 2>/dev/null || log_debug "Extension GitRepository already cleaned up"
     else
-        log_info "Cleaning up GitRepository: flux-system-${SOFTWARE_STACK}"
-        kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository "flux-system-${SOFTWARE_STACK}" -n flux-system 2>/dev/null || log_debug "GitRepository already cleaned up"
+        log_info "Cleaning up stack-specific GitRepository: flux-system-${SOFTWARE_STACK}"
+        kubectl --kubeconfig="$KUBECONFIG_PATH" delete gitrepository "flux-system-${SOFTWARE_STACK}" -n flux-system 2>/dev/null || log_debug "Stack GitRepository already cleaned up"
+        log_info "Keeping flux-system GitRepository (shared components repository)"
     fi
 
     log_success "Software stack '$SOFTWARE_STACK' removal initiated"
