@@ -290,16 +290,16 @@ generate_secrets() {
 #######################################
 show_secrets() {
     if [[ -z "${STACK}" ]]; then
-        error "Stack name required. Use: make secrets-show <name>"
+        log_error "Stack name required. Use: make secrets-show <name>"
         exit 1
     fi
 
-    info "Showing secrets for stack '${STACK}'"
+    log_info "Showing secrets for stack '${STACK}'"
 
     # Get the namespace from the contract
     CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
-        error "No secret contract found for stack '${STACK}'"
+        log_error "No secret contract found for stack '${STACK}'"
         exit 1
     fi
 
@@ -308,7 +308,7 @@ show_secrets() {
 
     for namespace in ${namespaces}; do
         echo ""
-        info "Secrets in namespace '${namespace}':"
+        log_info "Secrets in namespace '${namespace}':"
         kubectl get secrets -n "${namespace}" -l "hostk8s.io/contract=${STACK}" \
             -o custom-columns=NAME:.metadata.name,TYPE:.metadata.labels.hostk8s\\.io/type,AGE:.metadata.creationTimestamp
     done
@@ -319,16 +319,16 @@ show_secrets() {
 #######################################
 clean_secrets() {
     if [[ -z "${STACK}" ]]; then
-        error "Stack name required. Use: make secrets-clean <name>"
+        log_error "Stack name required. Use: make secrets-clean <name>"
         exit 1
     fi
 
-    warn "Removing secrets for stack '${STACK}'"
+    log_warn "Removing secrets for stack '${STACK}'"
 
     # Get the namespace from the contract
     CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
-        error "No secret contract found for stack '${STACK}'"
+        log_error "No secret contract found for stack '${STACK}'"
         exit 1
     fi
 
@@ -336,7 +336,7 @@ clean_secrets() {
     local namespaces=$(yq eval '.spec.secrets[].namespace' "${CONTRACT_FILE}" | sort -u)
 
     for namespace in ${namespaces}; do
-        info "Cleaning secrets in namespace '${namespace}'"
+        log_info "Cleaning secrets in namespace '${namespace}'"
         kubectl delete secrets -n "${namespace}" -l "hostk8s.io/contract=${STACK}" --ignore-not-found=true
     done
 
@@ -344,10 +344,10 @@ clean_secrets() {
     SECRETS_DIR="data/secrets/${STACK}"
     if [[ -d "${SECRETS_DIR}" ]]; then
         rm -rf "${SECRETS_DIR}"
-        info "Cleaned local secret cache"
+        log_info "Cleaned local secret cache"
     fi
 
-    success "Secrets cleaned successfully"
+    log_success "Secrets cleaned successfully"
 }
 
 #######################################
