@@ -74,7 +74,9 @@ function Build-Application {
             Log-Info "Building and pushing Docker images..."
 
             # Use docker buildx bake with push for detailed output
-            & docker buildx bake --push
+            Log-Info "Running: docker buildx bake --push"
+            $process = Start-Process -FilePath "docker" -ArgumentList "buildx", "bake", "--push" -Wait -PassThru -NoNewWindow
+            $LASTEXITCODE = $process.ExitCode
 
             if ($LASTEXITCODE -eq 0) {
                 Log-Success "Build and push complete"
@@ -88,16 +90,19 @@ function Build-Application {
 
             # Build the application
             Log-Info "Building Docker images..."
-            docker compose build
+            Log-Info "Running: docker compose build"
+            $buildProcess = Start-Process -FilePath "docker" -ArgumentList "compose", "build" -Wait -PassThru -NoNewWindow
 
-            if ($LASTEXITCODE -ne 0) {
+            if ($buildProcess.ExitCode -ne 0) {
                 Log-Error "Docker build failed"
                 return $false
             }
 
             # Push to registry
             Log-Info "Pushing to registry..."
-            docker compose push
+            Log-Info "Running: docker compose push"
+            $pushProcess = Start-Process -FilePath "docker" -ArgumentList "compose", "push" -Wait -PassThru -NoNewWindow
+            $LASTEXITCODE = $pushProcess.ExitCode
 
             if ($LASTEXITCODE -eq 0) {
                 Log-Success "Build and push complete"
