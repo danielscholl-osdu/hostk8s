@@ -255,8 +255,8 @@ function Show-DockerServices {
     try {
         $otherContainers = docker ps -a --filter "name=hostk8s-*" --format "{{.Names}}" 2>$null
         if ($LASTEXITCODE -eq 0 -and $otherContainers) {
-            $containers = $otherContainers -split "`n" | Where-Object { 
-                $_ -and $_ -notmatch "hostk8s-registry" -and $_ -notmatch "hostk8s-control-plane" -and $_ -notmatch "hostk8s-worker" 
+            $containers = $otherContainers -split "`n" | Where-Object {
+                $_ -and $_ -notmatch "hostk8s-registry" -and $_ -notmatch "hostk8s-control-plane" -and $_ -notmatch "hostk8s-worker"
             }
             foreach ($container in $containers) {
                 if ($container.Trim()) {
@@ -418,6 +418,80 @@ function Show-AddonStatus {
 
         Write-Host "🌐 NGINX Ingress: $ingressStatus"
         if ($ingressMessage) { Write-Host "   Status: $ingressMessage" }
+    }
+
+    # Show Registry status if installed (hybrid Docker/K8s)
+    if (Test-Registry) {
+        $registryStatus = "NotReady"
+        $registryMessage = ""
+
+        # Check Docker registry first (preferred)
+        if (Test-RegistryDocker) {
+            # Check if Kubernetes registry UI is also running
+            $cmd = "kubectl get deployment registry-ui -n hostk8s --no-headers 2>`$null"
+            $registryUi = Invoke-Expression $cmd
+            if ($LASTEXITCODE -eq 0 -and $registryUi) {
+                $parts = $registryUi -split "\s+"
+                if ($parts.Count -ge 2) {
+                    $ready = $parts[1]
+                    $readyParts = $ready -split "/"
+                    if ($readyParts.Count -eq 2 -and $readyParts[0] -eq $readyParts[1] -and [int]$readyParts[0] -gt 0) {
+                        $registryStatus = "Ready"
+                        $registryMessage = "Docker registry with Web UI at http://localhost:8080/registry"
+                    } else {
+                        $registryStatus = "Ready"
+                        $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"
+                    }
+                } else {
+                    $registryStatus = "Ready"
+                    $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"
+                }
+            } else {
+                $registryStatus = "Ready"
+                $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"
+            }
+        } elseif (Test-RegistryK8s) {
+            # Fallback to Kubernetes registry
+            $cmd = "kubectl get deployment registry-core -n hostk8s --no-headers 2>`$null"
+            $registryCore = Invoke-Expression $cmd
+            if ($LASTEXITCODE -eq 0 -and $registryCore) {
+                $parts = $registryCore -split "\s+"
+                if ($parts.Count -ge 2) {
+                    $ready = $parts[1]
+                    $readyParts = $ready -split "/"
+                    if ($readyParts.Count -eq 2 -and $readyParts[0] -eq $readyParts[1] -and [int]$readyParts[0] -gt 0) {
+                        $registryStatus = "Ready"
+                        $registryMessage = "Kubernetes registry at http://localhost:5001"
+
+                        # Check if registry UI is also running
+                        $cmd = "kubectl get deployment registry-ui -n hostk8s --no-headers 2>`$null"
+                        $registryUi = Invoke-Expression $cmd
+                        if ($LASTEXITCODE -eq 0 -and $registryUi) {
+                            $uiParts = $registryUi -split "\s+"
+                            if ($uiParts.Count -ge 2) {
+                                $uiReady = $uiParts[1]
+                                $uiReadyParts = $uiReady -split "/"
+                                if ($uiReadyParts.Count -eq 2 -and $uiReadyParts[0] -eq $uiReadyParts[1] -and [int]$uiReadyParts[0] -gt 0) {
+                                    $registryMessage = "$registryMessage, Web UI: Available at http://registry.localhost:8080"
+                                }
+                            }
+                        }
+                    } else {
+                        $registryStatus = "Pending"
+                        $registryMessage = "Registry deployment $ready ready"
+                    }
+                }
+            } else {
+                $registryStatus = "NotReady"
+                $registryMessage = "Registry deployment not found"
+            }
+        } else {
+            $registryStatus = "NotReady"
+            $registryMessage = "No registry found (Docker or Kubernetes)"
+        }
+
+        Write-Host "📦 Registry: $registryStatus"
+        if ($registryMessage) { Write-Host "   Status: $registryMessage" }
     }
 
     Write-Host ""

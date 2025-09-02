@@ -48,6 +48,36 @@ if (-not (Test-Path $registryDataDir)) {
     New-Item -ItemType Directory -Force -Path $registryDataDir >$null
 }
 
+# Ensure registry docker subdirectory exists (required by registry for storage)
+$registryDockerDir = "$registryDataDir/docker"
+if (-not (Test-Path $registryDockerDir)) {
+    Write-Host "[$timestamp] [Registry] Creating registry docker storage subdirectory..."
+    New-Item -ItemType Directory -Force -Path $registryDockerDir >$null
+}
+
+# Create registry config file if it doesn't exist
+$registryConfigFile = "$(Get-Location)/data/registry-config.yml"
+if (-not (Test-Path $registryConfigFile) -or (Test-Path $registryConfigFile -PathType Container)) {
+    Write-Host "[$timestamp] [Registry] Creating registry configuration file..."
+    @"
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+http:
+  addr: :5000
+  headers:
+    Access-Control-Allow-Origin: ['*']
+    Access-Control-Allow-Methods: ['HEAD', 'GET', 'OPTIONS', 'DELETE']
+    Access-Control-Allow-Headers: ['Authorization', 'Accept']
+    Access-Control-Max-Age: [1728000]
+    Access-Control-Allow-Credentials: [true]
+"@ | Set-Content -Path $registryConfigFile
+}
+
 # Function to setup containerd configuration on Kind nodes
 function Setup-ContainerdConfig {
     param([string]$node)
@@ -126,7 +156,7 @@ if (-not $skipContainerCreation) {
       -d --restart=always `
       -p "127.0.0.1:${REGISTRY_PORT}:${REGISTRY_INTERNAL_PORT}" `
       -v "${registryDataDir}:/var/lib/registry" `
-      -v "$(Get-Location)/data/registry-config.yml:/etc/docker/registry/config.yml" `
+      -v "${registryConfigFile}:/etc/docker/registry/config.yml" `
       --name $REGISTRY_NAME `
       registry:2
 
