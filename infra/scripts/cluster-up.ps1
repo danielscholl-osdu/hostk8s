@@ -272,6 +272,17 @@ try {
     Log-Debug "Cluster status:"
     kubectl get nodes
 
+    # Setup core hostk8s namespace (always present regardless of addons)
+    Log-Info "Setting up core hostk8s namespace..."
+    $namespaceManifest = "infra/manifests/namespace.yaml"
+    if (Test-Path $namespaceManifest) {
+        kubectl apply -f $namespaceManifest
+        Log-Success "HostK8s namespace ready"
+    } else {
+        Log-Warn "HostK8s namespace manifest not found, creating namespace directly..."
+        kubectl create namespace hostk8s --dry-run=client -o yaml | kubectl apply -f -
+    }
+
     # Setup add-ons if enabled
     if ($env:METALLB_ENABLED -eq "true") {
         Log-Info "Setting up MetalLB..."
@@ -300,6 +311,36 @@ try {
             }
         } else {
             Log-Warn "Ingress setup script not found, skipping..."
+        }
+    }
+
+    if ($env:REGISTRY_ENABLED -eq "true") {
+        Log-Info "Setting up Container Registry..."
+        $registryScript = Join-Path $PSScriptRoot "setup-registry.ps1"
+        if (Test-Path $registryScript) {
+            try {
+                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
+                & $registryScript
+            } catch {
+                Log-Warn "Registry setup failed, continuing..."
+            }
+        } else {
+            Log-Warn "Registry setup script not found, skipping..."
+        }
+    }
+
+    if ($env:METRICS_DISABLED -ne "true") {
+        Log-Info "Setting up Metrics Server..."
+        $metricsScript = Join-Path $PSScriptRoot "setup-metrics.ps1"
+        if (Test-Path $metricsScript) {
+            try {
+                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
+                & $metricsScript
+            } catch {
+                Log-Warn "Metrics Server setup failed, continuing..."
+            }
+        } else {
+            Log-Warn "Metrics Server setup script not found, skipping..."
         }
     }
 

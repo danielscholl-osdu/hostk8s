@@ -218,11 +218,96 @@ function Show-IngressControllerStatus {
 }
 
 
+function Test-Metrics {
+    try {
+        $null = kubectl get deployment metrics-server -n kube-system 2>$null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
+function Show-DockerServices {
+    Log-Info "Docker Services"
+
+    $dockerServicesFound = $false
+
+    # Check for hostk8s-registry container
+    try {
+        $null = docker inspect hostk8s-registry 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            $containerStatus = docker inspect -f '{{.State.Status}}' hostk8s-registry 2>$null
+            $portInfo = docker port hostk8s-registry 2>$null
+            $portInfo = if ($portInfo) { ($portInfo -split "`n")[0] -split " " | Select-Object -Last 1 } else { "localhost:5002" }
+
+            if ($containerStatus -eq "running") {
+                Write-Host "📦 Registry Container: Ready"
+                Write-Host "   Status: Running on $portInfo"
+                Write-Host "   Network: Connected to Kind cluster"
+            } else {
+                Write-Host "📦 Registry Container: $containerStatus"
+            }
+            $dockerServicesFound = $true
+        }
+    } catch { }
+
+    # Check for other hostk8s-* containers (future extensions, excluding Kind cluster nodes)
+    try {
+        $otherContainers = docker ps -a --filter "name=hostk8s-*" --format "{{.Names}}" 2>$null
+        if ($LASTEXITCODE -eq 0 -and $otherContainers) {
+            $containers = $otherContainers -split "`n" | Where-Object { 
+                $_ -and $_ -notmatch "hostk8s-registry" -and $_ -notmatch "hostk8s-control-plane" -and $_ -notmatch "hostk8s-worker" 
+            }
+            foreach ($container in $containers) {
+                if ($container.Trim()) {
+                    $status = docker inspect -f '{{.State.Status}}' $container.Trim() 2>$null
+                    Write-Host "🔧 $($container.Trim()): $status"
+                    $dockerServicesFound = $true
+                }
+            }
+        }
+    } catch { }
+
+    if (-not $dockerServicesFound) {
+        Write-Host "   No Docker services running"
+    }
+    Write-Host ""
+}
+
 function Show-AddonStatus {
-    Log-Info "Cluster Addons"
+    Log-Info "Cluster Services"
 
     # Show cluster nodes
     Show-ClusterNodes
+
+    # Metrics Server status (core cluster infrastructure)
+    if ($env:METRICS_DISABLED -ne "true") {
+        $metricsStatus = "NotReady"
+        $metricsMessage = ""
+
+        if (Test-Metrics) {
+            # Check if metrics API is available
+            try {
+                $null = kubectl top nodes 2>$null
+                if ($LASTEXITCODE -eq 0) {
+                    $metricsStatus = "Ready"
+                    $metricsMessage = "Resource metrics available (kubectl top)"
+                } else {
+                    $metricsStatus = "Starting"
+                    $metricsMessage = "Metrics API not yet available"
+                }
+            } catch {
+                $metricsStatus = "Starting"
+                $metricsMessage = "Metrics API not yet available"
+            }
+        } else {
+            $metricsStatus = "NotReady"
+            $metricsMessage = "Deployment not found in kube-system namespace"
+        }
+
+        Write-Host "📊 Metrics Server: $metricsStatus"
+        if ($metricsMessage) { Write-Host "   Status: $metricsMessage" }
+    }
 
     # Show Flux status if installed
     if (Test-Flux) {
@@ -1068,6 +1153,7 @@ function Main {
     }
 
     Show-KubeconfigInfo
+    Show-DockerServices
     Show-AddonStatus
     Show-GitOpsResources
     Show-GitOpsApplications
