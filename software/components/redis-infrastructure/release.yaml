@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: redis
-      version: "21.0.0"  # Pin to pre-OCI version
+      version: "17.15.6"  # Pin to much older pre-OCI version
       sourceRef:
         kind: HelmRepository
         name: bitnami
