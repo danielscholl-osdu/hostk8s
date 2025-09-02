@@ -93,80 +93,12 @@ secret_exists() {
 }
 
 #######################################
-# Generate PostgreSQL secret
+# Generate secret from generic data format
 #######################################
-generate_postgresql_secret() {
+generate_secret_from_data() {
     local secret_name="$1"
     local namespace="$2"
-    local username="${3:-postgres}"
-    local database="${4:-postgres}"
-    local cluster="${5:-postgres}"
-
-    local password=$(generate_password 32)
-    local host="${cluster}-rw.${namespace}.svc.cluster.local"
-    local port="5432"
-    local url="postgresql://${username}:${password}@${host}:${port}/${database}"
-
-    cat << EOF
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ${secret_name}
-  namespace: ${namespace}
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "${STACK}"
-    hostk8s.io/type: "postgresql"
-type: kubernetes.io/basic-auth
-stringData:
-  username: "${username}"
-  password: "${password}"
-  database: "${database}"
-  host: "${host}"
-  port: "${port}"
-  url: "${url}"
-EOF
-}
-
-#######################################
-# Generate Redis secret
-#######################################
-generate_redis_secret() {
-    local secret_name="$1"
-    local namespace="$2"
-    local service="${3:-redis}"
-
-    local password=$(generate_password 32)
-    local host="${service}.${namespace}.svc.cluster.local"
-    local port="6379"
-
-    cat << EOF
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ${secret_name}
-  namespace: ${namespace}
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "${STACK}"
-    hostk8s.io/type: "redis"
-type: Opaque
-stringData:
-  password: "${password}"
-  host: "${host}"
-  port: "${port}"
-EOF
-}
-
-#######################################
-# Generate generic secret
-#######################################
-generate_generic_secret() {
-    local secret_name="$1"
-    local namespace="$2"
-    shift 2
+    local data_json="$3"
 
     echo "---"
     echo "apiVersion: v1"
@@ -177,64 +109,50 @@ generate_generic_secret() {
     echo "  labels:"
     echo "    hostk8s.io/managed: \"true\""
     echo "    hostk8s.io/contract: \"${STACK}\""
-    echo "    hostk8s.io/type: \"generic\""
     echo "type: Opaque"
     echo "stringData:"
 
-    # Process field definitions passed as arguments
-    while [[ $# -gt 0 ]]; do
-        local field_name="$1"
-        local field_type="$2"
-        local field_value="$3"
-        shift 3 || break
+    # Process each data entry
+    local data_count=$(echo "${data_json}" | yq eval '. | length' -)
 
-        case "${field_type}" in
-            password)
-                echo "  ${field_name}: \"$(generate_password ${field_value})\""
-                ;;
-            token)
-                echo "  ${field_name}: \"$(generate_token ${field_value})\""
-                ;;
-            hex)
-                echo "  ${field_name}: \"$(generate_hex ${field_value})\""
-                ;;
-            static)
-                echo "  ${field_name}: \"${field_value}\""
-                ;;
-            *)
-                echo "  ${field_name}: \"$(generate_token ${field_value})\""
-                ;;
-        esac
+    for ((j=0; j<${data_count}; j++)); do
+        local key=$(echo "${data_json}" | yq eval ".[${j}].key" -)
+        local value=$(echo "${data_json}" | yq eval ".[${j}].value // null" -)
+        local generate_type=$(echo "${data_json}" | yq eval ".[${j}].generate // null" -)
+        local length=$(echo "${data_json}" | yq eval ".[${j}].length // 32" -)
+
+        if [[ "${value}" != "null" ]]; then
+            # Static value
+            echo "  ${key}: \"${value}\""
+        elif [[ "${generate_type}" != "null" ]]; then
+            # Generated value
+            case "${generate_type}" in
+                password)
+                    echo "  ${key}: \"$(generate_password ${length})\""
+                    ;;
+                token)
+                    echo "  ${key}: \"$(generate_token ${length})\""
+                    ;;
+                hex)
+                    echo "  ${key}: \"$(generate_hex ${length})\""
+                    ;;
+                uuid)
+                    if command -v uuidgen &> /dev/null; then
+                        echo "  ${key}: \"$(uuidgen | tr '[:upper:]' '[:lower:]')\""
+                    else
+                        # Fallback to random hex
+                        echo "  ${key}: \"$(generate_hex 32)\""
+                    fi
+                    ;;
+                *)
+                    echo "  ${key}: \"$(generate_token ${length})\""
+                    ;;
+            esac
+        fi
     done
 }
 
-#######################################
-# Generate API key secret
-#######################################
-generate_apikey_secret() {
-    local secret_name="$1"
-    local namespace="$2"
-    local prefix="${3:-}"
-    local length="${4:-32}"
-
-    local key="${prefix}$(generate_token ${length})"
-
-    cat << EOF
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: ${secret_name}
-  namespace: ${namespace}
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "${STACK}"
-    hostk8s.io/type: "apikey"
-type: Opaque
-stringData:
-  key: "${key}"
-EOF
-}
+# Legacy type-specific generators removed - using generic data format
 
 #######################################
 # Parse and generate secrets from contract
@@ -283,46 +201,40 @@ generate_secrets() {
             continue
         fi
 
-        info "Generating secret '${name}' of type '${type}'"
+        info "Generating secret '${name}'"
 
-        case "${type}" in
-            postgresql)
-                local username=$(yq eval ".spec.secrets[${i}].spec.username // \"postgres\"" "${CONTRACT_FILE}")
-                local database=$(yq eval ".spec.secrets[${i}].spec.database" "${CONTRACT_FILE}")
-                local cluster=$(yq eval ".spec.secrets[${i}].spec.cluster" "${CONTRACT_FILE}")
-                generate_postgresql_secret "${name}" "${namespace}" "${username}" "${database}" "${cluster}" >> "${temp_file}"
-                ;;
+        # Check if secret uses new data format or old type format
+        local has_data=$(yq eval ".spec.secrets[${i}] | has(\"data\")" "${CONTRACT_FILE}")
 
-            redis)
-                local service=$(yq eval ".spec.secrets[${i}].spec.service // \"redis\"" "${CONTRACT_FILE}")
-                generate_redis_secret "${name}" "${namespace}" "${service}" >> "${temp_file}"
-                ;;
+        if [[ "${has_data}" == "true" ]]; then
+            # New generic data format
+            local data_json=$(yq eval ".spec.secrets[${i}].data" "${CONTRACT_FILE}" -o=json)
+            generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
+        elif [[ "${type}" != "null" ]]; then
+            # Legacy type-based format (for backwards compatibility)
+            case "${type}" in
+                postgresql)
+                    local username=$(yq eval ".spec.secrets[${i}].spec.username // \"postgres\"" "${CONTRACT_FILE}")
+                    local database=$(yq eval ".spec.secrets[${i}].spec.database" "${CONTRACT_FILE}")
+                    local cluster=$(yq eval ".spec.secrets[${i}].spec.cluster" "${CONTRACT_FILE}")
 
-            apikey)
-                local prefix=$(yq eval ".spec.secrets[${i}].spec.prefix // \"\"" "${CONTRACT_FILE}")
-                local length=$(yq eval ".spec.secrets[${i}].spec.length // 32" "${CONTRACT_FILE}")
-                generate_apikey_secret "${name}" "${namespace}" "${prefix}" "${length}" >> "${temp_file}"
-                ;;
-
-            generic)
-                # Build field arguments for generic secret
-                local field_args=""
-                local field_count=$(yq eval ".spec.secrets[${i}].spec.fields | length" "${CONTRACT_FILE}")
-
-                for ((j=0; j<${field_count}; j++)); do
-                    local field_name=$(yq eval ".spec.secrets[${i}].spec.fields[${j}].name" "${CONTRACT_FILE}")
-                    local field_generate=$(yq eval ".spec.secrets[${i}].spec.fields[${j}].generate // \"token\"" "${CONTRACT_FILE}")
-                    local field_value=$(yq eval ".spec.secrets[${i}].spec.fields[${j}].length // .spec.secrets[${i}].spec.fields[${j}].value // 32" "${CONTRACT_FILE}")
-                    field_args="${field_args} ${field_name} ${field_generate} ${field_value}"
-                done
-
-                generate_generic_secret "${name}" "${namespace}" ${field_args} >> "${temp_file}"
-                ;;
-
-            *)
-                warn "Unknown secret type '${type}' for secret '${name}', skipping"
-                ;;
-        esac
+                    # Convert to new format internally
+                    local data_json='[
+                        {"key": "username", "value": "'${username}'"},
+                        {"key": "password", "generate": "password", "length": 32},
+                        {"key": "database", "value": "'${database}'"},
+                        {"key": "host", "value": "'${cluster}'-rw.'${namespace}'.svc.cluster.local"},
+                        {"key": "port", "value": "5432"}
+                    ]'
+                    generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
+                    ;;
+                *)
+                    warn "Unknown secret type '${type}' for secret '${name}', skipping"
+                    ;;
+            esac
+        else
+            warn "Secret '${name}' has no data or type definition, skipping"
+        fi
     done
 
     # Apply generated secrets to cluster

@@ -93,101 +93,51 @@ function Test-SecretExists {
 }
 
 #######################################
-# Generate PostgreSQL secret
+# Generate secret from generic data format
 #######################################
-function Generate-PostgreSQLSecret {
+function Generate-SecretFromData {
     param(
         [string]$SecretName,
         [string]$Namespace,
-        [string]$Username = "postgres",
-        [string]$Database = "postgres",
-        [string]$Cluster = "postgres"
-    )
-
-    $password = Generate-Password -Length 32
-    $host = "$Cluster-rw.$Namespace.svc.cluster.local"
-    $port = "5432"
-    $url = "postgresql://${Username}:${password}@${host}:${port}/${Database}"
-
-    @"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: $SecretName
-  namespace: $Namespace
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "$Stack"
-    hostk8s.io/type: "postgresql"
-type: kubernetes.io/basic-auth
-stringData:
-  username: "$Username"
-  password: "$password"
-  database: "$Database"
-  host: "$host"
-  port: "$port"
-  url: "$url"
-"@
-}
-
-#######################################
-# Generate Redis secret
-#######################################
-function Generate-RedisSecret {
-    param(
-        [string]$SecretName,
-        [string]$Namespace,
-        [string]$Service = "redis"
-    )
-
-    $password = Generate-Password -Length 32
-    $host = "$Service.$Namespace.svc.cluster.local"
-    $port = "6379"
-
-    @"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: $SecretName
-  namespace: $Namespace
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "$Stack"
-    hostk8s.io/type: "redis"
-type: Opaque
-stringData:
-  password: "$password"
-  host: "$host"
-  port: "$port"
-"@
-}
-
-#######################################
-# Generate generic secret
-#######################################
-function Generate-GenericSecret {
-    param(
-        [string]$SecretName,
-        [string]$Namespace,
-        [hashtable]$Fields
+        [array]$Data
     )
 
     $stringData = ""
-    foreach ($field in $Fields.Keys) {
-        $fieldDef = $Fields[$field]
-        $value = ""
 
-        switch ($fieldDef.generate) {
-            "password" { $value = Generate-Password -Length $fieldDef.length }
-            "token" { $value = Generate-Token -Length $fieldDef.length }
-            "hex" { $value = Generate-Hex -Length $fieldDef.length }
-            "static" { $value = $fieldDef.value }
-            default { $value = Generate-Token -Length $fieldDef.length }
+    foreach ($item in $Data) {
+        $key = $item.key
+
+        if ($item.value) {
+            # Static value
+            $stringData += "  $key: `"$($item.value)`"`n"
         }
+        elseif ($item.generate) {
+            # Generated value
+            $length = if ($item.length) { $item.length } else { 32 }
 
-        $stringData += "  $field: `"$value`"`n"
+            switch ($item.generate) {
+                "password" {
+                    $value = Generate-Password -Length $length
+                    $stringData += "  $key: `"$value`"`n"
+                }
+                "token" {
+                    $value = Generate-Token -Length $length
+                    $stringData += "  $key: `"$value`"`n"
+                }
+                "hex" {
+                    $value = Generate-Hex -Length $length
+                    $stringData += "  $key: `"$value`"`n"
+                }
+                "uuid" {
+                    $value = [guid]::NewGuid().ToString()
+                    $stringData += "  $key: `"$value`"`n"
+                }
+                default {
+                    $value = Generate-Token -Length $length
+                    $stringData += "  $key: `"$value`"`n"
+                }
+            }
+        }
     }
 
     @"
@@ -200,41 +150,12 @@ metadata:
   labels:
     hostk8s.io/managed: "true"
     hostk8s.io/contract: "$Stack"
-    hostk8s.io/type: "generic"
 type: Opaque
 stringData:
 $stringData"@
 }
 
-#######################################
-# Generate API key secret
-#######################################
-function Generate-APIKeySecret {
-    param(
-        [string]$SecretName,
-        [string]$Namespace,
-        [string]$Prefix = "",
-        [int]$Length = 32
-    )
-
-    $key = "$Prefix$(Generate-Token -Length $Length)"
-
-    @"
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: $SecretName
-  namespace: $Namespace
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "$Stack"
-    hostk8s.io/type: "apikey"
-type: Opaque
-stringData:
-  key: "$key"
-"@
-}
+# Legacy type-specific generators removed - using generic data format
 
 #######################################
 # Parse and generate secrets from contract
@@ -283,46 +204,40 @@ function Invoke-GenerateSecrets {
             continue
         }
 
-        Write-Info "Generating secret '$name' of type '$type'"
+        Write-Info "Generating secret '$name'"
 
         $secretYaml = ""
 
-        switch ($type) {
-            "postgresql" {
-                $username = if ($secret.spec.username) { $secret.spec.username } else { "postgres" }
-                $database = $secret.spec.database
-                $cluster = $secret.spec.cluster
-                $secretYaml = Generate-PostgreSQLSecret -SecretName $name -Namespace $namespace `
-                    -Username $username -Database $database -Cluster $cluster
-            }
+        # Check if secret uses new data format
+        if ($secret.data) {
+            # New generic data format
+            $secretYaml = Generate-SecretFromData -SecretName $name -Namespace $namespace -Data $secret.data
+        }
+        elseif ($type) {
+            # Legacy type-based format (for backwards compatibility)
+            switch ($type) {
+                "postgresql" {
+                    $username = if ($secret.spec.username) { $secret.spec.username } else { "postgres" }
+                    $database = $secret.spec.database
+                    $cluster = $secret.spec.cluster
 
-            "redis" {
-                $service = if ($secret.spec.service) { $secret.spec.service } else { "redis" }
-                $secretYaml = Generate-RedisSecret -SecretName $name -Namespace $namespace -Service $service
-            }
-
-            "apikey" {
-                $prefix = if ($secret.spec.prefix) { $secret.spec.prefix } else { "" }
-                $length = if ($secret.spec.length) { $secret.spec.length } else { 32 }
-                $secretYaml = Generate-APIKeySecret -SecretName $name -Namespace $namespace `
-                    -Prefix $prefix -Length $length
-            }
-
-            "generic" {
-                $fields = @{}
-                foreach ($field in $secret.spec.fields) {
-                    $fields[$field.name] = @{
-                        generate = if ($field.generate) { $field.generate } else { "token" }
-                        length = if ($field.length) { $field.length } else { 32 }
-                        value = $field.value
-                    }
+                    # Convert to new format internally
+                    $data = @(
+                        @{key = "username"; value = $username},
+                        @{key = "password"; generate = "password"; length = 32},
+                        @{key = "database"; value = $database},
+                        @{key = "host"; value = "$cluster-rw.$namespace.svc.cluster.local"},
+                        @{key = "port"; value = "5432"}
+                    )
+                    $secretYaml = Generate-SecretFromData -SecretName $name -Namespace $namespace -Data $data
                 }
-                $secretYaml = Generate-GenericSecret -SecretName $name -Namespace $namespace -Fields $fields
+                default {
+                    Write-Warning "Unknown secret type '$type' for secret '$name', skipping"
+                }
             }
-
-            default {
-                Write-Warning "Unknown secret type '$type' for secret '$name', skipping"
-            }
+        }
+        else {
+            Write-Warning "Secret '$name' has no data or type definition, skipping"
         }
 
         if ($secretYaml) {
