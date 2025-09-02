@@ -9,6 +9,9 @@ metadata:
 
 resources:
   - namespace.yaml
+  - source.yaml
+  - release.yaml
+  # Legacy manual manifests - will be removed after testing
   - redis-config.yaml
   - redis-pvc.yaml
   - redis-deployment.yaml
@@ -18,9 +21,3 @@ resources:
 
 commonLabels:
   hostk8s.component: redis-infrastructure
-
-images:
-  - name: redis
-    newTag: "7-alpine"
-  - name: rediscommander/redis-commander
-    newTag: "latest"
