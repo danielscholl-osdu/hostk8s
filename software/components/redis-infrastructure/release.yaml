@@ -92,20 +92,15 @@ spec:
       namespace: redis-infrastructure
   chart:
     spec:
-      chart: redis-commander
-      version: ">=0.1.0 <1.0.0"
+      chart: ./k8s/helm-chart/redis-commander
       sourceRef:
-        kind: HelmRepository
+        kind: GitRepository
         name: redis-commander
         namespace: flux-system
   values:
-    # Redis connection configuration
-    hosts: "redis:6379"  # Connect to Bitnami Redis service
-
     # Service configuration (maintain current NodePort access)
     service:
       type: NodePort
-      port: 8081
       nodePort: 30081
 
     # Resources (match current setup)
@@ -117,44 +112,19 @@ spec:
         memory: "128Mi"
         cpu: "100m"
 
-    # Health checks
-    livenessProbe:
-      enabled: true
-      httpGet:
-        path: /
-        port: 8081
-      initialDelaySeconds: 30
-      periodSeconds: 10
+    # Redis connection
+    hosts: "redis:6379"  # Connect to Bitnami Redis service
 
-    readinessProbe:
-      enabled: true
-      httpGet:
-        path: /
-        port: 8081
-      initialDelaySeconds: 10
-      periodSeconds: 5
-
-    # Security context
-    securityContext:
-      runAsNonRoot: true
-      runAsUser: 1000
-      readOnlyRootFilesystem: true
-      allowPrivilegeEscalation: false
-      capabilities:
-        drop:
-          - ALL
-
-    # Environment variables
+    # Environment variables from secret
     env:
-      - name: HTTP_USER
-        value: "admin"
-      - name: HTTP_PASSWORD
-        value: "admin"
-      - name: K8S_SIGTERM
-        value: "1"  # Kubernetes compatibility
-
-    # Labels
-    labels:
-      hostk8s.component: redis-infrastructure
-      app: redis-commander
-      component: management-ui
+      HTTP_USER:
+        valueFrom:
+          secretKeyRef:
+            name: redis-commander-credentials
+            key: username
+      HTTP_PASSWORD:
+        valueFrom:
+          secretKeyRef:
+            name: redis-commander-credentials
+            key: password
+      K8S_SIGTERM: "1"

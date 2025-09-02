@@ -11,6 +11,7 @@ resources:
   - namespace.yaml
   - source.yaml
   - release.yaml
+  - hostk8s.secrets.yaml
   # Legacy manual manifests - will be removed after testing
   - redis-config.yaml
   - redis-pvc.yaml
