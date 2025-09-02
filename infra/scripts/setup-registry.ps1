@@ -42,7 +42,7 @@ try {
 }
 
 # Create host directory for registry storage if it doesn't exist
-$registryDataDir = "$(Get-Location)/data/registry"
+$registryDataDir = "$(Get-Location)\data\registry"
 if (-not (Test-Path $registryDataDir)) {
     Write-Host "[$timestamp] [Registry] Creating registry storage directory..."
     New-Item -ItemType Directory -Force -Path $registryDataDir >$null
@@ -56,7 +56,7 @@ if (-not (Test-Path $registryDockerDir)) {
 }
 
 # Create registry config file if it doesn't exist
-$registryConfigFile = "$(Get-Location)/data/registry-config.yml"
+$registryConfigFile = "$(Get-Location)\data\registry-config.yml"
 if (-not (Test-Path $registryConfigFile) -or (Test-Path $registryConfigFile -PathType Container)) {
     Write-Host "[$timestamp] [Registry] Creating registry configuration file..."
     @"
@@ -85,7 +85,8 @@ function Setup-ContainerdConfig {
     Write-Host "[$timestamp] [Registry] Configuring containerd on node: $node"
 
     # Create containerd registry config directory
-    docker exec $node mkdir -p "/etc/containerd/certs.d/localhost:$REGISTRY_INTERNAL_PORT"
+    $cmd = "docker exec `"$node`" mkdir -p `"/etc/containerd/certs.d/localhost:$REGISTRY_INTERNAL_PORT`""
+    Invoke-Expression $cmd
 
     # Create hosts.toml configuration
     $hostsConfig = @"
@@ -97,16 +98,15 @@ server = "http://${REGISTRY_NAME}:${REGISTRY_INTERNAL_PORT}"
 "@
 
     # Use here-string with docker exec
-    docker exec $node sh -c @"
-cat > /etc/containerd/certs.d/localhost:${REGISTRY_INTERNAL_PORT}/hosts.toml << 'EOF'
-$hostsConfig
-EOF
-"@
+    $escapedHostsConfig = $hostsConfig -replace '"', '\"'
+    $cmd = "docker exec `"$node`" sh -c `"cat > /etc/containerd/certs.d/localhost:$REGISTRY_INTERNAL_PORT/hosts.toml << 'EOF'`n$escapedHostsConfig`nEOF`""
+    Invoke-Expression $cmd
 
     # Note: Kind config should already have config_path set, so hosts.toml should work without restart
     # Only modify containerd config if absolutely necessary
     try {
-        $configCheck = docker exec $node grep -q "config_path.*certs.d" /etc/containerd/config.toml 2>$null
+        $cmd = "docker exec `"$node`" grep -q `"config_path.*certs.d`" /etc/containerd/config.toml 2>`$null"
+        Invoke-Expression $cmd
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[$timestamp] [Registry] Warning: config_path not found in containerd config"
             Write-Host "[$timestamp] [Registry] Registry may not work properly without containerd reconfiguration"
@@ -122,19 +122,24 @@ EOF
 # Check if registry container already exists and is running
 $skipContainerCreation = $false
 try {
-    docker inspect $REGISTRY_NAME >$null 2>&1
+    $cmd = "docker inspect `"$REGISTRY_NAME`" 2>`$null"
+    Invoke-Expression $cmd >$null
     if ($LASTEXITCODE -eq 0) {
-        $containerStatus = docker inspect -f '{{.State.Status}}' $REGISTRY_NAME 2>$null
+        $cmd = "docker inspect -f '{{.State.Status}}' `"$REGISTRY_NAME`" 2>`$null"
+        $containerStatus = Invoke-Expression $cmd
         if ($containerStatus -eq "running") {
             Write-Host "[$timestamp] [Registry] ✅ Container Registry already running"
 
             # Verify network connectivity
-            $networkCheck = docker network inspect kind 2>$null | Select-String $REGISTRY_NAME
+            $cmd = "docker network inspect kind 2>`$null"
+            $networkOutput = Invoke-Expression $cmd
+            $networkCheck = $networkOutput | Select-String $REGISTRY_NAME
             if ($networkCheck) {
                 Write-Host "[$timestamp] [Registry] Registry container connected to Kind network"
             } else {
                 Write-Host "[$timestamp] [Registry] Connecting registry to Kind network..."
-                docker network connect "kind" $REGISTRY_NAME
+                $cmd = "docker network connect `"kind`" `"$REGISTRY_NAME`""
+                Invoke-Expression $cmd
             }
 
             # Skip container creation but continue with UI deployment and configuration
@@ -142,7 +147,8 @@ try {
         } else {
             Write-Host "[$timestamp] [Registry] Registry container exists but not running ($containerStatus)"
             Write-Host "[$timestamp] [Registry] Removing old container..."
-            docker rm -f $REGISTRY_NAME 2>$null
+            $cmd = "docker rm -f `"$REGISTRY_NAME`" 2>`$null"
+            Invoke-Expression $cmd
         }
     }
 } catch {
@@ -152,22 +158,28 @@ try {
 # Create registry container (if not skipped)
 if (-not $skipContainerCreation) {
     Write-Host "[$timestamp] [Registry] Creating Container Registry container..."
+    # Convert Windows paths to Unix-style for Docker volume mounts
+    $registryDataVolume = $registryDataDir -replace '\\', '/'
+    $registryConfigVolume = $registryConfigFile -replace '\\', '/'
+
     docker run `
       -d --restart=always `
       -p "127.0.0.1:${REGISTRY_PORT}:${REGISTRY_INTERNAL_PORT}" `
-      -v "${registryDataDir}:/var/lib/registry" `
-      -v "${registryConfigFile}:/etc/docker/registry/config.yml" `
+      -v "${registryDataVolume}:/var/lib/registry" `
+      -v "${registryConfigVolume}:/etc/docker/registry/config.yml" `
       --name $REGISTRY_NAME `
       registry:2
 
     # Connect registry to Kind network
     Write-Host "[$timestamp] [Registry] Connecting registry to Kind network..."
-    docker network connect "kind" $REGISTRY_NAME
+    $cmd = "docker network connect `"kind`" `"$REGISTRY_NAME`""
+    Invoke-Expression $cmd
 }
 
 # Configure containerd on all Kind nodes
 Write-Host "[$timestamp] [Registry] Configuring containerd on Kind cluster nodes..."
-$nodes = kind get nodes --name $env:CLUSTER_NAME
+$cmd = "kind get nodes --name `"$env:CLUSTER_NAME`""
+$nodes = Invoke-Expression $cmd
 foreach ($node in $nodes) {
     if ($node.Trim()) {
         Setup-ContainerdConfig $node.Trim()
@@ -177,19 +189,23 @@ foreach ($node in $nodes) {
 # Deploy registry UI (conditional on NGINX ingress)
 $registryUiDeployed = $false
 try {
-    kubectl get ingressclass nginx >$null 2>&1
+    $cmd = "kubectl get ingressclass nginx 2>`$null"
+    Invoke-Expression $cmd >$null
     if ($LASTEXITCODE -eq 0) {
         Write-Host "[$timestamp] [Registry] NGINX Ingress detected, installing Registry UI..."
 
         # Note: hostk8s namespace is created during cluster startup
 
-        kubectl apply -f "$(Get-Location)/infra/manifests/registry-ui.yaml" 2>$null
+        $manifestPath = "$(Get-Location)\infra\manifests\registry-ui.yaml"
+        $cmd = "kubectl apply -f `"$manifestPath`" 2>`$null"
+        Invoke-Expression $cmd
         if ($LASTEXITCODE -eq 0) {
             $registryUiDeployed = $true
 
             # Wait for registry UI to be ready
             Write-Host "[$timestamp] [Registry] Waiting for Container Registry UI to be ready..."
-            kubectl wait --namespace hostk8s --for=condition=ready pod --selector=app=registry-ui --timeout=120s >$null 2>&1
+            $cmd = "kubectl wait --namespace hostk8s --for=condition=ready pod --selector=app=registry-ui --timeout=120s 2>`$null"
+            Invoke-Expression $cmd >$null
         }
     } else {
         Write-Host "[$timestamp] [Registry] NGINX Ingress not available - Registry UI skipped"

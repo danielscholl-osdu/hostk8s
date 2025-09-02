@@ -219,9 +219,11 @@ function Test-Registry {
 
 function Test-RegistryDocker {
     try {
-        $null = docker inspect hostk8s-registry 2>$null
+        $cmd = "docker inspect hostk8s-registry 2>`$null"
+        Invoke-Expression $cmd >$null
         if ($LASTEXITCODE -eq 0) {
-            $status = docker inspect -f '{{.State.Status}}' hostk8s-registry 2>$null
+            $cmd = "docker inspect -f '{{.State.Status}}' hostk8s-registry 2>`$null"
+            $status = Invoke-Expression $cmd
             return $status -eq "running"
         }
         return $false
@@ -232,9 +234,11 @@ function Test-RegistryDocker {
 
 function Test-RegistryK8s {
     try {
-        $null = kubectl get namespace hostk8s 2>$null
+        $cmd = "kubectl get namespace hostk8s 2>`$null"
+        Invoke-Expression $cmd >$null
         if ($LASTEXITCODE -eq 0) {
-            $null = kubectl get deployment registry-ui -n hostk8s 2>$null
+            $cmd = "kubectl get deployment registry-ui -n hostk8s 2>`$null"
+            Invoke-Expression $cmd >$null
             return $LASTEXITCODE -eq 0
         }
         return $false

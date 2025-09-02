@@ -49,7 +49,7 @@ spec:
         - name: CATALOG_ELEMENTS_LIMIT
           value: "1000"
         - name: BASE_PATH
-          value: "/registry"
+          value: "/"
         resources:
           requests:
             memory: "64Mi"
@@ -167,6 +167,10 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/server-snippet: |
+      location = /registry {
+        return 301 $scheme://$http_host/registry/;
+      }
 spec:
   ingressClassName: nginx
   rules:

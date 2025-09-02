@@ -220,7 +220,8 @@ function Show-IngressControllerStatus {
 
 function Test-Metrics {
     try {
-        $null = kubectl get deployment metrics-server -n kube-system 2>$null
+        $cmd = "kubectl get deployment metrics-server -n kube-system 2>`$null"
+        Invoke-Expression $cmd >$null
         return $LASTEXITCODE -eq 0
     } catch {
         return $false
@@ -288,7 +289,8 @@ function Show-AddonStatus {
         if (Test-Metrics) {
             # Check if metrics API is available
             try {
-                $null = kubectl top nodes 2>$null
+                $cmd = "kubectl top nodes 2>`$null"
+                Invoke-Expression $cmd >$null
                 if ($LASTEXITCODE -eq 0) {
                     $metricsStatus = "Ready"
                     $metricsMessage = "Resource metrics available (kubectl top)"
@@ -500,7 +502,8 @@ function Show-AddonStatus {
 function Show-ClusterNodes {
     # Get all nodes info
     try {
-        $allNodes = kubectl get nodes --no-headers 2>$null
+        $cmd = "kubectl get nodes --no-headers 2>`$null"
+        $allNodes = Invoke-Expression $cmd
         if ($LASTEXITCODE -ne 0 -or -not $allNodes) {
             Write-Host "🕹️ Cluster Nodes: NotFound"
             Write-Host "   Status: No nodes found"
@@ -1216,7 +1219,8 @@ function Main {
 
     # Check if cluster is running
     try {
-        $null = kubectl cluster-info 2>$null
+        $cmd = "kubectl cluster-info 2>`$null"
+        Invoke-Expression $cmd >$null
         if ($LASTEXITCODE -ne 0) {
             Log-Warn "Cluster not running. Run 'make start' to start the cluster."
             return
