@@ -77,6 +77,4 @@ spec:
   superuserSecret:
     name: postgres-credentials
 
-  # Monitoring disabled for local dev
-  monitoring:
-    enabled: false
+  # Monitoring disabled for local dev (omit monitoring section to disable)
