@@ -439,7 +439,7 @@ function Show-AddonStatus {
                     $readyParts = $ready -split "/"
                     if ($readyParts.Count -eq 2 -and $readyParts[0] -eq $readyParts[1] -and [int]$readyParts[0] -gt 0) {
                         $registryStatus = "Ready"
-                        $registryMessage = "Docker registry with Web UI at http://localhost:8080/registry"
+                        $registryMessage = "Docker registry with Web UI at http://localhost:8080/registry/"
                     } else {
                         $registryStatus = "Ready"
                         $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"

@@ -880,7 +880,7 @@ show_addon_status() {
 
             if [ "$ui_ready" = "ready" ]; then
                 registry_status="Ready"
-                registry_message="Docker registry with Web UI at http://localhost:8080/registry"
+                registry_message="Docker registry with Web UI at http://localhost:8080/registry/"
             else
                 registry_status="Ready"
                 registry_message="Docker registry API at http://localhost:5002 (UI not deployed)"
