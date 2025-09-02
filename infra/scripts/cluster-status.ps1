@@ -474,7 +474,7 @@ function Show-AddonStatus {
                                 $uiReady = $uiParts[1]
                                 $uiReadyParts = $uiReady -split "/"
                                 if ($uiReadyParts.Count -eq 2 -and $uiReadyParts[0] -eq $uiReadyParts[1] -and [int]$uiReadyParts[0] -gt 0) {
-                                    $registryMessage = "$registryMessage, Web UI: Available at http://registry.localhost:8080"
+                                    $registryMessage = "$registryMessage, Web UI: Available at http://localhost:8080/registry/"
                                 }
                             }
                         }

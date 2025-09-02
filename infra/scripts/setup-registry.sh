@@ -188,5 +188,5 @@ EOF
 log_info "[Registry] ✅ Container Registry setup complete"
 log_info "[Registry] Access registry API at http://localhost:${REGISTRY_PORT}"
 if [ "$registry_ui_deployed" = true ]; then
-    log_info "[Registry] Web UI available at http://registry.localhost:8080"
+    log_info "[Registry] Web UI available at http://localhost:8080/registry/"
 fi

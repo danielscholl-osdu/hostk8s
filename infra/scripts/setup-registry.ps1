@@ -275,5 +275,5 @@ try {
 Write-Host "[$timestamp] [Registry] ✅ Container Registry setup complete"
 Write-Host "[$timestamp] [Registry] Access registry API at http://localhost:${REGISTRY_PORT}"
 if ($registryUiDeployed) {
-    Write-Host "[$timestamp] [Registry] Web UI available at http://registry.localhost:8080"
+    Write-Host "[$timestamp] [Registry] Web UI available at http://localhost:8080/registry/"
 }
