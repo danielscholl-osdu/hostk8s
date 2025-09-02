@@ -80,6 +80,35 @@ function Generate-Hex {
 }
 
 #######################################
+# Wait for namespace to be ready
+#######################################
+function Wait-ForNamespace {
+    param(
+        [string]$Namespace,
+        [int]$TimeoutSeconds = 60
+    )
+
+    Write-Info "Waiting for namespace '$Namespace' to be ready..."
+
+    $count = 0
+    while ((kubectl get namespace $Namespace 2>&1 | Out-String) -match "NotFound|Error") {
+        if ($count -ge $TimeoutSeconds) {
+            Write-Error "Timeout waiting for namespace '$Namespace' to be created"
+            Write-Error "Run 'kubectl get namespace $Namespace' to check status"
+            return $false
+        }
+
+        Start-Sleep -Seconds 2
+        $count += 2
+        Write-Host "." -NoNewline
+    }
+
+    Write-Host ""
+    Write-Success "Namespace '$Namespace' is ready"
+    return $true
+}
+
+#######################################
 # Check if secret exists in cluster
 #######################################
 function Test-SecretExists {
@@ -192,6 +221,14 @@ function Invoke-GenerateSecrets {
 
     # Parse contract
     $contract = Get-Content $ContractFile -Raw | yq eval -o=json | ConvertFrom-Json
+
+    # Get unique namespaces first and wait for them to be ready
+    $namespaces = $contract.spec.secrets | ForEach-Object { $_.namespace } | Select-Object -Unique
+    foreach ($namespace in $namespaces) {
+        if (-not (Wait-ForNamespace -Namespace $namespace)) {
+            exit 1
+        }
+    }
 
     foreach ($secret in $contract.spec.secrets) {
         $name = $secret.name

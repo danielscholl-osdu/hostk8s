@@ -79,6 +79,33 @@ generate_hex() {
 }
 
 #######################################
+# Wait for namespace to be ready
+#######################################
+wait_for_namespace() {
+    local namespace="$1"
+    local timeout="${2:-60}"  # Default 60 second timeout
+    local count=0
+
+    info "Waiting for namespace '${namespace}' to be ready..."
+
+    while ! kubectl get namespace "${namespace}" &>/dev/null; do
+        if [ $count -ge $timeout ]; then
+            error "Timeout waiting for namespace '${namespace}' to be created"
+            error "Run 'kubectl get namespace ${namespace}' to check status"
+            return 1
+        fi
+
+        sleep 2
+        count=$((count + 2))
+        echo -n "."
+    done
+
+    echo ""
+    success "Namespace '${namespace}' is ready"
+    return 0
+}
+
+#######################################
 # Check if secret exists in cluster
 #######################################
 secret_exists() {
@@ -186,6 +213,12 @@ generate_secrets() {
         error "Install with: brew install yq (Mac) or download from https://github.com/mikefarah/yq"
         exit 1
     fi
+
+    # Get unique namespaces first and wait for them to be ready
+    local namespaces=$(yq eval '.spec.secrets[].namespace' "${CONTRACT_FILE}" | sort -u)
+    for namespace in ${namespaces}; do
+        wait_for_namespace "${namespace}" || exit 1
+    done
 
     # Process each secret in the contract
     local secret_count=$(yq eval '.spec.secrets | length' "${CONTRACT_FILE}")

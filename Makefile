@@ -57,8 +57,8 @@ stop: ## Stop cluster
 	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT)
 
 up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) generate $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) 2>/dev/null || true
 	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) generate $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) 2>/dev/null || true
 
 # Handle arguments as targets to avoid "No rule to make target" errors
 minimal:
