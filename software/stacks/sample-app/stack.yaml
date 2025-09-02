@@ -74,7 +74,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system-sample-app
-  path: ./software/stacks/sample-app/app
+  path: ./software/stacks/sample-app/manifests
   prune: true
   wait: true
   healthChecks:

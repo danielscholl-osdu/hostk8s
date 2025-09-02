@@ -8,13 +8,14 @@ metadata:
 
 resources:
   - namespace.yaml
+  - database-storage.yaml
+  - database.yaml
   - vote-deployment.yaml
   - vote-service.yaml
   - result-deployment.yaml
   - result-service.yaml
   - worker-deployment.yaml
   - voting-ingress.yaml
-  - postgres/
 
 commonLabels:
   hostk8s.app: sample-app
