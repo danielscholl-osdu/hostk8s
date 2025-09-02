@@ -10,7 +10,7 @@ show_usage() {
     echo "Options:"
     echo "  -h, --help    Show this help"
     echo ""
-    echo "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
+    echo "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, yq, docker"
     echo ""
     echo "Supported package managers:"
     echo "  - Homebrew (brew) - macOS/Linux"
@@ -39,9 +39,11 @@ check_tool() {
                 ;;
             "flux-operator-mcp")
                 version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
+            "yq")
+                version=$(yq --version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
                 ;;
         esac
-        
+
         if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
             if [ -n "$version" ]; then
                 log_debug "  $tool: ${CYAN}$version${NC}"
@@ -72,9 +74,11 @@ check_tool() {
                 ;;
             "flux-operator-mcp")
                 version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
+            "yq")
+                version=$(yq --version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
                 ;;
         esac
-        
+
         if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
             if [ -n "$version" ]; then
                 log_debug "  $tool: ${CYAN}$version${NC}"
@@ -97,6 +101,7 @@ install_with_homebrew() {
         "helm:brew install helm"
         "flux:brew install fluxcd/tap/flux"
         "flux-operator-mcp:brew install controlplaneio-fluxcd/tap/flux-operator-mcp"
+        "yq:brew install yq"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -118,6 +123,7 @@ install_with_apt() {
         "helm:curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null && echo 'deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main' | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list && sudo apt update && sudo apt install -y helm"
         "flux:curl -s https://fluxcd.io/install.sh | sudo bash"
         "flux-operator-mcp:curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/"
+        "yq:sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -136,6 +142,7 @@ install_with_apk() {
         "helm:sudo apk add --no-cache helm"
         "flux:curl -s https://fluxcd.io/install.sh | sudo sh"
         "flux-operator-mcp:curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/"
+        "yq:sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -149,7 +156,7 @@ validate_ci_environment() {
     local env_name="$1"
     log_debug "$env_name environment detected - dependencies should be pre-installed"
 
-    local tools=("kind" "kubectl" "helm" "flux" "flux-operator-mcp")
+    local tools=("kind" "kubectl" "helm" "flux" "flux-operator-mcp" "yq")
     local missing_tools=()
 
     for tool in "${tools[@]}"; do
@@ -196,7 +203,7 @@ install_dependencies() {
                 log_debug "------------------------"
             fi
             log_error "No supported package manager found (brew, apt, or apk)."
-            log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
+            log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, yq, docker"
             log_info "Installation guides:"
             log_info "  - kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
             log_info "  - kubectl: https://kubernetes.io/docs/tasks/tools/"

@@ -125,6 +125,15 @@ deploy: ## Deploy application (Usage: make deploy [app-name] [namespace] - defau
 remove: ## Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)
 	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) remove "$(word 2,$(MAKECMDGOALS))" $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),$(if $(NAMESPACE),$(NAMESPACE),default))
 
+secrets-generate: ## Generate ephemeral secrets for a stack (Usage: make secrets-generate <stack-name>)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) generate $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+
+secrets-show: ## Show secrets for a stack (Usage: make secrets-show <stack-name>)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) show $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+
+secrets-clean: ## Clean secrets for a stack (Usage: make secrets-clean <stack-name>)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) clean $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+
 # Handle app and namespace arguments as targets to avoid "No rule to make target" errors
 %:
 	@:
@@ -141,12 +150,3 @@ logs: ## View recent cluster events and logs
 
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
 	@$(SCRIPT_RUNNER) ./infra/scripts/build$(SCRIPT_EXT) "$(word 2,$(MAKECMDGOALS))"
-
-secrets-generate: ## Generate ephemeral secrets for a stack (Usage: make secrets-generate <stack-name>)
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) generate $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
-
-secrets-show: ## Show secrets for a stack (Usage: make secrets-show <stack-name>)
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) show $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
-
-secrets-clean: ## Clean secrets for a stack (Usage: make secrets-clean <stack-name>)
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) clean $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)

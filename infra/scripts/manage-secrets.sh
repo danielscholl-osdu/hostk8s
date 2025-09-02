@@ -86,12 +86,12 @@ wait_for_namespace() {
     local timeout="${2:-60}"  # Default 60 second timeout
     local count=0
 
-    info "Waiting for namespace '${namespace}' to be ready..."
+    log_info "Waiting for namespace '${namespace}' to be ready..."
 
     while ! kubectl get namespace "${namespace}" &>/dev/null; do
         if [ $count -ge $timeout ]; then
-            error "Timeout waiting for namespace '${namespace}' to be created"
-            error "Run 'kubectl get namespace ${namespace}' to check status"
+            log_error "Timeout waiting for namespace '${namespace}' to be created"
+            log_error "Run 'kubectl get namespace ${namespace}' to check status"
             return 1
         fi
 
@@ -101,7 +101,7 @@ wait_for_namespace() {
     done
 
     echo ""
-    success "Namespace '${namespace}' is ready"
+    log_success "Namespace '${namespace}' is ready"
     return 0
 }
 
@@ -186,7 +186,7 @@ generate_secret_from_data() {
 #######################################
 generate_secrets() {
     if [[ -z "${STACK}" ]]; then
-        error "Stack name required. Use: make secrets-generate <name>"
+        log_error "Stack name required. Use: make secrets-generate <name>"
         exit 1
     fi
 
@@ -194,11 +194,11 @@ generate_secrets() {
     SECRETS_DIR="data/secrets/${STACK}"
 
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
-        info "No secret contract found for stack '${STACK}'"
+        log_info "No secret contract found for stack '${STACK}'"
         return 0
     fi
 
-    info "Generating secrets for stack '${STACK}'"
+    log_info "Generating secrets for stack '${STACK}'"
 
     # Create secrets directory
     mkdir -p "${SECRETS_DIR}"
@@ -209,8 +209,8 @@ generate_secrets() {
 
     # Parse contract using yq
     if ! command -v yq &> /dev/null; then
-        error "yq is required for parsing YAML contracts"
-        error "Install with: brew install yq (Mac) or download from https://github.com/mikefarah/yq"
+        log_error "yq is required for parsing YAML contracts"
+        log_error "Install with: brew install yq (Mac) or download from https://github.com/mikefarah/yq"
         exit 1
     fi
 
@@ -230,11 +230,11 @@ generate_secrets() {
 
         # Skip if secret already exists (idempotency)
         if secret_exists "${name}" "${namespace}"; then
-            info "Secret '${name}' already exists in namespace '${namespace}', skipping"
+            log_info "Secret '${name}' already exists in namespace '${namespace}', skipping"
             continue
         fi
 
-        info "Generating secret '${name}'"
+        log_info "Generating secret '${name}'"
 
         # Check if secret uses new data format or old type format
         local has_data=$(yq eval ".spec.secrets[${i}] | has(\"data\")" "${CONTRACT_FILE}")
@@ -262,26 +262,26 @@ generate_secrets() {
                     generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
                     ;;
                 *)
-                    warn "Unknown secret type '${type}' for secret '${name}', skipping"
+                    log_warn "Unknown secret type '${type}' for secret '${name}', skipping"
                     ;;
             esac
         else
-            warn "Secret '${name}' has no data or type definition, skipping"
+            log_warn "Secret '${name}' has no data or type definition, skipping"
         fi
     done
 
     # Apply generated secrets to cluster
     if [[ -s "${temp_file}" ]]; then
-        info "Applying generated secrets to cluster"
+        log_info "Applying generated secrets to cluster"
         kubectl apply -f "${temp_file}"
 
         # Save a copy for reference (but it's gitignored)
         cp "${temp_file}" "${SECRETS_DIR}/generated.yaml"
         rm "${temp_file}"
 
-        success "Secrets generated and applied successfully"
+        log_success "Secrets generated and applied successfully"
     else
-        info "No new secrets to generate"
+        log_info "No new secrets to generate"
     fi
 }
 
