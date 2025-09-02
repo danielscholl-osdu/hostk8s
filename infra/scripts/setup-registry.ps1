@@ -197,15 +197,45 @@ try {
         # Note: hostk8s namespace is created during cluster startup
 
         $manifestPath = "$(Get-Location)\infra\manifests\registry-ui.yaml"
-        $cmd = "kubectl apply -f `"$manifestPath`" 2>`$null"
-        Invoke-Expression $cmd
-        if ($LASTEXITCODE -eq 0) {
+        Write-Host "[$timestamp] [Registry] Applying registry UI manifest: $manifestPath"
+
+        # Apply manifest with error capture
+        $cmd = "kubectl apply -f `"$manifestPath`""
+        $applyOutput = Invoke-Expression $cmd 2>&1
+        $applyExitCode = $LASTEXITCODE
+
+        Write-Host "[$timestamp] [Registry] kubectl apply output: $applyOutput"
+        Write-Host "[$timestamp] [Registry] kubectl apply exit code: $applyExitCode"
+
+        if ($applyExitCode -eq 0) {
             $registryUiDeployed = $true
 
             # Wait for registry UI to be ready
             Write-Host "[$timestamp] [Registry] Waiting for Container Registry UI to be ready..."
-            $cmd = "kubectl wait --namespace hostk8s --for=condition=ready pod --selector=app=registry-ui --timeout=120s 2>`$null"
-            Invoke-Expression $cmd >$null
+            $cmd = "kubectl wait --namespace hostk8s --for=condition=ready pod --selector=app=registry-ui --timeout=120s"
+            $waitOutput = Invoke-Expression $cmd 2>&1
+            Write-Host "[$timestamp] [Registry] kubectl wait output: $waitOutput"
+        } else {
+            Write-Host "[$timestamp] [Registry] ❌ Registry UI deployment failed"
+            Write-Host "[$timestamp] [Registry] Troubleshooting registry UI deployment..."
+
+            # Check if ingresses were created
+            $cmd = "kubectl get ingress -n hostk8s -l hostk8s.addon=registry"
+            $ingressList = Invoke-Expression $cmd 2>&1
+            Write-Host "[$timestamp] [Registry] Registry ingresses: $ingressList"
+
+            # Check ingress controller logs if UI ingress creation failed
+            $cmd = "kubectl get ingress registry-ui -n hostk8s 2>&1"
+            $uiIngressStatus = Invoke-Expression $cmd
+            Write-Host "[$timestamp] [Registry] UI Ingress status: $uiIngressStatus"
+
+            if ($uiIngressStatus -match "NotFound") {
+                Write-Host "[$timestamp] [Registry] ❌ UI Ingress was not created - likely manifest parsing error"
+                # Get nginx ingress controller logs for debugging
+                $cmd = "kubectl logs -n ingress-nginx deployment/ingress-nginx-controller --tail=10"
+                $nginxLogs = Invoke-Expression $cmd 2>&1
+                Write-Host "[$timestamp] [Registry] Recent nginx logs: $nginxLogs"
+            }
         }
     } else {
         Write-Host "[$timestamp] [Registry] NGINX Ingress not available - Registry UI skipped"
