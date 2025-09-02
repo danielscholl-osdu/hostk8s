@@ -74,7 +74,7 @@ function Build-Application {
             Log-Info "Building and pushing Docker images..."
 
             # Use docker buildx bake with push for detailed output
-            docker buildx bake --push
+            & docker buildx bake --push
 
             if ($LASTEXITCODE -eq 0) {
                 Log-Success "Build and push complete"
