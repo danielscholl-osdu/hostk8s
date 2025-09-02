@@ -220,7 +220,8 @@ function Show-IngressControllerStatus {
 
 function Test-Metrics {
     try {
-        $null = kubectl get deployment metrics-server -n kube-system 2>$null
+        $cmd = "kubectl get deployment metrics-server -n kube-system 2>`$null"
+        Invoke-Expression $cmd >$null
         return $LASTEXITCODE -eq 0
     } catch {
         return $false
@@ -255,8 +256,8 @@ function Show-DockerServices {
     try {
         $otherContainers = docker ps -a --filter "name=hostk8s-*" --format "{{.Names}}" 2>$null
         if ($LASTEXITCODE -eq 0 -and $otherContainers) {
-            $containers = $otherContainers -split "`n" | Where-Object { 
-                $_ -and $_ -notmatch "hostk8s-registry" -and $_ -notmatch "hostk8s-control-plane" -and $_ -notmatch "hostk8s-worker" 
+            $containers = $otherContainers -split "`n" | Where-Object {
+                $_ -and $_ -notmatch "hostk8s-registry" -and $_ -notmatch "hostk8s-control-plane" -and $_ -notmatch "hostk8s-worker"
             }
             foreach ($container in $containers) {
                 if ($container.Trim()) {
@@ -288,7 +289,8 @@ function Show-AddonStatus {
         if (Test-Metrics) {
             # Check if metrics API is available
             try {
-                $null = kubectl top nodes 2>$null
+                $cmd = "kubectl top nodes 2>`$null"
+                Invoke-Expression $cmd >$null
                 if ($LASTEXITCODE -eq 0) {
                     $metricsStatus = "Ready"
                     $metricsMessage = "Resource metrics available (kubectl top)"
@@ -420,13 +422,88 @@ function Show-AddonStatus {
         if ($ingressMessage) { Write-Host "   Status: $ingressMessage" }
     }
 
+    # Show Registry status if installed (hybrid Docker/K8s)
+    if (Test-Registry) {
+        $registryStatus = "NotReady"
+        $registryMessage = ""
+
+        # Check Docker registry first (preferred)
+        if (Test-RegistryDocker) {
+            # Check if Kubernetes registry UI is also running
+            $cmd = "kubectl get deployment registry-ui -n hostk8s --no-headers 2>`$null"
+            $registryUi = Invoke-Expression $cmd
+            if ($LASTEXITCODE -eq 0 -and $registryUi) {
+                $parts = $registryUi -split "\s+"
+                if ($parts.Count -ge 2) {
+                    $ready = $parts[1]
+                    $readyParts = $ready -split "/"
+                    if ($readyParts.Count -eq 2 -and $readyParts[0] -eq $readyParts[1] -and [int]$readyParts[0] -gt 0) {
+                        $registryStatus = "Ready"
+                        $registryMessage = "Docker registry with Web UI at http://localhost:8080/registry/"
+                    } else {
+                        $registryStatus = "Ready"
+                        $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"
+                    }
+                } else {
+                    $registryStatus = "Ready"
+                    $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"
+                }
+            } else {
+                $registryStatus = "Ready"
+                $registryMessage = "Docker registry API at http://localhost:5002 (UI not deployed)"
+            }
+        } elseif (Test-RegistryK8s) {
+            # Fallback to Kubernetes registry
+            $cmd = "kubectl get deployment registry-core -n hostk8s --no-headers 2>`$null"
+            $registryCore = Invoke-Expression $cmd
+            if ($LASTEXITCODE -eq 0 -and $registryCore) {
+                $parts = $registryCore -split "\s+"
+                if ($parts.Count -ge 2) {
+                    $ready = $parts[1]
+                    $readyParts = $ready -split "/"
+                    if ($readyParts.Count -eq 2 -and $readyParts[0] -eq $readyParts[1] -and [int]$readyParts[0] -gt 0) {
+                        $registryStatus = "Ready"
+                        $registryMessage = "Kubernetes registry at http://localhost:5001"
+
+                        # Check if registry UI is also running
+                        $cmd = "kubectl get deployment registry-ui -n hostk8s --no-headers 2>`$null"
+                        $registryUi = Invoke-Expression $cmd
+                        if ($LASTEXITCODE -eq 0 -and $registryUi) {
+                            $uiParts = $registryUi -split "\s+"
+                            if ($uiParts.Count -ge 2) {
+                                $uiReady = $uiParts[1]
+                                $uiReadyParts = $uiReady -split "/"
+                                if ($uiReadyParts.Count -eq 2 -and $uiReadyParts[0] -eq $uiReadyParts[1] -and [int]$uiReadyParts[0] -gt 0) {
+                                    $registryMessage = "$registryMessage, Web UI: Available at http://localhost:8080/registry/"
+                                }
+                            }
+                        }
+                    } else {
+                        $registryStatus = "Pending"
+                        $registryMessage = "Registry deployment $ready ready"
+                    }
+                }
+            } else {
+                $registryStatus = "NotReady"
+                $registryMessage = "Registry deployment not found"
+            }
+        } else {
+            $registryStatus = "NotReady"
+            $registryMessage = "No registry found (Docker or Kubernetes)"
+        }
+
+        Write-Host "📦 Registry: $registryStatus"
+        if ($registryMessage) { Write-Host "   Status: $registryMessage" }
+    }
+
     Write-Host ""
 }
 
 function Show-ClusterNodes {
     # Get all nodes info
     try {
-        $allNodes = kubectl get nodes --no-headers 2>$null
+        $cmd = "kubectl get nodes --no-headers 2>`$null"
+        $allNodes = Invoke-Expression $cmd
         if ($LASTEXITCODE -ne 0 -or -not $allNodes) {
             Write-Host "🕹️ Cluster Nodes: NotFound"
             Write-Host "   Status: No nodes found"
@@ -950,46 +1027,56 @@ function Show-AppIngress {
                     # Check if ingress controller is ready
                     if (Test-IngressControllerReady) {
                         if ($appType -eq "application") {
-                            # Get detailed ingress info to show paths for GitOps applications
-                            $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            # Get detailed ingress info to show paths for GitOps applications - get ALL paths
+                            $paths = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
                             $hasTls = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.tls}' 2>$null
-                            if ($LASTEXITCODE -eq 0 -and $path) {
-                                if ($path -eq "/") {
-                                    if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                        Write-Host "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
-                                    } else {
-                                        Write-Host "   Access: http://localhost:8080/ ($name ingress)"
-                                    }
-                                } else {
-                                    if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                        Write-Host "   Access: http://localhost:8080$path, https://localhost:8443$path ($name ingress)"
-                                    } else {
-                                        Write-Host "   Access: http://localhost:8080$path ($name ingress)"
-                                    }
-                                }
-                            } else {
+
+                            # Format paths for display
+                            if ($paths -eq "/" -or -not $paths) {
+                                # Handle single root path
                                 if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
                                     Write-Host "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
                                 } else {
                                     Write-Host "   Access: http://localhost:8080/ ($name ingress)"
                                 }
+                            } else {
+                                # Handle multiple paths - split by space and create URL list
+                                $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                $urlList = @()
+
+                                # Create HTTP URLs for each path
+                                foreach ($path in $pathList) {
+                                    $urlList += "http://localhost:8080$path"
+                                }
+
+                                # Add HTTPS URLs if TLS is configured
+                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                    foreach ($path in $pathList) {
+                                        $urlList += "https://localhost:8443$path"
+                                    }
+                                }
+
+                                $urlString = $urlList -join ", "
+                                Write-Host "   Access: $urlString ($name ingress)"
                             }
                         } else {
-                            # For non-GitOps applications, use simpler format
-                            $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                            $hasTls = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.tls}' 2>$null
-                            if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080$path, https://localhost:8443$path"
-                                } else {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080$path"
-                                }
+                            # Handle other app types with multi-path support
+                            $paths = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
+                            if ($paths -eq "/" -or -not $paths) {
+                                Write-Host "   Ingress: $name -> http://localhost:8080/"
                             } else {
-                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080/, https://localhost:8443/"
-                                } else {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080/"
+                                # Handle multiple paths - split by space and create URL list
+                                $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                $urlList = @()
+
+                                foreach ($path in $pathList) {
+                                    # Clean up regex patterns for display (remove (.*) and trailing /)
+                                    $cleanPath = $path -replace '\(.*\)', '' -replace '/$', ''
+                                    $urlList += "http://localhost:8080$cleanPath"
                                 }
+
+                                $urlString = $urlList -join ", "
+                                Write-Host "   Ingress: $name -> $urlString"
                             }
                         }
                     } else {
@@ -1096,9 +1183,16 @@ function Show-HelmAppResources {
 
                     if ($hosts -eq "localhost" -or $hosts -eq "*") {
                         if (Test-IngressControllerReady) {
-                            $path = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                            if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                Write-Host "   Ingress: $name -> http://localhost:8080$path"
+                            $paths = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $paths -and $paths -ne "/") {
+                                # Handle multiple paths
+                                $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                $urlList = @()
+                                foreach ($path in $pathList) {
+                                    $urlList += "http://localhost:8080$path"
+                                }
+                                $urlString = $urlList -join ", "
+                                Write-Host "   Ingress: $name -> $urlString"
                             } else {
                                 Write-Host "   Ingress: $name -> http://localhost:8080/"
                             }
@@ -1110,9 +1204,16 @@ function Show-HelmAppResources {
                         # Handle namespace-based hostnames (e.g., test.localhost)
                         if (Test-IngressControllerReady) {
                             if ($hosts -match "\.localhost$") {
-                                $path = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                                if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                    Write-Host "   Ingress: $name -> http://${hosts}:8080$path"
+                                $paths = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
+                                if ($LASTEXITCODE -eq 0 -and $paths -and $paths -ne "/") {
+                                    # Handle multiple paths
+                                    $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                    $urlList = @()
+                                    foreach ($path in $pathList) {
+                                        $urlList += "http://${hosts}:8080$path"
+                                    }
+                                    $urlString = $urlList -join ", "
+                                    Write-Host "   Ingress: $name -> $urlString"
                                 } else {
                                     Write-Host "   Ingress: $name -> http://${hosts}:8080/"
                                 }
@@ -1142,7 +1243,8 @@ function Main {
 
     # Check if cluster is running
     try {
-        $null = kubectl cluster-info 2>$null
+        $cmd = "kubectl cluster-info 2>`$null"
+        Invoke-Expression $cmd >$null
         if ($LASTEXITCODE -ne 0) {
             Log-Warn "Cluster not running. Run 'make start' to start the cluster."
             return

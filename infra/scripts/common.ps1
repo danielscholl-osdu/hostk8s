@@ -30,7 +30,7 @@ function Log-Debug {
     if ($env:LOG_LEVEL -ne "info") {
         $timestamp = Get-Date -Format 'HH:mm:ss'
         Write-Host "[$timestamp]" -ForegroundColor $Global:GREEN -NoNewline
-        
+
         # Parse message for colored variables (pattern: variable_name: variable_value)
         if ($Message -match '^(\s+\w+):\s(.+)$') {
             $label = $matches[1]
@@ -209,6 +209,41 @@ function Test-ClusterRunning {
     if (-not (Test-Cluster)) {
         Log-Error "Cluster not found or not running. Run 'make start' first."
         exit 1
+    }
+}
+
+function Test-Registry {
+    # Check for Docker registry container OR K8s namespace
+    return (Test-RegistryDocker) -or (Test-RegistryK8s)
+}
+
+function Test-RegistryDocker {
+    try {
+        $cmd = "docker inspect hostk8s-registry 2>`$null"
+        Invoke-Expression $cmd >$null
+        if ($LASTEXITCODE -eq 0) {
+            $cmd = "docker inspect -f '{{.State.Status}}' hostk8s-registry 2>`$null"
+            $status = Invoke-Expression $cmd
+            return $status -eq "running"
+        }
+        return $false
+    } catch {
+        return $false
+    }
+}
+
+function Test-RegistryK8s {
+    try {
+        $cmd = "kubectl get namespace hostk8s 2>`$null"
+        Invoke-Expression $cmd >$null
+        if ($LASTEXITCODE -eq 0) {
+            $cmd = "kubectl get deployment registry-ui -n hostk8s 2>`$null"
+            Invoke-Expression $cmd >$null
+            return $LASTEXITCODE -eq 0
+        }
+        return $false
+    } catch {
+        return $false
     }
 }
 
