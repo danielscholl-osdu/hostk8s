@@ -1,0 +1,233 @@
+# Secret Contract Specification
+
+## Overview
+
+Secret contracts allow stacks to declare their secret requirements without storing any sensitive data in git. Secrets are generated automatically at deployment time and exist only in the Kubernetes cluster.
+
+## Contract Schema
+
+### File Location
+Secret contracts must be named `secrets.contract.yaml` and placed in the stack directory:
+```
+software/stacks/{stack-name}/secrets.contract.yaml
+```
+
+### Schema Definition
+
+```yaml
+apiVersion: hostk8s.io/v1
+kind: SecretContract
+metadata:
+  name: {stack-name}
+spec:
+  secrets:
+    - name: {secret-name}
+      namespace: {namespace}
+      type: {secret-type}
+      spec: {type-specific-fields}
+```
+
+## Secret Types
+
+### PostgreSQL Database
+```yaml
+type: postgresql
+spec:
+  username: {username}      # Database user (default: postgres)
+  database: {database}      # Database name (required)
+  cluster: {cluster-name}   # CNPG cluster name (required)
+```
+
+Generates:
+- `username`: Specified username
+- `password`: Random 32-character password
+- `database`: Database name
+- `host`: {cluster}-rw.{namespace}.svc.cluster.local
+- `port`: "5432"
+- `url`: Full PostgreSQL connection URL
+
+### Redis
+```yaml
+type: redis
+spec:
+  service: {service-name}   # Redis service name (default: redis)
+```
+
+Generates:
+- `password`: Random 32-character password
+- `host`: {service}.{namespace}.svc.cluster.local
+- `port`: "6379"
+
+### Generic Secret
+```yaml
+type: generic
+spec:
+  fields:
+    - name: {field-name}
+      generate: {generation-type}
+      length: {length}
+      value: {static-value}  # For static fields
+```
+
+Generation types:
+- `password`: Alphanumeric + symbols
+- `token`: Alphanumeric only
+- `alphanumeric`: Letters and numbers
+- `hex`: Hexadecimal
+- `base64`: Base64 encoded random bytes
+- `static`: Use provided value
+
+### API Key
+```yaml
+type: apikey
+spec:
+  prefix: {prefix}    # Optional prefix (e.g., "sk_")
+  length: 32         # Key length (default: 32)
+```
+
+Generates:
+- `key`: {prefix}{random-alphanumeric}
+
+### TLS Certificate (References)
+```yaml
+type: tls
+spec:
+  issuer: {issuer-name}      # cert-manager issuer
+  commonName: {common-name}  # Certificate CN
+  dnsNames:                  # DNS SANs
+    - {dns-name}
+```
+
+Note: This type creates a Certificate resource for cert-manager, not the actual secret.
+
+## Complete Example
+
+```yaml
+apiVersion: hostk8s.io/v1
+kind: SecretContract
+metadata:
+  name: sample-app
+spec:
+  secrets:
+    # PostgreSQL database credentials
+    - name: postgres-credentials
+      namespace: sample-app
+      type: postgresql
+      spec:
+        username: postgres
+        database: voting
+        cluster: voting-db
+
+    # Redis authentication
+    - name: redis-auth
+      namespace: sample-app
+      type: redis
+      spec:
+        service: redis-cache
+
+    # Application secrets
+    - name: app-secrets
+      namespace: sample-app
+      type: generic
+      spec:
+        fields:
+          - name: jwt_secret
+            generate: token
+            length: 64
+          - name: session_key
+            generate: password
+            length: 32
+          - name: environment
+            generate: static
+            value: development
+
+    # External API key
+    - name: api-credentials
+      namespace: sample-app
+      type: apikey
+      spec:
+        prefix: "sk_live_"
+        length: 48
+```
+
+## Generated Secret Format
+
+All generated secrets follow Kubernetes Secret conventions:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {secret-name}
+  namespace: {namespace}
+  labels:
+    hostk8s.io/managed: "true"
+    hostk8s.io/contract: "{stack-name}"
+    hostk8s.io/type: "{secret-type}"
+type: Opaque  # or kubernetes.io/basic-auth for postgresql
+stringData:
+  {field}: {value}
+```
+
+## Usage in Deployments
+
+Reference generated secrets normally in your deployments:
+
+```yaml
+# PostgreSQL connection
+env:
+  - name: DATABASE_URL
+    valueFrom:
+      secretKeyRef:
+        name: postgres-credentials
+        key: url
+
+# Individual fields
+env:
+  - name: DB_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgres-credentials
+        key: password
+```
+
+## Validation Rules
+
+1. **Required Fields**:
+   - `name`: Must be a valid Kubernetes resource name
+   - `namespace`: Must match the stack's namespace
+   - `type`: Must be one of the supported types
+
+2. **Type-Specific Requirements**:
+   - PostgreSQL: `database` and `cluster` are required
+   - Generic: At least one field must be defined
+   - TLS: `commonName` or `dnsNames` required
+
+3. **Generation Constraints**:
+   - Minimum password length: 8 characters
+   - Maximum field name length: 63 characters
+   - Supported characters in names: alphanumeric, dash, underscore
+
+## Security Considerations
+
+1. **No Storage in Git**: Generated secrets are never written to the repository
+2. **Cluster-Only**: Secrets exist only in the Kubernetes cluster
+3. **Regeneration**: Secrets can be regenerated by deleting and redeploying
+4. **Environment Separation**: Different secrets per environment/cluster
+5. **Audit Trail**: All secrets labeled with contract source
+
+## Integration with Make
+
+The secret contract is automatically processed during stack deployment:
+
+```bash
+make up {stack-name}  # Generates secrets if contract exists
+```
+
+Manual secret management uses subcommands:
+```bash
+make secrets generate STACK={stack-name}  # Generate/regenerate secrets
+make secrets show STACK={stack-name}      # View current secrets
+make secrets clean STACK={stack-name}     # Remove secrets from cluster
+make secrets help                         # Show available commands
+```

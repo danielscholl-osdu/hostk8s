@@ -1,0 +1,82 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: voting-db
+  namespace: sample-app
+spec:
+  # Single instance for development
+  instances: 1
+
+  # PostgreSQL version
+  imageName: ghcr.io/cloudnative-pg/postgresql:16
+
+  # Primary update strategy
+  primaryUpdateStrategy: unsupervised
+
+  # Bootstrap configuration with initial database
+  bootstrap:
+    initdb:
+      database: voting
+      owner: postgres
+      secret:
+        name: postgres-credentials
+      dataChecksums: true
+      encoding: UTF8
+      localeCollate: en_US.utf8
+      localeCType: en_US.utf8
+
+      # Initialize with voting app schema
+      postInitSQL:
+        - |
+          CREATE TABLE IF NOT EXISTS votes (
+            id SERIAL PRIMARY KEY,
+            vote VARCHAR(1) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+
+  # Resource limits for local development
+  resources:
+    requests:
+      memory: 128Mi
+      cpu: 50m
+    limits:
+      memory: 256Mi
+      cpu: 200m
+
+  # Storage configuration using hostPath PV
+  storage:
+    size: 1Gi
+    storageClass: sample-app-postgres
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+      volumeMode: Filesystem
+
+  # PostgreSQL configuration
+  postgresql:
+    parameters:
+      # Basic settings for development
+      max_connections: "100"
+      shared_buffers: "64MB"
+      effective_cache_size: "128MB"
+
+      # Logging for development
+      log_statement: "all"
+      log_duration: "on"
+
+    # pg_hba rules for authentication
+    pg_hba:
+      - host all all 0.0.0.0/0 md5
+      - host all all ::0/0 md5
+
+  # Reference to auto-generated superuser secret
+  superuserSecret:
+    name: postgres-credentials
+
+  # Monitoring disabled for local dev
+  monitoring:
+    enabled: false

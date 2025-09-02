@@ -27,7 +27,10 @@ spec:
           name: http
         env:
         - name: DATABASE_URL
-          value: "postgres://postgres:postgres@db.sample-app.svc.cluster.local:5432/votes"
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: url
         resources:
           requests:
             memory: "64Mi"

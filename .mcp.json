@@ -17,6 +17,9 @@
       "env": {
         "KUBECONFIG": "./data/kubeconfig/config"
       }
+    },
+     "archon": {
+      "serverUrl": "http://localhost:8051/mcp"
     }
   }
 }

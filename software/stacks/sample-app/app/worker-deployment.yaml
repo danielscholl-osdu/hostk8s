@@ -28,13 +28,22 @@ spec:
         - name: REDIS_PORT
           value: "6379"
         - name: POSTGRES_HOST
-          value: "db.sample-app.svc.cluster.local"
+          value: "voting-db-rw.sample-app.svc.cluster.local"
         - name: POSTGRES_USER
-          value: "postgres"
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: username
         - name: POSTGRES_PASSWORD
-          value: "postgres"
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: password
         - name: POSTGRES_DB
-          value: "votes"
+          valueFrom:
+            secretKeyRef:
+              name: postgres-credentials
+              key: database
         resources:
           requests:
             memory: "64Mi"

@@ -1,0 +1,28 @@
+---
+# PersistentVolume for PostgreSQL data
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: sample-app-postgres-pv
+  labels:
+    hostk8s.app: sample-app
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: sample-app-postgres
+  hostPath:
+    path: /mnt/postgres/sample-app
+    type: DirectoryOrCreate
+
+---
+# StorageClass for PostgreSQL
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: sample-app-postgres
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain

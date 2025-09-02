@@ -1,0 +1,29 @@
+######################
+## PostgreSQL Component - CloudNativePG Operator
+## Deploys CNPG operator to hostk8s namespace to enable PostgreSQL clusters
+## Stacks can then create their own Cluster resources as needed
+######################
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-postgres
+  namespace: flux-system
+  labels:
+    hostk8s.component: postgres
+    component.hostk8s.io/type: operator
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/postgres/operator
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cnpg-controller-manager
+      namespace: hostk8s

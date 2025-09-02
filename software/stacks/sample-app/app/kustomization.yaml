@@ -13,9 +13,8 @@ resources:
   - result-deployment.yaml
   - result-service.yaml
   - worker-deployment.yaml
-  - db-deployment.yaml
-  - db-service.yaml
   - voting-ingress.yaml
+  - postgres/
 
 commonLabels:
   hostk8s.app: sample-app
