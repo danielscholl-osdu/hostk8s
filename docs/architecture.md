@@ -197,6 +197,53 @@ make status                      # Verify deployment
 **Architecture Integration:**
 The build system integrates seamlessly with the GitOps stack pattern - applications can be built locally and deployed via standard Kubernetes manifests, maintaining consistency between development and production workflows. (Detailed design in [ADR-008](adr/008-source-code-build-system.md))
 
+### Ephemeral Secret Management Architecture
+
+**The Development Security Challenge:**
+Software stacks require sensitive configuration data (database passwords, API keys, tokens) for proper deployment and operation. Traditional approaches either store secrets in Git repositories (security risk) or require manual secret management (operational complexity). Development environments need automatic secret provisioning without compromising security.
+
+**The Solution:**
+The platform provides an ephemeral secret management system using contract-based declarations with automatic generation during stack deployment. Secrets exist only in the Kubernetes cluster and are never stored in Git repositories.
+
+**Key Capabilities:**
+- **Contract-Based Declarations** - YAML contracts (`hostk8s.secrets.yaml`) declaring secret requirements
+- **Automatic Generation** - Cryptographically secure generation of passwords, tokens, hex values, and UUIDs
+- **Lifecycle Integration** - Seamless integration with `make up <stack>` workflow
+- **Environment Isolation** - Different secrets per cluster/environment automatically
+- **Cross-Platform Consistency** - Identical behavior across Mac, Linux, Windows
+
+**Secret Management Workflow:**
+```bash
+# Stack declares secret requirements in hostk8s.secrets.yaml
+make up sample-app              # Deploy stack and auto-generate secrets
+kubectl get secrets -n sample-app  # View generated secrets
+# Secrets persist across cluster restarts but regenerate on fresh deployments
+```
+
+**Contract Example:**
+```yaml
+# software/stacks/sample-app/hostk8s.secrets.yaml
+apiVersion: hostk8s.io/v1
+kind: SecretContract
+metadata:
+  name: sample-app
+spec:
+  secrets:
+    - name: postgres-credentials
+      namespace: sample-app
+      data:
+        - key: username
+          value: postgres
+        - key: password
+          generate: password
+          length: 8
+        - key: host
+          value: voting-db-rw.sample-app.svc.cluster.local
+```
+
+**Architecture Integration:**
+The secret management system integrates with the GitOps stack deployment lifecycle - contracts are stored in Git while actual secrets are generated at runtime, ensuring security while maintaining declarative infrastructure. Secrets are generated after namespace creation by Flux, providing proper sequencing. (Detailed design in [ADR-013](adr/013-ephemeral-secret-management-architecture.md))
+
 ### Extensibility Architecture
 
 **The Innovation Challenge:**
@@ -462,3 +509,8 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Organized host-mode data persistence using dedicated directory structure with service-specific isolation and Kind extraMounts integration
 - **Benefits**: Data persistence, service isolation, stack organization, debugging access, cross-platform consistency
 - **Tradeoffs**: Directory complexity, host filesystem dependency, manual cleanup, storage capacity limits
+
+**[ADR-013: Ephemeral Secret Management Architecture](adr/013-ephemeral-secret-management-architecture.md)**
+- **Decision**: Implement ephemeral secret management system using contract-based declarations with automatic generation during stack deployment
+- **Benefits**: Security enhancement, development velocity, environment consistency, operational simplicity, GitOps compatibility
+- **Tradeoffs**: Cross-platform maintenance, limited generation types, namespace dependency, platform tool dependencies

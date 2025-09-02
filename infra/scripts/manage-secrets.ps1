@@ -1,47 +1,16 @@
 #######################################
-# HostK8s Secret Management Script
-# Handles ephemeral secret generation from contracts
+# HostK8s Secret Generation Script
+# Generates ephemeral secrets from hostk8s.secrets.yaml contract files
 #######################################
 
 param(
     [Parameter(Position = 0)]
-    [string]$Action = "help",
-
-    [Parameter(Position = 1)]
     [string]$Stack = ""
 )
 
 # Source common utilities
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$ScriptDir\common.ps1"
-
-# Variables
-$ContractFile = ""
-$SecretsDir = ""
-$Namespace = ""
-
-#######################################
-# Show help message
-#######################################
-function Show-Help {
-    Write-Host @"
-HostK8s Secret Management
-
-Usage: make secrets-<action> <stack-name>
-
-Actions:
-  generate    Generate secrets from contract for a stack
-  show        Display current secrets for a stack
-  clean       Remove secrets for a stack from cluster
-  help        Show this help message
-
-Examples:
-  make secrets-generate sample-app
-  make secrets-show sample-app
-  make secrets-clean sample-app
-
-"@
-}
 
 #######################################
 # Generate random password
@@ -158,7 +127,7 @@ function Generate-SecretFromData {
                     $stringData += "  $key: `"$value`"`n"
                 }
                 "uuid" {
-                    $value = [guid]::NewGuid().ToString()
+                    $value = [guid]::NewGuid().ToString().ToLower()
                     $stringData += "  $key: `"$value`"`n"
                 }
                 default {
@@ -184,14 +153,12 @@ stringData:
 $stringData"@
 }
 
-# Legacy type-specific generators removed - using generic data format
-
 #######################################
-# Parse and generate secrets from contract
+# Generate secrets from contract
 #######################################
-function Invoke-GenerateSecrets {
+function Generate-Secrets {
     if ([string]::IsNullOrEmpty($Stack)) {
-        Write-Error "Stack name required. Use: make secrets-generate <name>"
+        Write-Error "Stack name required. Usage: manage-secrets.ps1 <stack-name>"
         exit 1
     }
 
@@ -230,12 +197,15 @@ function Invoke-GenerateSecrets {
         }
     }
 
-    foreach ($secret in $contract.spec.secrets) {
+    # Process each secret in the contract
+    $secretCount = $contract.spec.secrets.Count
+
+    for ($i = 0; $i -lt $secretCount; $i++) {
+        $secret = $contract.spec.secrets[$i]
         $name = $secret.name
         $namespace = $secret.namespace
-        $type = $secret.type
 
-        # Skip if secret already exists
+        # Skip if secret already exists (idempotency)
         if (Test-SecretExists -Name $name -Namespace $namespace) {
             Write-Info "Secret '$name' already exists in namespace '$namespace', skipping"
             continue
@@ -243,43 +213,9 @@ function Invoke-GenerateSecrets {
 
         Write-Info "Generating secret '$name'"
 
-        $secretYaml = ""
-
-        # Check if secret uses new data format
-        if ($secret.data) {
-            # New generic data format
-            $secretYaml = Generate-SecretFromData -SecretName $name -Namespace $namespace -Data $secret.data
-        }
-        elseif ($type) {
-            # Legacy type-based format (for backwards compatibility)
-            switch ($type) {
-                "postgresql" {
-                    $username = if ($secret.spec.username) { $secret.spec.username } else { "postgres" }
-                    $database = $secret.spec.database
-                    $cluster = $secret.spec.cluster
-
-                    # Convert to new format internally
-                    $data = @(
-                        @{key = "username"; value = $username},
-                        @{key = "password"; generate = "password"; length = 32},
-                        @{key = "database"; value = $database},
-                        @{key = "host"; value = "$cluster-rw.$namespace.svc.cluster.local"},
-                        @{key = "port"; value = "5432"}
-                    )
-                    $secretYaml = Generate-SecretFromData -SecretName $name -Namespace $namespace -Data $data
-                }
-                default {
-                    Write-Warning "Unknown secret type '$type' for secret '$name', skipping"
-                }
-            }
-        }
-        else {
-            Write-Warning "Secret '$name' has no data or type definition, skipping"
-        }
-
-        if ($secretYaml) {
-            Add-Content -Path $tempFile -Value $secretYaml -Encoding UTF8
-        }
+        # Use generic data format
+        $secretYaml = Generate-SecretFromData -SecretName $name -Namespace $namespace -Data $secret.data
+        Add-Content -Path $tempFile -Value $secretYaml -Encoding UTF8
     }
 
     # Apply generated secrets to cluster
@@ -287,7 +223,7 @@ function Invoke-GenerateSecrets {
         Write-Info "Applying generated secrets to cluster"
         kubectl apply -f $tempFile
 
-        # Save a copy for reference
+        # Save a copy for reference (but it's gitignored)
         Copy-Item $tempFile "$SecretsDir/generated.yaml" -Force
         Remove-Item $tempFile
 
@@ -298,78 +234,6 @@ function Invoke-GenerateSecrets {
 }
 
 #######################################
-# Show secrets for a stack
-#######################################
-function Show-Secrets {
-    if ([string]::IsNullOrEmpty($Stack)) {
-        Write-Error "Stack name required. Use: make secrets-show <name>"
-        exit 1
-    }
-
-    Write-Info "Showing secrets for stack '$Stack'"
-
-    # Get the namespace from the contract
-    $ContractFile = "software/stacks/$Stack/hostk8s.secrets.yaml"
-    if (-not (Test-Path $ContractFile)) {
-        Write-Error "No secret contract found for stack '$Stack'"
-        exit 1
-    }
-
-    # Get unique namespaces from contract
-    $contract = Get-Content $ContractFile -Raw | yq eval -o=json | ConvertFrom-Json
-    $namespaces = $contract.spec.secrets | ForEach-Object { $_.namespace } | Select-Object -Unique
-
-    foreach ($namespace in $namespaces) {
-        Write-Host ""
-        Write-Info "Secrets in namespace '$namespace':"
-        kubectl get secrets -n $namespace -l "hostk8s.io/contract=$Stack" `
-            -o custom-columns=NAME:.metadata.name,TYPE:.metadata.labels.'hostk8s\.io/type',AGE:.metadata.creationTimestamp
-    }
-}
-
-#######################################
-# Clean secrets for a stack
-#######################################
-function Invoke-CleanSecrets {
-    if ([string]::IsNullOrEmpty($Stack)) {
-        Write-Error "Stack name required. Use: make secrets-clean <name>"
-        exit 1
-    }
-
-    Write-Warning "Removing secrets for stack '$Stack'"
-
-    # Get the namespace from the contract
-    $ContractFile = "software/stacks/$Stack/hostk8s.secrets.yaml"
-    if (-not (Test-Path $ContractFile)) {
-        Write-Error "No secret contract found for stack '$Stack'"
-        exit 1
-    }
-
-    # Get unique namespaces from contract
-    $contract = Get-Content $ContractFile -Raw | yq eval -o=json | ConvertFrom-Json
-    $namespaces = $contract.spec.secrets | ForEach-Object { $_.namespace } | Select-Object -Unique
-
-    foreach ($namespace in $namespaces) {
-        Write-Info "Cleaning secrets in namespace '$namespace'"
-        kubectl delete secrets -n $namespace -l "hostk8s.io/contract=$Stack" --ignore-not-found=true
-    }
-
-    # Clean local cache
-    $SecretsDir = "data/secrets/$Stack"
-    if (Test-Path $SecretsDir) {
-        Remove-Item -Recurse -Force $SecretsDir
-        Write-Info "Cleaned local secret cache"
-    }
-
-    Write-Success "Secrets cleaned successfully"
-}
-
-#######################################
 # Main execution
 #######################################
-switch ($Action) {
-    "generate" { Invoke-GenerateSecrets }
-    "show" { Show-Secrets }
-    "clean" { Invoke-CleanSecrets }
-    default { Show-Help }
-}
+Generate-Secrets
