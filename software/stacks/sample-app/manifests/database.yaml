@@ -73,7 +73,8 @@ spec:
       - host all all 0.0.0.0/0 md5
       - host all all ::0/0 md5
 
-  # Reference to auto-generated superuser secret
+  # Enable superuser access with our custom secret
+  enableSuperuserAccess: true
   superuserSecret:
     name: postgres-credentials
 
