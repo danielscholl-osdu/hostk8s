@@ -23,7 +23,7 @@ spec:
   wait: true
   healthChecks:
     - kind: Deployment
-      name: cnpg-controller-manager
+      name: cnpg-operator-cloudnative-pg
       namespace: hostk8s
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
