@@ -21,6 +21,7 @@ software/stacks/*/secrets/*.yaml
 software/stacks/*/secrets.yaml
 *.secret.yaml
 *.secrets.yaml
+!hostk8s.secrets.yaml
 
 # Secret generation temporary files
 *.tmp.yaml

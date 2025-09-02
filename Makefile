@@ -133,13 +133,6 @@ remove: ## Remove application (Usage: make remove <app-name> [namespace] or NAME
 src/%:
 	@:
 
-# Handle secrets subcommands as targets
-generate:
-	@:
-show:
-	@:
-clean:
-	@:
 
 ##@ Development Tools
 
@@ -149,5 +142,11 @@ logs: ## View recent cluster events and logs
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
 	@$(SCRIPT_RUNNER) ./infra/scripts/build$(SCRIPT_EXT) "$(word 2,$(MAKECMDGOALS))"
 
-secrets: ## Manage ephemeral secrets (Usage: make secrets [generate|show|clean] STACK=<name>)
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),help) $(STACK)
+secrets-generate: ## Generate ephemeral secrets for a stack (Usage: make secrets-generate <stack-name>)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) generate $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+
+secrets-show: ## Show secrets for a stack (Usage: make secrets-show <stack-name>)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) show $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+
+secrets-clean: ## Clean secrets for a stack (Usage: make secrets-clean <stack-name>)
+	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) clean $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)

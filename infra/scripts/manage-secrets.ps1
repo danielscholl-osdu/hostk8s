@@ -27,7 +27,7 @@ function Show-Help {
     Write-Host @"
 HostK8s Secret Management
 
-Usage: make secrets <action> [STACK=stack-name]
+Usage: make secrets-<action> <stack-name>
 
 Actions:
   generate    Generate secrets from contract for a stack
@@ -36,9 +36,9 @@ Actions:
   help        Show this help message
 
 Examples:
-  make secrets generate STACK=sample-app
-  make secrets show STACK=sample-app
-  make secrets clean STACK=sample-app
+  make secrets-generate sample-app
+  make secrets-show sample-app
+  make secrets-clean sample-app
 
 "@
 }
@@ -241,11 +241,11 @@ stringData:
 #######################################
 function Invoke-GenerateSecrets {
     if ([string]::IsNullOrEmpty($Stack)) {
-        Write-Error "Stack name required. Use: make secrets generate STACK=<name>"
+        Write-Error "Stack name required. Use: make secrets-generate <name>"
         exit 1
     }
 
-    $ContractFile = "software/stacks/$Stack/secrets.contract.yaml"
+    $ContractFile = "software/stacks/$Stack/hostk8s.secrets.yaml"
     $SecretsDir = "data/secrets/$Stack"
 
     if (-not (Test-Path $ContractFile)) {
@@ -350,14 +350,14 @@ function Invoke-GenerateSecrets {
 #######################################
 function Show-Secrets {
     if ([string]::IsNullOrEmpty($Stack)) {
-        Write-Error "Stack name required. Use: make secrets show STACK=<name>"
+        Write-Error "Stack name required. Use: make secrets-show <name>"
         exit 1
     }
 
     Write-Info "Showing secrets for stack '$Stack'"
 
     # Get the namespace from the contract
-    $ContractFile = "software/stacks/$Stack/secrets.contract.yaml"
+    $ContractFile = "software/stacks/$Stack/hostk8s.secrets.yaml"
     if (-not (Test-Path $ContractFile)) {
         Write-Error "No secret contract found for stack '$Stack'"
         exit 1
@@ -380,14 +380,14 @@ function Show-Secrets {
 #######################################
 function Invoke-CleanSecrets {
     if ([string]::IsNullOrEmpty($Stack)) {
-        Write-Error "Stack name required. Use: make secrets clean STACK=<name>"
+        Write-Error "Stack name required. Use: make secrets-clean <name>"
         exit 1
     }
 
     Write-Warning "Removing secrets for stack '$Stack'"
 
     # Get the namespace from the contract
-    $ContractFile = "software/stacks/$Stack/secrets.contract.yaml"
+    $ContractFile = "software/stacks/$Stack/hostk8s.secrets.yaml"
     if (-not (Test-Path $ContractFile)) {
         Write-Error "No secret contract found for stack '$Stack'"
         exit 1

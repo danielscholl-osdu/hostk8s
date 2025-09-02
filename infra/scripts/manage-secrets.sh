@@ -25,7 +25,7 @@ show_help() {
     cat << EOF
 HostK8s Secret Management
 
-Usage: make secrets <action> [STACK=stack-name]
+Usage: make secrets-<action> <stack-name>
 
 Actions:
   generate    Generate secrets from contract for a stack
@@ -34,9 +34,9 @@ Actions:
   help        Show this help message
 
 Examples:
-  make secrets generate STACK=sample-app
-  make secrets show STACK=sample-app
-  make secrets clean STACK=sample-app
+  make secrets-generate sample-app
+  make secrets-show sample-app
+  make secrets-clean sample-app
 
 EOF
 }
@@ -241,11 +241,11 @@ EOF
 #######################################
 generate_secrets() {
     if [[ -z "${STACK}" ]]; then
-        error "Stack name required. Use: make secrets generate STACK=<name>"
+        error "Stack name required. Use: make secrets-generate <name>"
         exit 1
     fi
 
-    CONTRACT_FILE="software/stacks/${STACK}/secrets.contract.yaml"
+    CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
     SECRETS_DIR="data/secrets/${STACK}"
 
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
@@ -345,14 +345,14 @@ generate_secrets() {
 #######################################
 show_secrets() {
     if [[ -z "${STACK}" ]]; then
-        error "Stack name required. Use: make secrets show STACK=<name>"
+        error "Stack name required. Use: make secrets-show <name>"
         exit 1
     fi
 
     info "Showing secrets for stack '${STACK}'"
 
     # Get the namespace from the contract
-    CONTRACT_FILE="software/stacks/${STACK}/secrets.contract.yaml"
+    CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
         error "No secret contract found for stack '${STACK}'"
         exit 1
@@ -374,14 +374,14 @@ show_secrets() {
 #######################################
 clean_secrets() {
     if [[ -z "${STACK}" ]]; then
-        error "Stack name required. Use: make secrets clean STACK=<name>"
+        error "Stack name required. Use: make secrets-clean <name>"
         exit 1
     fi
 
     warn "Removing secrets for stack '${STACK}'"
 
     # Get the namespace from the contract
-    CONTRACT_FILE="software/stacks/${STACK}/secrets.contract.yaml"
+    CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
         error "No secret contract found for stack '${STACK}'"
         exit 1
