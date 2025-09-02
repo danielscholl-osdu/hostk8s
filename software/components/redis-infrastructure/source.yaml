@@ -1,13 +1,15 @@
 apiVersion: source.toolkit.fluxcd.io/v1
-kind: HelmRepository
+kind: OCIRepository
 metadata:
-  name: bitnami
+  name: bitnami-redis
   namespace: flux-system
   labels:
     hostk8s.component: redis-infrastructure
 spec:
   interval: 5m
-  url: https://charts.bitnami.com/bitnami
+  url: oci://registry-1.docker.io/bitnamicharts/redis
+  ref:
+    tag: "22.0.7"
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
