@@ -1027,46 +1027,56 @@ function Show-AppIngress {
                     # Check if ingress controller is ready
                     if (Test-IngressControllerReady) {
                         if ($appType -eq "application") {
-                            # Get detailed ingress info to show paths for GitOps applications
-                            $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
+                            # Get detailed ingress info to show paths for GitOps applications - get ALL paths
+                            $paths = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
                             $hasTls = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.tls}' 2>$null
-                            if ($LASTEXITCODE -eq 0 -and $path) {
-                                if ($path -eq "/") {
-                                    if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                        Write-Host "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
-                                    } else {
-                                        Write-Host "   Access: http://localhost:8080/ ($name ingress)"
-                                    }
-                                } else {
-                                    if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                        Write-Host "   Access: http://localhost:8080$path, https://localhost:8443$path ($name ingress)"
-                                    } else {
-                                        Write-Host "   Access: http://localhost:8080$path ($name ingress)"
-                                    }
-                                }
-                            } else {
+
+                            # Format paths for display
+                            if ($paths -eq "/" -or -not $paths) {
+                                # Handle single root path
                                 if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
                                     Write-Host "   Access: http://localhost:8080/, https://localhost:8443/ ($name ingress)"
                                 } else {
                                     Write-Host "   Access: http://localhost:8080/ ($name ingress)"
                                 }
+                            } else {
+                                # Handle multiple paths - split by space and create URL list
+                                $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                $urlList = @()
+
+                                # Create HTTP URLs for each path
+                                foreach ($path in $pathList) {
+                                    $urlList += "http://localhost:8080$path"
+                                }
+
+                                # Add HTTPS URLs if TLS is configured
+                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
+                                    foreach ($path in $pathList) {
+                                        $urlList += "https://localhost:8443$path"
+                                    }
+                                }
+
+                                $urlString = $urlList -join ", "
+                                Write-Host "   Access: $urlString ($name ingress)"
                             }
                         } else {
-                            # For non-GitOps applications, use simpler format
-                            $path = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                            $hasTls = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.tls}' 2>$null
-                            if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080$path, https://localhost:8443$path"
-                                } else {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080$path"
-                                }
+                            # Handle other app types with multi-path support
+                            $paths = kubectl get ingress $name -n $ingressNs -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
+                            if ($paths -eq "/" -or -not $paths) {
+                                Write-Host "   Ingress: $name -> http://localhost:8080/"
                             } else {
-                                if ($hasTls -and $hasTls -ne "null" -and $hasTls.Trim() -ne "") {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080/, https://localhost:8443/"
-                                } else {
-                                    Write-Host "   Ingress: $name -> http://localhost:8080/"
+                                # Handle multiple paths - split by space and create URL list
+                                $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                $urlList = @()
+
+                                foreach ($path in $pathList) {
+                                    # Clean up regex patterns for display (remove (.*) and trailing /)
+                                    $cleanPath = $path -replace '\(.*\)', '' -replace '/$', ''
+                                    $urlList += "http://localhost:8080$cleanPath"
                                 }
+
+                                $urlString = $urlList -join ", "
+                                Write-Host "   Ingress: $name -> $urlString"
                             }
                         }
                     } else {
@@ -1173,9 +1183,16 @@ function Show-HelmAppResources {
 
                     if ($hosts -eq "localhost" -or $hosts -eq "*") {
                         if (Test-IngressControllerReady) {
-                            $path = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                            if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                Write-Host "   Ingress: $name -> http://localhost:8080$path"
+                            $paths = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $paths -and $paths -ne "/") {
+                                # Handle multiple paths
+                                $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                $urlList = @()
+                                foreach ($path in $pathList) {
+                                    $urlList += "http://localhost:8080$path"
+                                }
+                                $urlString = $urlList -join ", "
+                                Write-Host "   Ingress: $name -> $urlString"
                             } else {
                                 Write-Host "   Ingress: $name -> http://localhost:8080/"
                             }
@@ -1187,9 +1204,16 @@ function Show-HelmAppResources {
                         # Handle namespace-based hostnames (e.g., test.localhost)
                         if (Test-IngressControllerReady) {
                             if ($hosts -match "\.localhost$") {
-                                $path = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[0].path}' 2>$null
-                                if ($LASTEXITCODE -eq 0 -and $path -and $path -ne "/") {
-                                    Write-Host "   Ingress: $name -> http://${hosts}:8080$path"
+                                $paths = kubectl get ingress $name -n $namespace -o jsonpath='{.spec.rules[0].http.paths[*].path}' 2>$null
+                                if ($LASTEXITCODE -eq 0 -and $paths -and $paths -ne "/") {
+                                    # Handle multiple paths
+                                    $pathList = $paths -split "\s+" | Where-Object { $_.Trim() }
+                                    $urlList = @()
+                                    foreach ($path in $pathList) {
+                                        $urlList += "http://${hosts}:8080$path"
+                                    }
+                                    $urlString = $urlList -join ", "
+                                    Write-Host "   Ingress: $name -> $urlString"
                                 } else {
                                     Write-Host "   Ingress: $name -> http://${hosts}:8080/"
                                 }

@@ -22,7 +22,7 @@ target "vote" {
     "${REGISTRY}/hostk8s-vote:${BUILD_VERSION}"
   ]
   target = "final"
-  platforms = ["linux/arm64"]
+  platforms = ["linux/amd64", "linux/arm64"]
   output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
@@ -38,7 +38,7 @@ target "result" {
     "${REGISTRY}/hostk8s-result:latest",
     "${REGISTRY}/hostk8s-result:${BUILD_VERSION}"
   ]
-  platforms = ["linux/arm64"]
+  platforms = ["linux/amd64", "linux/arm64"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
     "org.opencontainers.image.version" = "${BUILD_VERSION}"
@@ -53,7 +53,7 @@ target "worker" {
     "${REGISTRY}/hostk8s-worker:latest",
     "${REGISTRY}/hostk8s-worker:${BUILD_VERSION}"
   ]
-  platforms = ["linux/arm64"]
+  platforms = ["linux/amd64", "linux/arm64"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
     "org.opencontainers.image.version" = "${BUILD_VERSION}"
