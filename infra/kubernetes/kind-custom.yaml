@@ -17,7 +17,7 @@ containerdConfigPatches:
 
 nodes:
   - role: control-plane
-    image: kindest/node:v1.34.0
+    image: kindest/node:v1.33.2
     kubeadmConfigPatches:
       - |
         kind: InitConfiguration

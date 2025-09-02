@@ -880,7 +880,7 @@ show_addon_status() {
 
             if [ "$ui_ready" = "ready" ]; then
                 registry_status="Ready"
-                registry_message="Docker registry with Web UI at http://localhost:8080/registry"
+                registry_message="Docker registry with Web UI at http://localhost:8080/registry/"
             else
                 registry_status="Ready"
                 registry_message="Docker registry API at http://localhost:5002 (UI not deployed)"
@@ -896,7 +896,7 @@ show_addon_status() {
                 # Check if registry UI is also running
                 local ui_ready=$(kubectl get deployment registry-ui -n hostk8s --no-headers 2>/dev/null | awk '{ready=$2; split(ready,a,"/"); if(a[1]==a[2] && a[1]>0) print "ready"; else print "not ready"}' || echo "not found")
                 if [ "$ui_ready" = "ready" ]; then
-                    registry_message="${registry_message}, Web UI: Available at http://registry.localhost:8080"
+                    registry_message="${registry_message}, Web UI: Available at http://localhost:8080/registry/"
                 fi
             elif [ "$core_ready" = "not found" ]; then
                 registry_status="NotReady"
