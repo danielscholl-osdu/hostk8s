@@ -16,12 +16,6 @@ compress.md
 # Data directory (runtime artifacts, credentials, storage)
 data/
 
-# Generated secrets (never commit these)
-software/stacks/*/secrets/*.yaml
-software/stacks/*/secrets.yaml
-*.secret.yaml
-*.secrets.yaml
-
 # Secret generation temporary files
 *.tmp.yaml
 secrets.tmp.*
