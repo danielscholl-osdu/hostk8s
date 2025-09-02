@@ -131,6 +131,30 @@ function Remove-Stack {
     Log-Info "Monitor with: kubectl get all --all-namespaces | Select-String -NotMatch flux-system"
 }
 
+# Function to substitute environment variables in text (PowerShell envsubst equivalent)
+function Expand-EnvVars {
+    param([string]$Text)
+
+    # Get all environment variables that might be used
+    $envVars = @(
+        'GITOPS_REPO', 'GITOPS_BRANCH', 'SOFTWARE_STACK', 'COMPONENTS_REPO',
+        'COMPONENTS_BRANCH', 'REPO_NAME', 'KUBECONFIG_PATH'
+    )
+
+    $result = $Text
+
+    # Replace each environment variable
+    foreach ($varName in $envVars) {
+        $envValue = [Environment]::GetEnvironmentVariable($varName)
+        if ($envValue) {
+            $pattern = "`${$varName}"
+            $result = $result -replace [regex]::Escape($pattern), $envValue
+        }
+    }
+
+    return $result
+}
+
 # Function to apply stack YAML files with template substitution support
 function Apply-StackYaml {
     param(
@@ -140,14 +164,22 @@ function Apply-StackYaml {
 
     if (Test-Path $YamlFile) {
         Log-Info $Description
-        # Check if this is an extension stack that needs template processing
-        if ($YamlFile -match "extension/") {
-            Log-Debug "Processing template variables for extension stack"
-            # For now, template processing would need envsubst equivalent - applying directly
-            $output = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" apply -f $YamlFile 2>&1
-            Write-Host $output
-            if ($LASTEXITCODE -ne 0) {
-                Log-Warn "Failed to apply $Description"
+
+        # Check if this file needs template processing (extension stacks or files with environment variables)
+        $needsTemplateProcessing = ($YamlFile -match "extension/") -or ((Get-Content $YamlFile -Raw) -match '\$\{')
+
+        if ($needsTemplateProcessing) {
+            Log-Debug "Processing template variables for stack file"
+            # Read YAML content and substitute environment variables
+            $yamlContent = Get-Content $YamlFile -Raw
+            $processedYaml = Expand-EnvVars $yamlContent
+
+            # Apply processed YAML via stdin
+            $processedYaml | kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" apply -f - 2>&1 | ForEach-Object {
+                Write-Host $_
+                if ($_ -match "Failed|Error|error") {
+                    Log-Warn "Failed to apply $Description"
+                }
             }
         } else {
             $output = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" apply -f $YamlFile 2>&1
