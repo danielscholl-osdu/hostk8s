@@ -1,8 +1,8 @@
 #!/bin/bash
 
 #######################################
-# HostK8s Secret Management Script
-# Handles ephemeral secret generation from contracts
+# HostK8s Secret Generation Script
+# Generates ephemeral secrets from hostk8s.secrets.yaml contract files
 #######################################
 
 set -euo pipefail
@@ -12,34 +12,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/common.sh"
 
 # Variables
-ACTION="${1:-help}"
-STACK="${2:-}"
-CONTRACT_FILE=""
-SECRETS_DIR=""
-NAMESPACE=""
-
-#######################################
-# Show help message
-#######################################
-show_help() {
-    cat << EOF
-HostK8s Secret Management
-
-Usage: make secrets-<action> <stack-name>
-
-Actions:
-  generate    Generate secrets from contract for a stack
-  show        Display current secrets for a stack
-  clean       Remove secrets for a stack from cluster
-  help        Show this help message
-
-Examples:
-  make secrets-generate sample-app
-  make secrets-show sample-app
-  make secrets-clean sample-app
-
-EOF
-}
+STACK="${1:-}"
 
 #######################################
 # Generate random password
@@ -179,14 +152,12 @@ generate_secret_from_data() {
     done
 }
 
-# Legacy type-specific generators removed - using generic data format
-
 #######################################
-# Parse and generate secrets from contract
+# Generate secrets from contract
 #######################################
 generate_secrets() {
     if [[ -z "${STACK}" ]]; then
-        log_error "Stack name required. Use: make secrets-generate <name>"
+        log_error "Stack name required. Usage: manage-secrets.sh <stack-name>"
         exit 1
     fi
 
@@ -226,7 +197,6 @@ generate_secrets() {
     for ((i=0; i<${secret_count}; i++)); do
         local name=$(yq eval ".spec.secrets[${i}].name" "${CONTRACT_FILE}")
         local namespace=$(yq eval ".spec.secrets[${i}].namespace" "${CONTRACT_FILE}")
-        local type=$(yq eval ".spec.secrets[${i}].type" "${CONTRACT_FILE}")
 
         # Skip if secret already exists (idempotency)
         if secret_exists "${name}" "${namespace}"; then
@@ -236,38 +206,9 @@ generate_secrets() {
 
         log_info "Generating secret '${name}'"
 
-        # Check if secret uses new data format or old type format
-        local has_data=$(yq eval ".spec.secrets[${i}] | has(\"data\")" "${CONTRACT_FILE}")
-
-        if [[ "${has_data}" == "true" ]]; then
-            # New generic data format
-            local data_json=$(yq eval ".spec.secrets[${i}].data" "${CONTRACT_FILE}" -o=json)
-            generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
-        elif [[ "${type}" != "null" ]]; then
-            # Legacy type-based format (for backwards compatibility)
-            case "${type}" in
-                postgresql)
-                    local username=$(yq eval ".spec.secrets[${i}].spec.username // \"postgres\"" "${CONTRACT_FILE}")
-                    local database=$(yq eval ".spec.secrets[${i}].spec.database" "${CONTRACT_FILE}")
-                    local cluster=$(yq eval ".spec.secrets[${i}].spec.cluster" "${CONTRACT_FILE}")
-
-                    # Convert to new format internally
-                    local data_json='[
-                        {"key": "username", "value": "'${username}'"},
-                        {"key": "password", "generate": "password", "length": 32},
-                        {"key": "database", "value": "'${database}'"},
-                        {"key": "host", "value": "'${cluster}'-rw.'${namespace}'.svc.cluster.local"},
-                        {"key": "port", "value": "5432"}
-                    ]'
-                    generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
-                    ;;
-                *)
-                    log_warn "Unknown secret type '${type}' for secret '${name}', skipping"
-                    ;;
-            esac
-        else
-            log_warn "Secret '${name}' has no data or type definition, skipping"
-        fi
+        # Use new generic data format
+        local data_json=$(yq eval ".spec.secrets[${i}].data" "${CONTRACT_FILE}" -o=json)
+        generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
     done
 
     # Apply generated secrets to cluster
@@ -286,84 +227,6 @@ generate_secrets() {
 }
 
 #######################################
-# Show secrets for a stack
-#######################################
-show_secrets() {
-    if [[ -z "${STACK}" ]]; then
-        log_error "Stack name required. Use: make secrets-show <name>"
-        exit 1
-    fi
-
-    log_info "Showing secrets for stack '${STACK}'"
-
-    # Get the namespace from the contract
-    CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
-    if [[ ! -f "${CONTRACT_FILE}" ]]; then
-        log_error "No secret contract found for stack '${STACK}'"
-        exit 1
-    fi
-
-    # Get unique namespaces from contract
-    local namespaces=$(yq eval '.spec.secrets[].namespace' "${CONTRACT_FILE}" | sort -u)
-
-    for namespace in ${namespaces}; do
-        echo ""
-        log_info "Secrets in namespace '${namespace}':"
-        kubectl get secrets -n "${namespace}" -l "hostk8s.io/contract=${STACK}" \
-            -o custom-columns=NAME:.metadata.name,TYPE:.metadata.labels.hostk8s\\.io/type,AGE:.metadata.creationTimestamp
-    done
-}
-
-#######################################
-# Clean secrets for a stack
-#######################################
-clean_secrets() {
-    if [[ -z "${STACK}" ]]; then
-        log_error "Stack name required. Use: make secrets-clean <name>"
-        exit 1
-    fi
-
-    log_warn "Removing secrets for stack '${STACK}'"
-
-    # Get the namespace from the contract
-    CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
-    if [[ ! -f "${CONTRACT_FILE}" ]]; then
-        log_error "No secret contract found for stack '${STACK}'"
-        exit 1
-    fi
-
-    # Get unique namespaces from contract
-    local namespaces=$(yq eval '.spec.secrets[].namespace' "${CONTRACT_FILE}" | sort -u)
-
-    for namespace in ${namespaces}; do
-        log_info "Cleaning secrets in namespace '${namespace}'"
-        kubectl delete secrets -n "${namespace}" -l "hostk8s.io/contract=${STACK}" --ignore-not-found=true
-    done
-
-    # Clean local cache
-    SECRETS_DIR="data/secrets/${STACK}"
-    if [[ -d "${SECRETS_DIR}" ]]; then
-        rm -rf "${SECRETS_DIR}"
-        log_info "Cleaned local secret cache"
-    fi
-
-    log_success "Secrets cleaned successfully"
-}
-
-#######################################
 # Main execution
 #######################################
-case "${ACTION}" in
-    generate)
-        generate_secrets
-        ;;
-    show)
-        show_secrets
-        ;;
-    clean)
-        clean_secrets
-        ;;
-    help|*)
-        show_help
-        ;;
-esac
+generate_secrets
