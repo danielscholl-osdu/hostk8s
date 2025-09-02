@@ -42,7 +42,7 @@ try {
 }
 
 # Create host directory for registry storage if it doesn't exist
-$registryDataDir = "$(Get-Location)\data\registry"
+$registryDataDir = Join-Path (Get-Location) "data" "registry"
 if (-not (Test-Path $registryDataDir)) {
     Write-Host "[$timestamp] [Registry] Creating registry storage directory..."
     New-Item -ItemType Directory -Force -Path $registryDataDir >$null
@@ -56,7 +56,7 @@ if (-not (Test-Path $registryDockerDir)) {
 }
 
 # Create registry config file if it doesn't exist
-$registryConfigFile = "$(Get-Location)\data\registry-config.yml"
+$registryConfigFile = Join-Path (Get-Location) "data" "registry-config.yml"
 if (-not (Test-Path $registryConfigFile) -or (Test-Path $registryConfigFile -PathType Container)) {
     Write-Host "[$timestamp] [Registry] Creating registry configuration file..."
     @"
@@ -196,7 +196,7 @@ try {
 
         # Note: hostk8s namespace is created during cluster startup
 
-        $manifestPath = "$(Get-Location)\infra\manifests\registry-ui.yaml"
+        $manifestPath = Join-Path (Get-Location) "infra" "manifests" "registry-ui.yaml"
         Write-Host "[$timestamp] [Registry] Applying registry UI manifest: $manifestPath"
 
         # Apply manifest with error capture
