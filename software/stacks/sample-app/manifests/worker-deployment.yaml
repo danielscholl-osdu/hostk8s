@@ -30,20 +30,9 @@ spec:
         - name: POSTGRES_HOST
           value: "voting-db-rw.sample-app.svc.cluster.local"
         - name: POSTGRES_USER
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: username
-        - name: POSTGRES_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: password
+          value: "postgres"
         - name: POSTGRES_DB
-          valueFrom:
-            secretKeyRef:
-              name: postgres-credentials
-              key: database
+          value: "voting"
         resources:
           requests:
             memory: "64Mi"
