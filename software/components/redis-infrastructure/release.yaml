@@ -9,10 +9,11 @@ spec:
   interval: 5m
   chart:
     spec:
-      chart: .
+      chart: redis
+      version: "21.0.0"  # Pin to pre-OCI version
       sourceRef:
-        kind: OCIRepository
-        name: bitnami-redis
+        kind: HelmRepository
+        name: bitnami
         namespace: flux-system
   values:
     # Architecture - simple replication for development
