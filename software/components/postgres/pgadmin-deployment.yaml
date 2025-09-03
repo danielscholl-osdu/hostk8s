@@ -41,8 +41,6 @@ spec:
           value: "True"
         - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
           value: "False"
-        - name: SCRIPT_NAME
-          value: "/postgres"
         resources:
           requests:
             memory: "128Mi"
@@ -52,13 +50,13 @@ spec:
             cpu: "250m"
         livenessProbe:
           httpGet:
-            path: /postgres/login
+            path: /login
             port: 80
           initialDelaySeconds: 60
           periodSeconds: 30
         readinessProbe:
           httpGet:
-            path: /postgres/login
+            path: /login
             port: 80
           initialDelaySeconds: 30
           periodSeconds: 10
