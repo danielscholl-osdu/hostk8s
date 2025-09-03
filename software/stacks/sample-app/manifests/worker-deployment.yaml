@@ -24,7 +24,7 @@ spec:
         image: localhost:5000/hostk8s-worker:latest
         env:
         - name: REDIS_HOST
-          value: "redis.redis-infrastructure.svc.cluster.local"
+          value: "redis-master.redis-infrastructure.svc.cluster.local"
         - name: REDIS_PORT
           value: "6379"
         - name: POSTGRES_HOST
