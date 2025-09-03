@@ -3,4 +3,3 @@ kind: Kustomization
 
 resources:
   - stack.yaml
-  - manifests/external-secrets.yaml
