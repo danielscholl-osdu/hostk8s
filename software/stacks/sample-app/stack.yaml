@@ -47,10 +47,10 @@ spec:
   healthChecks:
     - kind: Deployment
       name: redis
-      namespace: redis-infrastructure
+      namespace: redis
     - kind: Deployment
       name: redis-commander
-      namespace: redis-infrastructure
+      namespace: redis
 ---
 ######################
 ## Voting App Applications

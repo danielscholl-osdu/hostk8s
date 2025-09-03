@@ -4,7 +4,7 @@ metadata:
   name: redis-bitnami
   namespace: flux-system
   labels:
-    hostk8s.component: redis-infrastructure
+    hostk8s.component: redis
 spec:
   interval: 5m
   url: oci://registry-1.docker.io/bitnamicharts/redis
@@ -17,7 +17,7 @@ metadata:
   name: redis-commander
   namespace: flux-system
   labels:
-    hostk8s.component: redis-infrastructure
+    hostk8s.component: redis
 spec:
   interval: 5m
   url: https://github.com/joeferner/redis-commander

@@ -17,7 +17,7 @@ Then connect from your applications using the Redis service:
 ```yaml
 env:
 - name: REDIS_HOST
-  value: "redis-master.redis-infrastructure.svc.cluster.local"
+  value: "redis-master.redis.svc.cluster.local"
 - name: REDIS_PORT
   value: "6379"
 ```
@@ -28,7 +28,7 @@ For Redis Commander web UI, use HostK8s secret contracts in your stack's `hostk8
 
 ```yaml
 - name: redis-commander-credentials
-  namespace: redis-infrastructure
+  namespace: redis
   data:
     - key: username
       value: admin
@@ -41,7 +41,7 @@ For Redis Commander web UI, use HostK8s secret contracts in your stack's `hostk8
 
 | Service | Endpoint | Port | Purpose |
 |---------|----------|------|---------|
-| Redis Server | `redis-master.redis-infrastructure.svc.cluster.local` | 6379 | Application data store |
+| Redis Server | `redis-master.redis.svc.cluster.local` | 6379 | Application data store |
 | Redis Commander | NodePort | 30833 | Web management interface |
 
 ## Connection Examples
@@ -50,14 +50,14 @@ For Redis Commander web UI, use HostK8s secret contracts in your stack's `hostk8
 ```yaml
 env:
 - name: REDIS_URL
-  value: "redis://redis-master.redis-infrastructure.svc.cluster.local:6379"
+  value: "redis://redis-master.redis.svc.cluster.local:6379"
 ```
 
 **With connection pooling:**
 ```yaml
 env:
 - name: REDIS_HOST
-  value: "redis-master.redis-infrastructure.svc.cluster.local"
+  value: "redis-master.redis.svc.cluster.local"
 - name: REDIS_PORT
   value: "6379"
 - name: REDIS_DB
