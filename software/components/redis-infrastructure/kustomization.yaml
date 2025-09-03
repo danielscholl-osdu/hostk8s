@@ -11,13 +11,6 @@ resources:
   - namespace.yaml
   - source.yaml
   - release.yaml
-  # Legacy manual manifests - will be removed after testing
-  - redis-config.yaml
-  - redis-pvc.yaml
-  - redis-deployment.yaml
-  - redis-service.yaml
-  - commander-deployment.yaml
-  - commander-service.yaml
 
 commonLabels:
   hostk8s.component: redis-infrastructure
