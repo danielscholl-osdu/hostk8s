@@ -1,0 +1,26 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: pgadmin4-ingress
+  namespace: hostk8s
+  labels:
+    hostk8s.component: postgres
+    hostk8s.type: management-ui
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      - path: /postgres(/|$)(.*)
+        pathType: ImplementationSpecific
+        backend:
+          service:
+            name: pgadmin4
+            port:
+              number: 80

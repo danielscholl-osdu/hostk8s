@@ -4,6 +4,9 @@ kind: Kustomization
 resources:
   - source.yaml
   - release.yaml
+  - pgadmin-deployment.yaml
+  - pgadmin-service.yaml
+  - pgadmin-ingress.yaml
 
 commonLabels:
   hostk8s.component: postgres
