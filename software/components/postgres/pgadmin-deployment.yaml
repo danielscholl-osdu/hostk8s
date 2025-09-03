@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin4
+  namespace: hostk8s
+  labels:
+    hostk8s.component: postgres
+    app: pgadmin4
+    component: management-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pgadmin4
+      component: management-ui
+  template:
+    metadata:
+      labels:
+        app: pgadmin4
+        component: management-ui
+        hostk8s.component: postgres
+    spec:
+      containers:
+      - name: pgadmin4
+        image: dpage/pgadmin4:latest
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: PGADMIN_DEFAULT_EMAIL
+          valueFrom:
+            secretKeyRef:
+              name: pgadmin4-credentials
+              key: email
+        - name: PGADMIN_DEFAULT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: pgadmin4-credentials
+              key: password
+        - name: PGADMIN_CONFIG_SERVER_MODE
+          value: "True"
+        - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
+          value: "False"
+        - name: SCRIPT_NAME
+          value: "/postgres"
+        - name: PGADMIN_CONFIG_PROXY_X_FOR_COUNT
+          value: "1"
+        - name: PGADMIN_CONFIG_PROXY_X_PROTO_COUNT
+          value: "1"
+        - name: PGADMIN_CONFIG_PROXY_X_HOST_COUNT
+          value: "1"
+        - name: PGADMIN_CONFIG_PROXY_X_PORT_COUNT
+          value: "1"
+        - name: PGADMIN_CONFIG_PROXY_X_PREFIX_COUNT
+          value: "1"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "250m"
+        livenessProbe:
+          httpGet:
+            path: /postgres/login
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /postgres/login
+            port: 80
+          initialDelaySeconds: 30
+          periodSeconds: 10

@@ -8,13 +8,14 @@ metadata:
 
 resources:
   - namespace.yaml
+  - external-secrets-app.yaml
+  - database-storage.yaml
+  - database.yaml
   - vote-deployment.yaml
   - vote-service.yaml
   - result-deployment.yaml
   - result-service.yaml
   - worker-deployment.yaml
-  - db-deployment.yaml
-  - db-service.yaml
   - voting-ingress.yaml
 
 commonLabels:

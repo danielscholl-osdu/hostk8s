@@ -18,6 +18,7 @@ Optimized ADR Index for Agent Context
 | 010 | Infrastructure Addon Namespace Consolidation | acc    | [ADR-010](010-infrastructure-addon-namespace-consolidation.md) |
 | 011 | Hybrid Container Registry Architecture | acc    | [ADR-011](011-hybrid-container-registry-architecture.md) |
 | 012 | Host-Mode Data Persistence Architecture | acc    | [ADR-012](012-host-mode-data-persistence-architecture.md) |
+| 013 | Ephemeral Secret Management Architecture | acc    | [ADR-013](013-ephemeral-secret-management-architecture.md) |
 
 ---
 
@@ -229,4 +230,21 @@ why: |
 tradeoffs:
 positive: [data persistence, service isolation, stack organization, debugging access, cross-platform consistency]
 negative: [directory complexity, host filesystem dependency, manual cleanup, storage capacity limits]
+```
+
+--------------------------------------------
+```yaml
+id: 013
+title: Ephemeral Secret Management Architecture
+status: accepted
+date: 2025-09-02
+decision: Implement ephemeral secret management system using contract-based declarations with automatic generation during stack deployment.
+why: |
+• Security enhancement: Zero sensitive data stored in repositories
+• Development velocity: Automatic secret provisioning eliminates manual steps
+• Environment consistency: Identical secret generation across all platforms
+• GitOps compatibility: Contracts tracked in Git, values generated at runtime
+tradeoffs:
+positive: [security enhancement, development velocity, environment consistency, operational simplicity, debugging simplicity, GitOps compatibility]
+negative: [cross-platform maintenance, limited generation types, namespace dependency, platform tool dependencies]
 ```

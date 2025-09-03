@@ -1,0 +1,48 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: cnpg-operator
+  namespace: flux-system
+spec:
+  targetNamespace: hostk8s
+  releaseName: cnpg-operator
+  chart:
+    spec:
+      chart: cloudnative-pg
+      version: "0.x"  # Uses latest 0.x version
+      sourceRef:
+        kind: HelmRepository
+        name: cnpg
+        namespace: flux-system
+  install:
+    createNamespace: false  # hostk8s namespace already exists
+    remediation:
+      retries: 3
+  interval: 10m0s
+  values:
+    # Resource limits for local development
+    resources:
+      limits:
+        cpu: 200m
+        memory: 256Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+
+    # Monitoring disabled for local dev (can be enabled if needed)
+    monitoring:
+      enabled: false
+
+    # Pod disruption budget for operator
+    podDisruptionBudget:
+      enabled: true
+      minAvailable: 1
+
+    # Operator configuration
+    config:
+      data:
+        # Enable developer-friendly logging
+        OPERATOR_LOG_LEVEL: "info"
+        # Watch all namespaces for Cluster resources
+        WATCH_NAMESPACE: ""

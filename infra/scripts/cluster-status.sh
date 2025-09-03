@@ -780,6 +780,27 @@ show_addon_status() {
         [ -n "$metrics_message" ] && echo "   Status: $metrics_message"
     fi
 
+    # Show Vault status if installed
+    if kubectl get statefulset vault -n hostk8s >/dev/null 2>&1; then
+        local vault_status="NotReady"
+        local vault_message=""
+
+        if kubectl get pod -l app.kubernetes.io/name=vault -n hostk8s 2>/dev/null | grep -q Running; then
+            vault_status="Ready"
+            vault_message="Secret management available (dev mode)"
+            # Check if ingress is configured for Vault UI
+            if kubectl get ingress vault-ui -n hostk8s >/dev/null 2>&1; then
+                vault_message="$vault_message, UI at http://localhost:8080/ui/"
+            fi
+        else
+            vault_status="Starting"
+            vault_message="Vault pod not yet running"
+        fi
+
+        echo "🔐 Vault: $vault_status"
+        [ -n "$vault_message" ] && echo "   Status: $vault_message"
+    fi
+
     # Show Flux status if installed
     if has_flux; then
         local flux_status="NotReady"

@@ -16,6 +16,10 @@ compress.md
 # Data directory (runtime artifacts, credentials, storage)
 data/
 
+# Secret generation temporary files
+*.tmp.yaml
+secrets.tmp.*
+
 # Git Worktree directories
 trees/
 

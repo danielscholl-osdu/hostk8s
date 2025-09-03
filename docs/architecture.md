@@ -197,6 +197,79 @@ make status                      # Verify deployment
 **Architecture Integration:**
 The build system integrates seamlessly with the GitOps stack pattern - applications can be built locally and deployed via standard Kubernetes manifests, maintaining consistency between development and production workflows. (Detailed design in [ADR-008](adr/008-source-code-build-system.md))
 
+### Vault-Integrated Secret Management Architecture
+
+**The Development Security Challenge:**
+Software stacks require sensitive configuration data (database passwords, API keys, tokens) for proper deployment and operation. Traditional approaches either store secrets in Git repositories (security risk) or require manual secret management (operational complexity). Direct Kubernetes secret generation creates race conditions with GitOps namespace creation.
+
+**The Solution:**
+The platform provides a Vault-integrated secret management system using HashiCorp Vault + External Secrets Operator (ESO) while preserving contract-based declarations. This eliminates race conditions and aligns with modern GitOps practices.
+
+**Key Capabilities:**
+- **Contract-Based Declarations** - YAML contracts (`hostk8s.secrets.yaml`) declaring secret requirements
+- **Vault Backend Storage** - HashiCorp Vault (dev mode) stores generated secrets securely
+- **External Secrets Operator** - Syncs secrets from Vault to Kubernetes declaratively
+- **GitOps Integration** - ExternalSecret manifests deployed via Flux eliminate timing dependencies
+- **Development UI** - Vault web interface for secret inspection and debugging
+- **Enhanced Lifecycle** - Command-based interface (add/remove/list) for complete secret management
+
+**Secret Management Workflow:**
+```bash
+# Stack declares secret requirements in hostk8s.secrets.yaml
+make up sample-app              # Store secrets in Vault + generate ExternalSecret manifests
+git add software/stacks/sample-app/manifests/external-secrets.yaml
+git commit -m "Add external secrets for sample-app"
+# Flux deploys ExternalSecrets → ESO syncs from Vault → Kubernetes secrets created
+kubectl get secrets -n sample-app  # View synchronized secrets
+```
+
+**Contract Example (Unchanged):**
+```yaml
+# software/stacks/sample-app/hostk8s.secrets.yaml
+apiVersion: hostk8s.io/v1
+kind: SecretContract
+metadata:
+  name: sample-app
+spec:
+  secrets:
+    - name: postgres-credentials
+      namespace: sample-app
+      data:
+        - key: username
+          value: postgres
+        - key: password
+          generate: password
+          length: 8
+        - key: host
+          value: voting-db-rw.sample-app.svc.cluster.local
+```
+
+**Generated ExternalSecret Example:**
+```yaml
+# software/stacks/sample-app/manifests/external-secrets.yaml (safe to commit)
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: postgres-credentials
+  namespace: sample-app
+spec:
+  refreshInterval: 10s
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: postgres-credentials
+    creationPolicy: Owner
+  data:
+  - secretKey: username
+    remoteRef:
+      key: sample-app/sample-app/postgres-credentials
+      property: username
+```
+
+**Architecture Integration:**
+The Vault-integrated system eliminates race conditions by storing secrets in Vault and using declarative ExternalSecret manifests deployed via Flux. This aligns with GitOps principles while maintaining security - contracts and ExternalSecret manifests are stored in Git, while actual secret values exist only in Vault and Kubernetes. (Evolution detailed in [ADR-014](adr/014-vault-integrated-secret-management-architecture.md), original foundation in [ADR-013](adr/013-ephemeral-secret-management-architecture.md))
+
 ### Extensibility Architecture
 
 **The Innovation Challenge:**
@@ -265,6 +338,12 @@ fi
 - **Purpose**: HTTP/HTTPS ingress capabilities with localhost port mapping
 - **Deployment**: `hostk8s` namespace with MetalLB integration or NodePort fallback
 - **Configuration**: Automatic service type selection based on MetalLB availability
+
+**HashiCorp Vault Secret Management**
+- **Purpose**: Centralized secret storage for development environments with External Secrets Operator integration
+- **Deployment**: Dev mode configuration in `hostk8s` namespace with token-based authentication
+- **Integration**: Web UI via NGINX ingress, ClusterSecretStore for ESO, dependency-aware startup sequencing
+- **Configuration**: Automatic setup when `VAULT_ENABLED=true`, includes ESO installation and ClusterSecretStore creation
 
 **Hybrid Container Registry**
 - **Purpose**: Local image storage and deployment for development workflows
@@ -462,3 +541,13 @@ For detailed rationale behind key design choices, see our Architecture Decision 
 - **Decision**: Organized host-mode data persistence using dedicated directory structure with service-specific isolation and Kind extraMounts integration
 - **Benefits**: Data persistence, service isolation, stack organization, debugging access, cross-platform consistency
 - **Tradeoffs**: Directory complexity, host filesystem dependency, manual cleanup, storage capacity limits
+
+**[ADR-013: Ephemeral Secret Management Architecture](adr/013-ephemeral-secret-management-architecture.md)**
+- **Decision**: Implement ephemeral secret management system using contract-based declarations with automatic generation during stack deployment
+- **Benefits**: Security enhancement, development velocity, environment consistency, operational simplicity, GitOps compatibility
+- **Tradeoffs**: Cross-platform maintenance, limited generation types, namespace dependency, platform tool dependencies
+
+**[ADR-014: Vault-Integrated Secret Management Architecture](adr/014-vault-integrated-secret-management-architecture.md)**
+- **Decision**: Evolve secret management to use HashiCorp Vault + External Secrets Operator while preserving SecretContract format
+- **Benefits**: Race condition elimination, GitOps compliance, development UI, operational resilience, architecture modernization
+- **Tradeoffs**: Infrastructure complexity, startup dependencies, development learning curve, manual Git workflow

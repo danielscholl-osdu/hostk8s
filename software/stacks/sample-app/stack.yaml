@@ -1,12 +1,12 @@
 ######################
 ## Voting App Stack Components
-## Registry and Redis infrastructure must be ready before applications
+## PostgreSQL operator and Redis infrastructure must be ready before applications
 ######################
 ---
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-redis-infrastructure
+  name: component-postgres
   namespace: flux-system
   labels:
     hostk8s.stack: sample-app
@@ -18,16 +18,39 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/redis-infrastructure
+  path: ./software/components/postgres
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cnpg-operator-cloudnative-pg
+      namespace: hostk8s
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-redis
+  namespace: flux-system
+  labels:
+    hostk8s.stack: sample-app
+    hostk8s.type: component
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/redis
   prune: true
   wait: true
   healthChecks:
     - kind: Deployment
       name: redis
-      namespace: redis-infrastructure
+      namespace: redis
     - kind: Deployment
       name: redis-commander
-      namespace: redis-infrastructure
+      namespace: redis
 ---
 ######################
 ## Voting App Applications
@@ -43,14 +66,15 @@ metadata:
     hostk8s.type: application
 spec:
   dependsOn:
-    - name: component-redis-infrastructure
+    - name: component-postgres
+    - name: component-redis
   interval: 1h
   retryInterval: 1m
   timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system-sample-app
-  path: ./software/stacks/sample-app/app
+  path: ./software/stacks/sample-app/manifests
   prune: true
   wait: true
   healthChecks:
@@ -62,7 +86,4 @@ spec:
       namespace: sample-app
     - kind: Deployment
       name: worker
-      namespace: sample-app
-    - kind: Deployment
-      name: db
       namespace: sample-app

@@ -16,6 +16,5 @@ spec:
     kind: GitRepository
     name: flux-system-${SOFTWARE_STACK}
   path: ./software/stacks/${SOFTWARE_STACK}
-  targetNamespace: flux-system
   prune: true
   wait: false
