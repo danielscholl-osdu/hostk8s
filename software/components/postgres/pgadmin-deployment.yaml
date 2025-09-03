@@ -41,6 +41,8 @@ spec:
           value: "True"
         - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
           value: "False"
+        - name: SCRIPT_NAME
+          value: "/postgres"
         resources:
           requests:
             memory: "128Mi"
