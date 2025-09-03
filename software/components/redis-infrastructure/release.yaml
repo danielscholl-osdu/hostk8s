@@ -7,14 +7,10 @@ metadata:
     hostk8s.component: redis-infrastructure
 spec:
   interval: 5m
-  chart:
-    spec:
-      chart: redis
-      version: "17.15.6"  # Pin to much older pre-OCI version
-      sourceRef:
-        kind: HelmRepository
-        name: bitnami
-        namespace: flux-system
+  chartRef:
+    kind: OCIRepository
+    name: redis-bitnami
+    namespace: flux-system
   values:
     # Architecture - simple replication for development
     architecture: standalone
