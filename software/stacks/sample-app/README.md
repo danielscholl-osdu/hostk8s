@@ -63,7 +63,7 @@ Since the stack is already deployed via GitOps, the applications will automatica
 
 ### Service Discovery
 Applications connect to shared components via Kubernetes DNS:
-- **Redis**: `redis.redis-infrastructure.svc.cluster.local:6379`
+- **Redis**: `redis-master.redis.svc.cluster.local:6379`
 - **Database**: `db.voting-app.svc.cluster.local:5432`
 
 ### Image Sources
@@ -118,7 +118,7 @@ kubectl rollout restart deployment/worker -n voting-app
 # Connect local development to shared Redis
 cd src/sample-app/vote
 export REDIS_HOST=localhost
-kubectl port-forward -n redis-infrastructure svc/redis 6379:6379
+kubectl port-forward -n redis svc/redis 6379:6379
 python app.py  # Runs locally, uses K8s Redis
 ```
 
@@ -132,7 +132,7 @@ make status
 ### View Component Health
 ```bash
 # Redis infrastructure
-kubectl get pods -n redis-infrastructure
+kubectl get pods -n redis
 
 # Voting applications
 kubectl get pods -n voting-app
@@ -145,7 +145,7 @@ kubectl get pods -n registry
 ```bash
 # Test Redis connectivity from voting app
 kubectl exec -n voting-app deployment/vote -- \
-  redis-cli -h redis.redis-infrastructure.svc.cluster.local ping
+  redis-cli -h redis-master.redis.svc.cluster.local ping
 
 # Test database connectivity
 kubectl exec -n voting-app deployment/result -- \
@@ -184,9 +184,9 @@ make sync voting-app
 3. **Rebuild if needed**: `make build src/sample-app`
 
 ### Services Can't Connect
-1. **DNS resolution**: `kubectl exec -n voting-app deployment/vote -- nslookup redis.redis-infrastructure.svc.cluster.local`
-2. **Port connectivity**: `kubectl exec -n voting-app deployment/vote -- telnet redis.redis-infrastructure.svc.cluster.local 6379`
-3. **Check component health**: `kubectl get pods -n redis-infrastructure`
+1. **DNS resolution**: `kubectl exec -n voting-app deployment/vote -- nslookup redis-master.redis.svc.cluster.local`
+2. **Port connectivity**: `kubectl exec -n voting-app deployment/vote -- telnet redis-master.redis.svc.cluster.local 6379`
+3. **Check component health**: `kubectl get pods -n redis`
 
 ### Stack Won't Deploy
 1. **Check Flux status**: `make status`

@@ -24,17 +24,15 @@ spec:
         image: localhost:5000/hostk8s-worker:latest
         env:
         - name: REDIS_HOST
-          value: "redis.redis-infrastructure.svc.cluster.local"
+          value: "redis-master.redis.svc.cluster.local"
         - name: REDIS_PORT
           value: "6379"
         - name: POSTGRES_HOST
-          value: "db.sample-app.svc.cluster.local"
+          value: "voting-db-rw.sample-app.svc.cluster.local"
         - name: POSTGRES_USER
           value: "postgres"
-        - name: POSTGRES_PASSWORD
-          value: "postgres"
         - name: POSTGRES_DB
-          value: "votes"
+          value: "voting"
         resources:
           requests:
             memory: "64Mi"

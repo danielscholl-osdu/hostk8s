@@ -277,6 +277,15 @@ if [[ "${METRICS_DISABLED}" != "true" ]]; then
     fi
 fi
 
+if [[ "${VAULT_ENABLED}" == "true" ]]; then
+    log_info "Setting up Vault secret management..."
+    if [ -f "infra/scripts/setup-vault.sh" ]; then
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-vault.sh || log_warn "Vault setup failed, continuing..."
+    else
+        log_warn "Vault setup script not found, skipping..."
+    fi
+fi
+
 if [[ "${FLUX_ENABLED}" == "true" ]]; then
     log_info "Setting up Flux GitOps..."
     if [ -f "infra/scripts/setup-flux.sh" ]; then

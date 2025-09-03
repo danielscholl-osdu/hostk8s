@@ -1,0 +1,33 @@
+# Ingress for Vault UI - Simple /ui routing (no rewriting needed!)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vault-ui
+  namespace: hostk8s
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    # No rewrite needed - pass through paths as-is
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: localhost
+    http:
+      paths:
+      # Route /ui/* to Vault's /ui/* (no rewriting)
+      - path: /ui
+        pathType: Prefix
+        backend:
+          service:
+            name: vault
+            port:
+              number: 8200
+      # Route /v1/* to Vault's /v1/* (API calls, no rewriting)
+      - path: /v1
+        pathType: Prefix
+        backend:
+          service:
+            name: vault
+            port:
+              number: 8200

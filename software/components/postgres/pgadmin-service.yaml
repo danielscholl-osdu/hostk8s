@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgadmin4
+  namespace: hostk8s
+  labels:
+    hostk8s.component: postgres
+    app: pgadmin4
+    component: management-ui
+spec:
+  selector:
+    app: pgadmin4
+    component: management-ui
+  ports:
+  - port: 80
+    targetPort: 80
+    protocol: TCP
+    name: http
+  type: ClusterIP
