@@ -111,16 +111,17 @@ spec:
     # Redis connection
     hosts: "redis:6379"  # Connect to Bitnami Redis service
 
-    # Environment variables from secret
+    # Environment variables from secret (array format)
     env:
-      HTTP_USER:
+      - name: HTTP_USER
         valueFrom:
           secretKeyRef:
             name: redis-commander-credentials
             key: username
-      HTTP_PASSWORD:
+      - name: HTTP_PASSWORD
         valueFrom:
           secretKeyRef:
             name: redis-commander-credentials
             key: password
-      K8S_SIGTERM: "1"
+      - name: K8S_SIGTERM
+        value: "1"
