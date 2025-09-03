@@ -11,6 +11,7 @@ resources:
   - namespace.yaml
   - source.yaml
   - release.yaml
+  - ingress.yaml
 
 commonLabels:
   hostk8s.component: redis
