@@ -10,18 +10,21 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/rewrite-target: /$2
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header X-Script-Name /postgres;
       proxy_set_header X-Scheme $scheme;
-      more_set_headers "X-Forwarded-Prefix: /postgres";
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
 spec:
   ingressClassName: nginx
   rules:
   - host: localhost
     http:
       paths:
-      - path: /postgres(/|$)(.*)
+      - path: /postgres
         pathType: ImplementationSpecific
         backend:
           service:
