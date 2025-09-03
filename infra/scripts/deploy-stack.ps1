@@ -56,7 +56,9 @@ function Remove-Stack {
     # Check if any kustomizations exist for this stack
     Log-Info "Checking for stack '$StackName' kustomizations..."
 
-    $stackKustomizations = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -l "hostk8s.stack=$StackName" --no-headers -o custom-columns="NAME:.metadata.name" 2>$null
+    $labelSelector = "hostk8s.stack=$StackName"
+    $cmd = "kubectl --kubeconfig=`"$($env:KUBECONFIG_PATH)`" get kustomizations -n flux-system -l `"$labelSelector`" --no-headers -o custom-columns=`"NAME:.metadata.name`" 2>`$null"
+    $stackKustomizations = Invoke-Expression $cmd
 
     if (-not $stackKustomizations -or $stackKustomizations.Trim() -eq "") {
         Log-Info "No kustomizations found for stack '$StackName'"
@@ -80,7 +82,9 @@ function Remove-Stack {
     # Remove all kustomizations labeled with this stack
     Log-Info "Removing all kustomizations for stack '$StackName'..."
     try {
-        kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" delete kustomizations -n flux-system -l "hostk8s.stack=$StackName" 2>$null
+        $labelSelector = "hostk8s.stack=$StackName"
+        $cmd = "kubectl --kubeconfig=`"$($env:KUBECONFIG_PATH)`" delete kustomizations -n flux-system -l `"$labelSelector`" 2>`$null"
+        Invoke-Expression $cmd
     } catch {
         Log-Debug "Stack kustomizations already cleaned up"
     }
@@ -104,7 +108,9 @@ function Remove-Stack {
         # Check if any component kustomizations remain (from any stack)
         Log-Info "Checking if flux-system GitRepository is still needed..."
         try {
-            $componentKustomizations = kubectl --kubeconfig="$($env:KUBECONFIG_PATH)" get kustomizations -n flux-system -l "hostk8s.type=component" --no-headers 2>$null
+            $labelSelector = "hostk8s.type=component"
+            $cmd = "kubectl --kubeconfig=`"$($env:KUBECONFIG_PATH)`" get kustomizations -n flux-system -l `"$labelSelector`" --no-headers 2>`$null"
+            $componentKustomizations = Invoke-Expression $cmd
             $componentCount = 0
 
             if ($componentKustomizations -and $componentKustomizations.Trim() -ne "") {

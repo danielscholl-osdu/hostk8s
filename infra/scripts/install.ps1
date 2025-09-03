@@ -23,10 +23,10 @@ function Test-Tool {
         [string]$InstallCommand = "",
         [string]$WingetPackage = ""
     )
-    
+
     if (Test-Command $Tool) {
         $version = ""
-        
+
         switch ($Tool) {
             "kind" {
                 try {
@@ -60,6 +60,14 @@ function Test-Tool {
                     }
                 } catch { }
             }
+            "yq" {
+                try {
+                    $output = yq --version 2>$null
+                    if ($LASTEXITCODE -eq 0 -and $output -match 'version\s+v?([0-9.]+)') {
+                        $version = $matches[1]
+                    }
+                } catch { }
+            }
             "flux-operator-mcp" {
                 try {
                     $output = flux-operator-mcp --version 2>$null
@@ -69,7 +77,7 @@ function Test-Tool {
                 } catch { }
             }
         }
-        
+
         if ($version) {
             Log-DebugWithColor -Tool $Tool -Version $version
         } else {
@@ -77,7 +85,7 @@ function Test-Tool {
         }
         return $true
     }
-    
+
     # First check if tool is installed via winget (more reliable than PATH check)
     $isInstalled = $false
     if ($WingetPackage -and (Test-WingetPackage $WingetPackage)) {
@@ -85,7 +93,7 @@ function Test-Tool {
     } elseif (Test-Command $Tool) {
         $isInstalled = $true
     }
-    
+
     if ($isInstalled) {
         # Tool is installed, try to get version (refresh PATH if needed)
         RefreshEnvironmentPath
@@ -123,6 +131,14 @@ function Test-Tool {
                             }
                         } catch { }
                     }
+                    "yq" {
+                        try {
+                            $output = yq --version 2>$null
+                            if ($LASTEXITCODE -eq 0 -and $output -match 'version\s+v?([0-9.]+)') {
+                                $version = $matches[1]
+                            }
+                        } catch { }
+                    }
                     "flux-operator-mcp" {
                         try {
                             $output = flux-operator-mcp --version 2>$null
@@ -132,7 +148,7 @@ function Test-Tool {
                         } catch { }
                     }
                 }
-                
+
         if ($version) {
             Log-DebugWithColor -Tool $Tool -Version $version
         } else {
@@ -140,7 +156,7 @@ function Test-Tool {
         }
         return $true
     }
-    
+
     # Tool not found, try to install it
     if ($InstallCommand) {
         Log-Info "Installing $Tool..."
@@ -166,55 +182,57 @@ function Test-Tool {
 
 function Install-WithWinget {
     Log-Info "Tools"
-    
+
     # Check if winget is available
     if (-not (Test-Command "winget")) {
         Log-Error "Winget not available. Please install App Installer from Microsoft Store."
         return $false
     }
-    
+
     $tools = @(
         @{ Name = "kind"; Command = "winget install Kubernetes.kind --accept-source-agreements --accept-package-agreements"; WingetPackage = "Kubernetes.kind" }
         @{ Name = "kubectl"; Command = "winget install Kubernetes.kubectl --accept-source-agreements --accept-package-agreements"; WingetPackage = "Kubernetes.kubectl" }
         @{ Name = "helm"; Command = "winget install Helm.Helm --accept-source-agreements --accept-package-agreements"; WingetPackage = "Helm.Helm" }
         @{ Name = "flux"; Command = "winget install FluxCD.Flux --accept-source-agreements --accept-package-agreements"; WingetPackage = "FluxCD.Flux" }
+        @{ Name = "yq"; Command = "winget install MikeFarah.yq --accept-source-agreements --accept-package-agreements"; WingetPackage = "MikeFarah.yq" }
         @{ Name = "flux-operator-mcp"; Command = "Invoke-WebRequest -Uri 'https://github.com/controlplaneio-fluxcd/flux-operator/releases/download/v0.27.0/flux-operator-mcp_0.27.0_windows_amd64.zip' -OutFile 'flux-operator-mcp.zip'; Expand-Archive -Path 'flux-operator-mcp.zip' -DestinationPath 'temp-flux' -Force; `$fluxPath = Split-Path (Get-Command flux).Source; Move-Item 'temp-flux/flux-operator-mcp.exe' `$fluxPath; Remove-Item 'flux-operator-mcp.zip', 'temp-flux' -Force -Recurse"; WingetPackage = "" }
     )
-    
+
     $allSuccess = $true
     foreach ($tool in $tools) {
         if (-not (Test-Tool -Tool $tool.Name -InstallCommand $tool.Command -WingetPackage $tool.WingetPackage)) {
             $allSuccess = $false
         }
     }
-    
+
     return $allSuccess
 }
 
 function Install-WithChocolatey {
     Log-Info "Tools"
-    
+
     # Check if chocolatey is available
     if (-not (Test-Command "choco")) {
         Log-Error "Chocolatey not available. Please install from https://chocolatey.org/install"
         return $false
     }
-    
+
     $tools = @(
         @{ Name = "kind"; Command = "choco install kind -y" }
         @{ Name = "kubectl"; Command = "choco install kubernetes-cli -y" }
         @{ Name = "helm"; Command = "choco install kubernetes-helm -y" }
         @{ Name = "flux"; Command = "choco install flux -y" }
+        @{ Name = "yq"; Command = "choco install yq -y" }
         @{ Name = "flux-operator-mcp"; Command = "Invoke-WebRequest -Uri 'https://github.com/controlplaneio-fluxcd/flux-operator/releases/download/v0.27.0/flux-operator-mcp_0.27.0_windows_amd64.zip' -OutFile 'flux-operator-mcp.zip'; Expand-Archive -Path 'flux-operator-mcp.zip' -DestinationPath 'temp-flux' -Force; `$fluxPath = Split-Path (Get-Command flux).Source; Move-Item 'temp-flux/flux-operator-mcp.exe' `$fluxPath; Remove-Item 'flux-operator-mcp.zip', 'temp-flux' -Force -Recurse" }
     )
-    
+
     $allSuccess = $true
     foreach ($tool in $tools) {
         if (-not (Test-Tool -Tool $tool.Name -InstallCommand $tool.Command -WingetPackage $tool.WingetPackage)) {
             $allSuccess = $false
         }
     }
-    
+
     return $allSuccess
 }
 
@@ -226,12 +244,12 @@ function Install-Manually {
     Log-Info "  - helm: https://helm.sh/docs/intro/install/#from-chocolatey-windows"
     Log-Info "  - flux: https://fluxcd.io/flux/installation/#install-the-flux-cli"
     Log-Info "  - flux-operator-mcp: https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest"
-    
+
     Log-Info ""
     Log-Info "Alternatively, install a package manager:"
     Log-Info "  - Winget (recommended): Included with Windows 11, or install App Installer from Microsoft Store"
     Log-Info "  - Chocolatey: https://chocolatey.org/install"
-    
+
     return $false
 }
 
@@ -240,9 +258,9 @@ function Install-Dependencies {
     Log-Info "Checking dependencies..."
     Log-Info "------------------------"
     Log-Info "Dependency Configuration"
-    
+
     $success = $false
-    
+
     # Select package manager based on PACKAGE_MANAGER setting
     if (-not $env:PACKAGE_MANAGER) {
         # Auto-detect: prefer winget, then chocolatey, then manual
@@ -304,10 +322,10 @@ function Install-Dependencies {
         Log-Info "Valid options for Windows: winget, chocolatey, choco, manual"
         return $false
     }
-    
-    
+
+
     Log-Info "------------------------"
-    
+
     if ($success) {
         Log-Info "All dependencies verified"
         return $true
@@ -319,7 +337,7 @@ function Install-Dependencies {
 # Main function
 function Main {
     param([string[]]$Arguments)
-    
+
     # Parse arguments
     foreach ($arg in $Arguments) {
         switch ($arg.ToLower()) {
@@ -333,7 +351,7 @@ function Main {
             }
         }
     }
-    
+
     if (Install-Dependencies) {
         exit 0
     } else {
