@@ -247,6 +247,16 @@ function Test-RegistryK8s {
     }
 }
 
+function Test-Vault {
+    try {
+        $cmd = "kubectl get statefulset vault -n hostk8s 2>`$null"
+        Invoke-Expression $cmd >$null
+        return $LASTEXITCODE -eq 0
+    } catch {
+        return $false
+    }
+}
+
 # Cross-platform path operations
 function Join-PathSafe {
     param([string[]]$Paths)

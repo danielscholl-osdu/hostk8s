@@ -344,6 +344,21 @@ try {
         }
     }
 
+    if ($env:VAULT_ENABLED -eq "true") {
+        Log-Info "Setting up Vault secret management..."
+        $vaultScript = Join-Path $PSScriptRoot "setup-vault.ps1"
+        if (Test-Path $vaultScript) {
+            try {
+                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
+                & $vaultScript
+            } catch {
+                Log-Warn "Vault setup failed, continuing..."
+            }
+        } else {
+            Log-Warn "Vault setup script not found, skipping..."
+        }
+    }
+
     if ($env:FLUX_ENABLED -eq "true") {
         Log-Info "Setting up Flux GitOps..."
         $fluxScript = Join-Path $PSScriptRoot "setup-flux.ps1"

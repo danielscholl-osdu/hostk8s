@@ -496,6 +496,42 @@ function Show-AddonStatus {
         if ($registryMessage) { Write-Host "   Status: $registryMessage" }
     }
 
+    # Show Vault status if installed
+    if (Test-Vault) {
+        $vaultStatus = "NotReady"
+        $vaultMessage = ""
+
+        try {
+            # Check if Vault pod is running using label selector (matching bash script)
+            $cmd = "kubectl get pod -l `"app.kubernetes.io/name=vault`" -n hostk8s --no-headers 2>`$null"
+            $vaultPods = Invoke-Expression $cmd
+            if ($LASTEXITCODE -eq 0 -and $vaultPods) {
+                if ($vaultPods -match "Running") {
+                    $vaultStatus = "Ready"
+                    $vaultMessage = "Secret management available (dev mode)"
+
+                    # Check if ingress is enabled for Vault UI
+                    $cmd = "kubectl get ingress vault-ui -n hostk8s 2>`$null"
+                    Invoke-Expression $cmd >$null
+                    if ($LASTEXITCODE -eq 0) {
+                        $vaultMessage = "$vaultMessage, UI at http://localhost:8080/ui/"
+                    }
+                } else {
+                    $vaultStatus = "Starting"
+                    $vaultMessage = "Vault pod not yet running"
+                }
+            } else {
+                $vaultStatus = "NotReady"
+                $vaultMessage = "Vault deployment not found"
+            }
+        } catch {
+            $vaultMessage = "Unable to check Vault status"
+        }
+
+        Write-Host "🔐 Vault: $vaultStatus"
+        if ($vaultMessage) { Write-Host "   Status: $vaultMessage" }
+    }
+
     Write-Host ""
 }
 
