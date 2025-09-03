@@ -1,81 +1,32 @@
 # PostgreSQL Component (CloudNativePG Operator)
 
-Provides CloudNativePG operator for PostgreSQL database management in HostK8s. This component enables stacks to create and manage PostgreSQL clusters with production-grade features like high availability, automated failover, and backup capabilities.
-
-## Architecture
-
-This component deploys the CloudNativePG operator to the `hostk8s` namespace, following the HostK8s operator placement strategy. Stacks can then create their own PostgreSQL clusters in dedicated namespaces.
-
-## Resource Requirements
-
-| Component | CPU Request | CPU Limit | Memory Request | Memory Limit |
-|-----------|-------------|-----------|----------------|--------------|
-| CNPG Operator | 50m | 200m | 64Mi | 256Mi |
+PostgreSQL operator component that enables stacks to create and manage production-ready PostgreSQL clusters with HostK8s.
 
 ## Quick Start
 
-### Deploy Component
+Add to your stack's `stack.yaml`:
 
-```bash
-# Include in stack (recommended)
-# In your stack.yaml:
+```yaml
 - name: component-postgres
   namespace: flux-system
   path: ./software/components/postgres
-
-# Or deploy standalone
-kubectl apply -k software/components/postgres
 ```
 
-### Verify Deployment
+Then create PostgreSQL clusters in your stack applications.
 
-```bash
-# Check operator status
-kubectl get pods -n hostk8s -l hostk8s.component=postgres
+## Creating a PostgreSQL Cluster
 
-# Verify CRDs are installed
-kubectl get crd | grep cnpg
-```
-
-## Stack Usage Examples
-
-Once the operator is deployed, stacks can create PostgreSQL clusters. Here are examples:
-
-### Basic PostgreSQL Cluster
-
-Create in your stack's app directory (e.g., `software/stacks/mystack/app/postgres/`):
+In your stack's application manifests, create a cluster:
 
 ```yaml
-# namespace.yaml
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: mystack-db
-  labels:
-    app: mystack
-
----
-# secrets.yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: postgres-superuser-secret
-  namespace: mystack-db
-type: kubernetes.io/basic-auth
-stringData:
-  username: postgres
-  password: ChangeMeInProduction123!
-
----
 # cluster.yaml
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
-  name: mystack-postgres
-  namespace: mystack-db
+  name: myapp-postgres
+  namespace: myapp-db
 spec:
-  instances: 1  # Single instance for development
+  instances: 1
 
   imageName: ghcr.io/cloudnative-pg/postgresql:16
 
@@ -88,7 +39,7 @@ spec:
 
   storage:
     size: 1Gi
-    storageClass: standard  # Or use hostPath with PVs
+    storageClass: standard
 
   resources:
     requests:
@@ -102,218 +53,95 @@ spec:
     name: postgres-superuser-secret
 ```
 
-### High Availability Configuration
+## Secret Management
 
-For production-like HA testing:
+Use HostK8s secret contracts in your stack's `hostk8s.secrets.yaml`:
 
 ```yaml
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: ha-postgres
-  namespace: production-db
+- name: postgres-superuser-secret
+  namespace: myapp-db
+  data:
+    - key: username
+      value: postgres
+    - key: password
+      generate: password
+      length: 16
+
+- name: myapp-credentials
+  namespace: myapp-db
+  data:
+    - key: username
+      value: myapp
+    - key: password
+      generate: password
+      length: 16
+```
+
+## Connection
+
+CloudNativePG creates multiple services for each cluster:
+
+| Service | Endpoint | Purpose |
+|---------|----------|---------|
+| `<cluster>-rw` | `myapp-postgres-rw.myapp-db.svc.cluster.local:5432` | Read/write (primary) |
+| `<cluster>-ro` | `myapp-postgres-ro.myapp-db.svc.cluster.local:5432` | Read-only (replicas) |
+| `<cluster>-r` | `myapp-postgres-r.myapp-db.svc.cluster.local:5432` | Any instance |
+
+## Application Configuration
+
+```yaml
+env:
+- name: DATABASE_HOST
+  value: "myapp-postgres-rw.myapp-db.svc.cluster.local"
+- name: DATABASE_PORT
+  value: "5432"
+- name: DATABASE_NAME
+  value: "myapp"
+- name: DATABASE_USER
+  valueFrom:
+    secretKeyRef:
+      name: myapp-credentials
+      key: username
+- name: DATABASE_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: myapp-credentials
+      key: password
+```
+
+## High Availability (Optional)
+
+For production-like testing with multiple instances:
+
+```yaml
 spec:
-  instances: 3  # 3 instances for HA
-
-  primaryUpdateStrategy: unsupervised
-
+  instances: 3
   minSyncReplicas: 1
   maxSyncReplicas: 1
-
-  replicationSlots:
-    highAvailability:
-      enabled: true
-
-  storage:
-    size: 10Gi
-    storageClass: fast-ssd
-
-  monitoring:
-    enabled: true  # Enable if you have Prometheus
+  primaryUpdateStrategy: unsupervised
 ```
 
-### Using HostPath Storage (Local Development)
-
-For persistent storage in local development:
-
-```yaml
-# pv.yaml - Create PersistentVolumes
----
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  name: mystack-postgres-pv
-spec:
-  capacity:
-    storage: 5Gi
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: postgres-local
-  hostPath:
-    path: /mnt/postgres/mystack  # Maps to ./data/postgres/mystack
-    type: DirectoryOrCreate
-
----
-# storageclass.yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: postgres-local
-provisioner: kubernetes.io/no-provisioner
-volumeBindingMode: WaitForFirstConsumer
-
----
-# cluster.yaml - Reference the storage class
-apiVersion: postgresql.cnpg.io/v1
-kind: Cluster
-metadata:
-  name: mystack-postgres
-  namespace: mystack-db
-spec:
-  storage:
-    size: 5Gi
-    storageClass: postgres-local
-  # ... rest of configuration
-```
-
-### Stack Integration Pattern
-
-In your stack's kustomization:
-
-```yaml
-# software/stacks/mystack/stack.yaml
----
-# First ensure operator is deployed
-- name: component-postgres
-  namespace: flux-system
-  path: ./software/components/postgres
-
----
-# Then deploy your database
-- name: mystack-database
-  namespace: flux-system
-  path: ./software/stacks/mystack/app/postgres
-  dependsOn:
-    - name: component-postgres
-```
-
-## Connection Patterns
-
-### Application ConfigMap
-
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: app-config
-  namespace: myapp
-data:
-  DATABASE_HOST: mystack-postgres-rw.mystack-db.svc.cluster.local
-  DATABASE_PORT: "5432"
-  DATABASE_NAME: myapp
-```
-
-### Service Discovery
-
-CNPG creates multiple services:
-- `<cluster-name>-rw` - Read/write service (primary)
-- `<cluster-name>-ro` - Read-only service (replicas)
-- `<cluster-name>-r` - Any instance (read)
-
-### Port Forwarding for Development
+## Development Access
 
 ```bash
-# Connect to primary for read/write
-kubectl port-forward -n mystack-db svc/mystack-postgres-rw 5432:5432
+# Port forward to connect directly
+kubectl port-forward -n myapp-db svc/myapp-postgres-rw 5432:5432
 
 # Connect with psql
-psql -h localhost -U postgres -d myapp
+psql -h localhost -U myapp -d myapp
 ```
 
-## Advanced Features
+## Resources
 
-### Backup Configuration
+| Component | CPU Request | CPU Limit | Memory Request | Memory Limit |
+|-----------|-------------|-----------|----------------|--------------|
+| CNPG Operator | 50m | 200m | 64Mi | 256Mi |
 
-```yaml
-spec:
-  backup:
-    retentionPolicy: "30d"
-    barmanObjectStore:
-      destinationPath: "s3://backup-bucket/postgres"
-      s3Credentials:
-        accessKeyId:
-          name: s3-credentials
-          key: ACCESS_KEY_ID
-        secretAccessKey:
-          name: s3-credentials
-          key: SECRET_ACCESS_KEY
-```
+## Features
 
-### Custom PostgreSQL Configuration
-
-```yaml
-spec:
-  postgresql:
-    parameters:
-      max_connections: "200"
-      shared_buffers: "256MB"
-      effective_cache_size: "1GB"
-      log_statement: "all"  # For development debugging
-```
-
-### TLS Configuration
-
-```yaml
-spec:
-  certificates:
-    serverTLSSecret: postgres-server-cert
-    serverCASecret: postgres-ca-cert
-    clientCASecret: postgres-ca-cert
-    replicationTLSSecret: postgres-replication-cert
-```
-
-## Troubleshooting
-
-### Check Operator Logs
-
-```bash
-kubectl logs -n hostk8s deployment/cnpg-controller-manager
-```
-
-### Cluster Not Starting
-
-```bash
-# Check cluster status
-kubectl describe cluster -n <namespace> <cluster-name>
-
-# Check pod events
-kubectl get events -n <namespace> --sort-by='.lastTimestamp'
-```
-
-### Storage Issues
-
-```bash
-# Verify PVC is bound
-kubectl get pvc -n <namespace>
-
-# Check PV status
-kubectl get pv
-```
-
-## CloudNativePG Resources
-
-- [Official Documentation](https://cloudnative-pg.io/documentation/)
-- [API Reference](https://cloudnative-pg.io/documentation/current/api_reference/)
-- [Operator GitHub](https://github.com/cloudnative-pg/cloudnative-pg)
-- [Examples](https://github.com/cloudnative-pg/cloudnative-pg/tree/main/docs/src/samples)
-
-## Component Contract
-
-This component follows HostK8s standards:
-- ✅ Operator deployed to `hostk8s` namespace
-- ✅ Resource labels (`hostk8s.component: postgres`)
-- ✅ Resource limits defined
-- ✅ Health checks included
-- ✅ Documentation complete
-- ✅ Stack integration examples provided
+- **CloudNativePG Operator 0.26.0** with automatic updates
+- **PostgreSQL 16** with production-grade configuration
+- **High availability** support with automatic failover
+- **Backup and recovery** capabilities built-in
+- **TLS encryption** ready for production workloads
+- **GitOps managed** with Flux v2
