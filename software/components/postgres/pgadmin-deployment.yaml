@@ -50,13 +50,13 @@ spec:
             cpu: "250m"
         livenessProbe:
           httpGet:
-            path: /misc/ping
+            path: /login
+            port: 80
+          initialDelaySeconds: 60
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /login
             port: 80
           initialDelaySeconds: 30
           periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /misc/ping
-            port: 80
-          initialDelaySeconds: 10
-          periodSeconds: 5
