@@ -1,8 +1,10 @@
 #!/bin/bash
 
 #######################################
-# HostK8s Secret Generation Script
-# Generates ephemeral secrets from hostk8s.secrets.yaml contract files
+# HostK8s Vault-Enhanced Secret Management Script
+# Reads hostk8s.secrets.yaml contracts and:
+# 1. Populates Vault with secret values
+# 2. Generates external-secrets.yaml for GitOps deployment
 #######################################
 
 set -euo pipefail
@@ -11,8 +13,33 @@ set -euo pipefail
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "${SCRIPT_DIR}/common.sh"
 
+# Command line parsing
+COMMAND=""
+STACK=""
+
+# Parse arguments - support both old and new formats
+if [ $# -eq 1 ]; then
+    # Could be either legacy format or list command
+    if [[ "$1" == "list" ]]; then
+        COMMAND="list"
+        STACK=""
+    else
+        # Legacy format: manage-secrets.sh <stack>
+        COMMAND="add"
+        STACK="$1"
+    fi
+elif [ $# -eq 2 ]; then
+    # New format: manage-secrets.sh <command> <stack>
+    COMMAND="$1"
+    STACK="$2"
+else
+    COMMAND=""
+    STACK=""
+fi
+
 # Variables
-STACK="${1:-}"
+VAULT_ADDR="${VAULT_ADDR:-http://localhost:8080}"
+VAULT_TOKEN="${VAULT_TOKEN:-hostk8s}"
 
 #######################################
 # Generate random password
@@ -52,131 +79,412 @@ generate_hex() {
 }
 
 #######################################
-# Wait for namespace to be ready
+# Check if secret already exists in Vault
 #######################################
-wait_for_namespace() {
-    local namespace="$1"
-    local timeout="${2:-60}"  # Default 60 second timeout
-    local count=0
+vault_secret_exists() {
+    local path="$1"
 
-    log_info "Waiting for namespace '${namespace}' to be ready..."
+    # Use curl to check if secret exists via Vault API
+    local response=$(curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/secret/data/${path}" 2>/dev/null || echo "")
 
-    while ! kubectl get namespace "${namespace}" &>/dev/null; do
-        if [ $count -ge $timeout ]; then
-            log_error "Timeout waiting for namespace '${namespace}' to be created"
-            log_error "Run 'kubectl get namespace ${namespace}' to check status"
-            return 1
-        fi
-
-        sleep 2
-        count=$((count + 2))
-        echo -n "."
-    done
-
-    echo ""
-    log_success "Namespace '${namespace}' is ready"
-    return 0
+    if echo "$response" | grep -q '"data"'; then
+        return 0  # exists
+    else
+        return 1  # doesn't exist
+    fi
 }
 
 #######################################
-# Check if secret exists in cluster
+# Store secret in Vault
 #######################################
-secret_exists() {
-    local name="$1"
-    local namespace="$2"
+store_vault_secret() {
+    local path="$1"
+    local json_data="$2"
 
-    if kubectl get secret "${name}" -n "${namespace}" &>/dev/null 2>&1; then
+    log_debug "Storing secret in Vault: secret/${path}"
+
+    # Create the payload for Vault KV v2
+    local payload="{\"data\": ${json_data}}"
+
+    # Store in Vault using curl
+    local response=$(curl -s -w "%{http_code}" \
+        -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -X POST \
+        -d "${payload}" \
+        "${VAULT_ADDR}/v1/secret/data/${path}")
+
+    local status_code="${response: -3}"
+    if [[ "${status_code}" =~ ^2[0-9][0-9]$ ]]; then
         return 0
     else
+        log_error "Failed to store secret ${path}: HTTP ${status_code}"
         return 1
     fi
 }
 
 #######################################
-# Generate secret from generic data format
+# Generate ExternalSecret manifest for a secret
 #######################################
-generate_secret_from_data() {
+generate_external_secret_manifest() {
     local secret_name="$1"
     local namespace="$2"
     local data_json="$3"
+    local vault_path="${STACK}/${namespace}/${secret_name}"
 
     echo "---"
-    echo "apiVersion: v1"
-    echo "kind: Secret"
+    echo "apiVersion: external-secrets.io/v1"
+    echo "kind: ExternalSecret"
     echo "metadata:"
     echo "  name: ${secret_name}"
     echo "  namespace: ${namespace}"
     echo "  labels:"
     echo "    hostk8s.io/managed: \"true\""
     echo "    hostk8s.io/contract: \"${STACK}\""
-    echo "type: Opaque"
-    echo "stringData:"
+    echo "spec:"
+    echo "  refreshInterval: 10s"
+    echo "  secretStoreRef:"
+    echo "    name: vault-backend"
+    echo "    kind: ClusterSecretStore"
+    echo "  target:"
+    echo "    name: ${secret_name}"
+    echo "    creationPolicy: Owner"
+    echo "  data:"
 
-    # Process each data entry
+    # Process each data entry to create remoteRef mappings
     local data_count=$(echo "${data_json}" | yq eval '. | length' -)
 
     for ((j=0; j<${data_count}; j++)); do
         local key=$(echo "${data_json}" | yq eval ".[${j}].key" -)
-        local value=$(echo "${data_json}" | yq eval ".[${j}].value // null" -)
-        local generate_type=$(echo "${data_json}" | yq eval ".[${j}].generate // null" -)
-        local length=$(echo "${data_json}" | yq eval ".[${j}].length // 32" -)
-
-        if [[ "${value}" != "null" ]]; then
-            # Static value
-            echo "  ${key}: \"${value}\""
-        elif [[ "${generate_type}" != "null" ]]; then
-            # Generated value
-            case "${generate_type}" in
-                password)
-                    echo "  ${key}: \"$(generate_password ${length})\""
-                    ;;
-                token)
-                    echo "  ${key}: \"$(generate_token ${length})\""
-                    ;;
-                hex)
-                    echo "  ${key}: \"$(generate_hex ${length})\""
-                    ;;
-                uuid)
-                    if command -v uuidgen &> /dev/null; then
-                        echo "  ${key}: \"$(uuidgen | tr '[:upper:]' '[:lower:]')\""
-                    else
-                        # Fallback to random hex
-                        echo "  ${key}: \"$(generate_hex 32)\""
-                    fi
-                    ;;
-                *)
-                    echo "  ${key}: \"$(generate_token ${length})\""
-                    ;;
-            esac
-        fi
+        echo "  - secretKey: ${key}"
+        echo "    remoteRef:"
+        echo "      key: ${vault_path}"
+        echo "      property: ${key}"
     done
 }
 
 #######################################
-# Generate secrets from contract
+# Process secret from contract data
 #######################################
-generate_secrets() {
+process_secret_data() {
+    local secret_name="$1"
+    local namespace="$2"
+    local data_json="$3"
+    local external_secrets_file="$4"
+
+    # Create Vault path: stack/namespace/secret-name
+    local vault_path="${STACK}/${namespace}/${secret_name}"
+
+    # Check if secret already exists in Vault (idempotency)
+    if vault_secret_exists "${vault_path}"; then
+        log_info "Secret '${secret_name}' already exists in Vault, skipping Vault population"
+    else
+        log_info "Populating Vault with secret '${secret_name}' for namespace '${namespace}'"
+
+        # Build JSON object for Vault storage
+        local vault_data="{"
+        local first=true
+
+        # Process each data entry
+        local data_count=$(echo "${data_json}" | yq eval '. | length' -)
+
+        for ((j=0; j<${data_count}; j++)); do
+            local key=$(echo "${data_json}" | yq eval ".[${j}].key" -)
+            local value=$(echo "${data_json}" | yq eval ".[${j}].value // null" -)
+            local generate_type=$(echo "${data_json}" | yq eval ".[${j}].generate // null" -)
+            local length=$(echo "${data_json}" | yq eval ".[${j}].length // 32" -)
+
+            if [[ "${first}" == "false" ]]; then
+                vault_data+=","
+            fi
+            first=false
+
+            if [[ "${value}" != "null" ]]; then
+                # Static value
+                vault_data+="\"${key}\": \"${value}\""
+            elif [[ "${generate_type}" != "null" ]]; then
+                # Generated value
+                local generated_value=""
+                case "${generate_type}" in
+                    password)
+                        generated_value=$(generate_password ${length})
+                        ;;
+                    token)
+                        generated_value=$(generate_token ${length})
+                        ;;
+                    hex)
+                        generated_value=$(generate_hex ${length})
+                        ;;
+                    uuid)
+                        if command -v uuidgen &> /dev/null; then
+                            generated_value=$(uuidgen | tr '[:upper:]' '[:lower:]')
+                        else
+                            # Fallback to random hex
+                            generated_value=$(generate_hex 32)
+                        fi
+                        ;;
+                    *)
+                        generated_value=$(generate_token ${length})
+                        ;;
+                esac
+                vault_data+="\"${key}\": \"${generated_value}\""
+            fi
+        done
+
+        vault_data+="}"
+
+        # Store in Vault
+        store_vault_secret "${vault_path}" "${vault_data}" || {
+            log_error "Failed to store secret in Vault"
+            return 1
+        }
+    fi
+
+    # Always generate ExternalSecret manifest (even if Vault secret exists)
+    log_debug "Generating ExternalSecret manifest for '${secret_name}'"
+    generate_external_secret_manifest "${secret_name}" "${namespace}" "${data_json}" >> "${external_secrets_file}"
+}
+
+#######################################
+# Show usage information
+#######################################
+show_usage() {
+    echo "Usage: $0 [COMMAND] <stack-name>"
+    echo ""
+    echo "Commands:"
+    echo "  add <stack>     Add/update secrets in Vault and generate manifests (default)"
+    echo "  remove <stack>  Remove all secrets for stack from Vault"
+    echo "  list [stack]    List secrets in Vault (all stacks or specific stack)"
+    echo ""
+    echo "Legacy format (defaults to 'add'):"
+    echo "  $0 <stack>      Same as: $0 add <stack>"
+    echo ""
+    echo "Examples:"
+    echo "  $0 add sample-app       # Populate Vault + generate manifests"
+    echo "  $0 remove sample-app    # Clean up Vault secrets"
+    echo "  $0 list                 # List all secrets"
+    echo "  $0 list sample-app      # List secrets for specific stack"
+    echo "  $0 sample-app           # Legacy format (same as add)"
+}
+
+#######################################
+# List secrets in Vault
+#######################################
+list_secrets() {
+    local filter_stack="${1:-}"
+
+    log_info "Listing secrets in Vault..."
+
+    # Check Vault connectivity
+    if ! check_vault_connectivity; then
+        exit 1
+    fi
+
+    if [[ -n "${filter_stack}" ]]; then
+        log_info "Filtering for stack: ${filter_stack}"
+        # List secrets for specific stack: secret/metadata/stack/*
+        vault_path="secret/metadata/${filter_stack}"
+    else
+        # List all secrets: secret/metadata/*
+        vault_path="secret/metadata"
+    fi
+
+    log_debug "Querying Vault path: ${vault_path}"
+
+    # Use Vault API to list secrets
+    vault_response=$(curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/${vault_path}?list=true" || echo "")
+
+    if [[ -z "${vault_response}" ]] || echo "${vault_response}" | grep -q "errors"; then
+        if [[ -n "${filter_stack}" ]]; then
+            log_info "No secrets found for stack '${filter_stack}'"
+        else
+            log_info "No secrets found in Vault"
+        fi
+        return 0
+    fi
+
+    # Parse and display results
+    if command -v jq &> /dev/null; then
+        echo "${vault_response}" | jq -r '.data.keys[]?' 2>/dev/null | while read -r key; do
+            if [[ -n "${key}" ]]; then
+                if [[ -n "${filter_stack}" ]]; then
+                    log_success "  ${filter_stack}/${key}"
+                else
+                    log_success "  ${key}"
+                fi
+            fi
+        done
+    else
+        log_warn "Install 'jq' for better secret listing output"
+        echo "${vault_response}"
+    fi
+}
+
+#######################################
+# Remove secrets for a stack from Vault
+#######################################
+remove_secrets() {
     if [[ -z "${STACK}" ]]; then
-        log_error "Stack name required. Usage: manage-secrets.sh <stack-name>"
+        log_error "Stack name required. Usage: $0 remove <stack-name>"
+        exit 1
+    fi
+
+    log_info "Removing secrets for stack '${STACK}' from Vault..."
+
+    # Check Vault connectivity
+    if ! check_vault_connectivity; then
+        exit 1
+    fi
+
+    local CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
+    local EXTERNAL_SECRETS_FILE="software/stacks/${STACK}/manifests/external-secrets.yaml"
+
+    if [[ ! -f "${CONTRACT_FILE}" ]]; then
+        log_warn "No secret contract found for stack '${STACK}'"
+        log_info "Attempting to remove any existing secrets anyway..."
+
+        # Try to remove by pattern: secret/metadata/STACK/*
+        vault_path="secret/metadata/${STACK}"
+        vault_response=$(curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
+            "${VAULT_ADDR}/v1/${vault_path}?list=true" || echo "")
+
+        if [[ -n "${vault_response}" ]] && ! echo "${vault_response}" | grep -q "errors"; then
+            if command -v jq &> /dev/null; then
+                echo "${vault_response}" | jq -r '.data.keys[]?' 2>/dev/null | while read -r namespace; do
+                    if [[ -n "${namespace}" ]]; then
+                        remove_secrets_in_path "${STACK}/${namespace}"
+                    fi
+                done
+            fi
+        else
+            log_info "No secrets found for stack '${STACK}'"
+        fi
+
+        # Remove external-secrets.yaml if it exists
+        if [[ -f "${EXTERNAL_SECRETS_FILE}" ]]; then
+            log_info "Removing ExternalSecret manifests: ${EXTERNAL_SECRETS_FILE}"
+            rm -f "${EXTERNAL_SECRETS_FILE}"
+        fi
+
+        log_success "Secret removal completed for stack '${STACK}'"
+        return 0
+    fi
+
+    log_info "Reading secret contract: ${CONTRACT_FILE}"
+
+    # Check if yq is available
+    if ! command -v yq &> /dev/null; then
+        log_error "yq is required for parsing YAML contracts"
+        log_error "Install from: https://github.com/mikefarah/yq"
+        exit 1
+    fi
+
+    # Process each secret in the contract for removal
+    local secret_count
+    secret_count=$(yq eval '.spec.secrets | length' "${CONTRACT_FILE}")
+
+    for (( i=0; i<secret_count; i++ )); do
+        local name namespace vault_path
+        name=$(yq eval ".spec.secrets[${i}].name" "${CONTRACT_FILE}")
+        namespace=$(yq eval ".spec.secrets[${i}].namespace" "${CONTRACT_FILE}")
+        vault_path="${STACK}/${namespace}/${name}"
+
+        log_info "Removing secret '${name}' from Vault path: secret/${vault_path}"
+
+        # Delete from Vault
+        if ! remove_vault_secret "${vault_path}"; then
+            log_warn "Failed to remove secret: ${vault_path}"
+        fi
+    done
+
+    # Remove external-secrets.yaml file
+    if [[ -f "${EXTERNAL_SECRETS_FILE}" ]]; then
+        log_info "Removing ExternalSecret manifests: ${EXTERNAL_SECRETS_FILE}"
+        rm -f "${EXTERNAL_SECRETS_FILE}"
+    fi
+
+    log_success "Secret removal completed for stack '${STACK}'"
+}
+
+#######################################
+# Remove secrets from a Vault path pattern
+#######################################
+remove_secrets_in_path() {
+    local base_path="$1"
+
+    # List secrets in the path
+    vault_response=$(curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/secret/metadata/${base_path}?list=true" || echo "")
+
+    if [[ -n "${vault_response}" ]] && ! echo "${vault_response}" | grep -q "errors"; then
+        if command -v jq &> /dev/null; then
+            echo "${vault_response}" | jq -r '.data.keys[]?' 2>/dev/null | while read -r secret_name; do
+                if [[ -n "${secret_name}" ]]; then
+                    remove_vault_secret "${base_path}/${secret_name}"
+                fi
+            done
+        fi
+    fi
+}
+
+#######################################
+# Remove a single secret from Vault
+#######################################
+remove_vault_secret() {
+    local vault_path="$1"
+
+    log_debug "Removing Vault secret: secret/${vault_path}"
+
+    # Delete secret data
+    local delete_response
+    delete_response=$(curl -s -X DELETE -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/secret/data/${vault_path}" 2>/dev/null || echo "")
+
+    # Delete secret metadata
+    curl -s -X DELETE -H "X-Vault-Token: ${VAULT_TOKEN}" \
+        "${VAULT_ADDR}/v1/secret/metadata/${vault_path}" >/dev/null 2>&1 || true
+
+    return 0
+}
+
+#######################################
+# Check Vault connectivity
+#######################################
+check_vault_connectivity() {
+    if ! curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" \
+         "${VAULT_ADDR}/v1/sys/health" >/dev/null 2>&1; then
+        log_error "Cannot connect to Vault at ${VAULT_ADDR}"
+        log_error "Make sure Vault is running and VAULT_ADDR/VAULT_TOKEN are set correctly"
+        return 1
+    fi
+    return 0
+}
+
+#######################################
+# Add secrets from contract (enhanced for Vault)
+#######################################
+add_secrets() {
+    if [[ -z "${STACK}" ]]; then
+        log_error "Stack name required. Usage: $0 add <stack-name>"
+        exit 1
+    fi
+
+    # Check Vault connectivity
+    if ! check_vault_connectivity; then
         exit 1
     fi
 
     CONTRACT_FILE="software/stacks/${STACK}/hostk8s.secrets.yaml"
-    SECRETS_DIR="data/secrets/${STACK}"
+    EXTERNAL_SECRETS_FILE="software/stacks/${STACK}/manifests/external-secrets.yaml"
 
     if [[ ! -f "${CONTRACT_FILE}" ]]; then
         log_info "No secret contract found for stack '${STACK}'"
         return 0
     fi
 
-    log_info "Generating secrets for stack '${STACK}'"
-
-    # Create secrets directory
-    mkdir -p "${SECRETS_DIR}"
-
-    # Temporary file for generated secrets
-    local temp_file="${SECRETS_DIR}/generated.tmp.yaml"
-    > "${temp_file}"
+    log_info "Processing secrets for stack '${STACK}' (Vault + ExternalSecrets)"
 
     # Parse contract using yq
     if ! command -v yq &> /dev/null; then
@@ -185,11 +493,23 @@ generate_secrets() {
         exit 1
     fi
 
-    # Get unique namespaces first and wait for them to be ready
-    local namespaces=$(yq eval '.spec.secrets[].namespace' "${CONTRACT_FILE}" | sort -u)
-    for namespace in ${namespaces}; do
-        wait_for_namespace "${namespace}" || exit 1
-    done
+    # Check Vault connectivity
+    if ! curl -s -H "X-Vault-Token: ${VAULT_TOKEN}" "${VAULT_ADDR}/v1/sys/health" > /dev/null; then
+        log_error "Cannot connect to Vault at ${VAULT_ADDR}"
+        log_error "Make sure Vault is running and VAULT_ADDR/VAULT_TOKEN are set correctly"
+        exit 1
+    fi
+
+    # Ensure manifests directory exists
+    mkdir -p "software/stacks/${STACK}/manifests"
+
+    # Create external-secrets.yaml file with header
+    cat > "${EXTERNAL_SECRETS_FILE}" <<EOF
+# Generated ExternalSecret manifests from hostk8s.secrets.yaml
+# This file is auto-generated by manage-secrets.sh - safe to commit to Git
+# Contains no sensitive data - only Vault path references
+# To regenerate: make up ${STACK}
+EOF
 
     # Process each secret in the contract
     local secret_count=$(yq eval '.spec.secrets | length' "${CONTRACT_FILE}")
@@ -198,35 +518,40 @@ generate_secrets() {
         local name=$(yq eval ".spec.secrets[${i}].name" "${CONTRACT_FILE}")
         local namespace=$(yq eval ".spec.secrets[${i}].namespace" "${CONTRACT_FILE}")
 
-        # Skip if secret already exists (idempotency)
-        if secret_exists "${name}" "${namespace}"; then
-            log_info "Secret '${name}' already exists in namespace '${namespace}', skipping"
-            continue
-        fi
-
-        log_info "Generating secret '${name}'"
-
-        # Use new generic data format
+        # Use generic data format
         local data_json=$(yq eval ".spec.secrets[${i}].data" "${CONTRACT_FILE}" -o=json)
-        generate_secret_from_data "${name}" "${namespace}" "${data_json}" >> "${temp_file}"
+        process_secret_data "${name}" "${namespace}" "${data_json}" "${EXTERNAL_SECRETS_FILE}"
     done
 
-    # Apply generated secrets to cluster
-    if [[ -s "${temp_file}" ]]; then
-        log_info "Applying generated secrets to cluster"
-        kubectl apply -f "${temp_file}"
-
-        # Save a copy for reference (but it's gitignored)
-        cp "${temp_file}" "${SECRETS_DIR}/generated.yaml"
-        rm "${temp_file}"
-
-        log_success "Secrets generated and applied successfully"
-    else
-        log_info "No new secrets to generate"
-    fi
+    log_success "Secrets processed successfully for stack '${STACK}'"
+    log_info "✅ Vault populated with secret values"
+    log_info "✅ ExternalSecret manifests generated: ${EXTERNAL_SECRETS_FILE}"
+    log_info "✅ Ready for GitOps deployment via Flux"
 }
 
 #######################################
 # Main execution
 #######################################
-generate_secrets
+
+# Validate command and execute
+case "${COMMAND}" in
+    "add")
+        add_secrets
+        ;;
+    "remove")
+        remove_secrets
+        ;;
+    "list")
+        list_secrets "${STACK}"
+        ;;
+    "")
+        show_usage
+        exit 1
+        ;;
+    *)
+        log_error "Unknown command: ${COMMAND}"
+        echo ""
+        show_usage
+        exit 1
+        ;;
+esac
