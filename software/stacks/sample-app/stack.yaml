@@ -29,7 +29,7 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-redis-infrastructure
+  name: component-redis
   namespace: flux-system
   labels:
     hostk8s.stack: sample-app
@@ -41,7 +41,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/redis-infrastructure
+  path: ./software/components/redis
   prune: true
   wait: true
   healthChecks:
@@ -67,7 +67,7 @@ metadata:
 spec:
   dependsOn:
     - name: component-postgres
-    - name: component-redis-infrastructure
+    - name: component-redis
   interval: 1h
   retryInterval: 1m
   timeout: 5m
