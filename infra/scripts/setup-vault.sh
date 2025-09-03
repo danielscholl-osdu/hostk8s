@@ -103,12 +103,20 @@ stringData:
 EOF
 fi
 
-# Setup Vault UI ingress if NGINX is available
-if kubectl get deployment -n ingress-nginx ingress-nginx-controller >/dev/null 2>&1; then
-    log_info "NGINX Ingress detected, configuring Vault UI ingress..."
-    kubectl apply -f infra/manifests/vault-ingress.yaml >/dev/null 2>&1 || {
-        log_warn "Failed to configure Vault UI ingress"
-    }
+# Setup Vault UI ingress if NGINX is available and ready
+if kubectl get deployment -n hostk8s ingress-nginx-controller >/dev/null 2>&1; then
+    log_info "NGINX Ingress detected, waiting for readiness..."
+
+    # Wait for NGINX Ingress controller to be ready (up to 30 seconds)
+    if kubectl wait --for=condition=available deployment/ingress-nginx-controller -n hostk8s --timeout=30s >/dev/null 2>&1; then
+        log_info "NGINX Ingress ready, configuring Vault UI ingress..."
+        kubectl apply -f infra/manifests/vault-ingress.yaml >/dev/null 2>&1 || {
+            log_warn "Failed to configure Vault UI ingress"
+        }
+    else
+        log_warn "NGINX Ingress not ready within 30 seconds, skipping Vault UI ingress setup"
+        log_warn "You can manually apply: kubectl apply -f infra/manifests/vault-ingress.yaml"
+    fi
 fi
 
 # Show addon status

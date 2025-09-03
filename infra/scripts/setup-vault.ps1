@@ -131,14 +131,23 @@ stringData:
     }
 }
 
-# Setup Vault UI ingress if NGINX is available
+# Setup Vault UI ingress if NGINX is available and ready
 try {
-    kubectl get deployment -n ingress-nginx ingress-nginx-controller 2>$null | Out-Null
-    Log-Info "NGINX Ingress detected, configuring Vault UI ingress..."
+    kubectl get deployment -n hostk8s ingress-nginx-controller 2>$null | Out-Null
+    Log-Info "NGINX Ingress detected, waiting for readiness..."
+
+    # Wait for NGINX Ingress controller to be ready (up to 30 seconds)
     try {
-        kubectl apply -f infra/manifests/vault-ingress.yaml 2>$null | Out-Null
+        kubectl wait --for=condition=available deployment/ingress-nginx-controller -n hostk8s --timeout=30s 2>$null | Out-Null
+        Log-Info "NGINX Ingress ready, configuring Vault UI ingress..."
+        try {
+            kubectl apply -f infra/manifests/vault-ingress.yaml 2>$null | Out-Null
+        } catch {
+            Log-Warn "Failed to configure Vault UI ingress"
+        }
     } catch {
-        Log-Warn "Failed to configure Vault UI ingress"
+        Log-Warn "NGINX Ingress not ready within 30 seconds, skipping Vault UI ingress setup"
+        Log-Warn "You can manually apply: kubectl apply -f infra/manifests/vault-ingress.yaml"
     }
 } catch {
     # No NGINX detected
