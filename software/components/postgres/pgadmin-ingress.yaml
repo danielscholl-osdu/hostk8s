@@ -10,7 +10,9 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
-    nginx.ingress.kubernetes.io/upstream-vhost: "localhost:8080"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Script-Name /postgres;
+      proxy_set_header X-Scheme $scheme;
 spec:
   ingressClassName: nginx
   rules:
