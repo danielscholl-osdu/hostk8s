@@ -76,5 +76,5 @@ env:
 - **Bitnami Redis 18.19.4** with automatic semver updates
 - **Persistent storage** with 8Gi default volume
 - **Web management** via Redis Commander UI
-- **Production ready** configuration with optimized settings
+- **Development optimized** configuration with persistent storage
 - **GitOps managed** with Flux v2 and OCIRepository source

@@ -1,6 +1,6 @@
 # PostgreSQL Component (CloudNativePG Operator)
 
-PostgreSQL operator component that enables stacks to create and manage production-ready PostgreSQL clusters with HostK8s.
+PostgreSQL operator component that enables stacks to create and manage PostgreSQL clusters for local development with HostK8s.
 
 ## Quick Start
 
@@ -111,7 +111,7 @@ env:
 
 ## High Availability (Optional)
 
-For production-like testing with multiple instances:
+For development testing with multiple instances:
 
 ```yaml
 spec:
@@ -140,8 +140,8 @@ psql -h localhost -U myapp -d myapp
 ## Features
 
 - **CloudNativePG Operator 0.26.0** with automatic updates
-- **PostgreSQL 16** with production-grade configuration
+- **PostgreSQL 16** with development-optimized configuration
 - **High availability** support with automatic failover
 - **Backup and recovery** capabilities built-in
-- **TLS encryption** ready for production workloads
+- **TLS encryption** support for secure local development
 - **GitOps managed** with Flux v2
