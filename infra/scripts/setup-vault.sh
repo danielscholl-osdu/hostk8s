@@ -9,51 +9,56 @@ source "$(dirname "$0")/common.sh"
 #######################################
 
 # Check if Vault is already installed
+VAULT_ALREADY_INSTALLED=false
 if helm list -n hostk8s 2>/dev/null | grep -q "^vault\\s"; then
     log_info "Vault already installed via Helm"
     if kubectl get pod -l app.kubernetes.io/name=vault -n hostk8s 2>/dev/null | grep -q Running; then
         log_info "Vault is already running"
-        exit 0
+        VAULT_ALREADY_INSTALLED=true
     fi
 fi
 
-log_info "Setting up Vault secret management addon..."
+# Only install Vault if not already installed
+if [[ "$VAULT_ALREADY_INSTALLED" != "true" ]]; then
+    log_info "Setting up Vault secret management addon..."
 
-# Add HashiCorp Helm repository
-log_debug "Adding HashiCorp Helm repository..."
-helm repo add hashicorp https://helm.releases.hashicorp.com >/dev/null 2>&1 || {
-    log_debug "HashiCorp repo already exists"
-}
-helm repo update >/dev/null 2>&1
+    # Add HashiCorp Helm repository
+    log_debug "Adding HashiCorp Helm repository..."
+    helm repo add hashicorp https://helm.releases.hashicorp.com >/dev/null 2>&1 || {
+        log_debug "HashiCorp repo already exists"
+    }
+    helm repo update >/dev/null 2>&1
 
-# Install Vault in dev mode (lightweight for development)
-log_info "Installing Vault in dev mode..."
-helm upgrade --install vault hashicorp/vault \
-    --namespace hostk8s \
-    --create-namespace \
-    --set "server.dev.enabled=true" \
-    --set "server.dev.devRootToken=hostk8s" \
-    --set "injector.enabled=false" \
-    --set "server.resources.requests.memory=64Mi" \
-    --set "server.resources.requests.cpu=10m" \
-    --set "server.resources.limits.memory=128Mi" \
-    --set "server.resources.limits.cpu=100m" \
-    --set "ui.enabled=true" \
-    --set "ui.serviceType=ClusterIP" \
-    --wait --timeout 2m >/dev/null 2>&1 || {
-    log_error "Failed to install Vault"
-    exit 1
-}
+    # Install Vault in dev mode (lightweight for development)
+    log_info "Installing Vault in dev mode..."
+    helm upgrade --install vault hashicorp/vault \
+        --namespace hostk8s \
+        --create-namespace \
+        --set "server.dev.enabled=true" \
+        --set "server.dev.devRootToken=hostk8s" \
+        --set "injector.enabled=false" \
+        --set "server.resources.requests.memory=64Mi" \
+        --set "server.resources.requests.cpu=10m" \
+        --set "server.resources.limits.memory=128Mi" \
+        --set "server.resources.limits.cpu=100m" \
+        --set "ui.enabled=true" \
+        --set "ui.serviceType=ClusterIP" \
+        --wait --timeout 2m >/dev/null 2>&1 || {
+        log_error "Failed to install Vault"
+        exit 1
+    }
 
-# Wait for Vault to be ready
-log_info "Waiting for Vault to be ready..."
-kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n hostk8s --timeout=120s || {
-    log_warn "Vault not ready after 120s, checking status..."
-    kubectl get pod -l app.kubernetes.io/name=vault -n hostk8s
-}
+    # Wait for Vault to be ready
+    log_info "Waiting for Vault to be ready..."
+    kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=vault -n hostk8s --timeout=120s || {
+        log_warn "Vault not ready after 120s, checking status..."
+        kubectl get pod -l app.kubernetes.io/name=vault -n hostk8s
+    }
+fi
 
-# Optional: Install External Secrets Operator if needed for GitOps integration
-if [[ "${EXTERNAL_SECRETS_ENABLED:-false}" == "true" ]]; then
+# Install External Secrets Operator - required for Vault integration
+# ESO is essential for the Vault-integrated secret management architecture
+if [[ "${VAULT_ENABLED:-false}" == "true" ]]; then
     log_info "Installing External Secrets Operator..."
 
     # Add External Secrets Helm repository
@@ -76,7 +81,7 @@ if [[ "${EXTERNAL_SECRETS_ENABLED:-false}" == "true" ]]; then
     # Create ClusterSecretStore for Vault
     log_debug "Creating Vault ClusterSecretStore..."
     cat <<EOF | kubectl apply -f - || log_warn "Failed to create ClusterSecretStore"
-apiVersion: external-secrets.io/v1beta1
+apiVersion: external-secrets.io/v1
 kind: ClusterSecretStore
 metadata:
   name: vault-backend

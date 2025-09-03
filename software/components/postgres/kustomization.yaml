@@ -7,7 +7,6 @@ resources:
   - pgadmin-deployment.yaml
   - pgadmin-service.yaml
   - pgadmin-ingress.yaml
-  - pgadmin-external-secret.yaml
 
 commonLabels:
   hostk8s.component: postgres
