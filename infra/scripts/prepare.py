@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run
+# -*- coding: utf-8 -*-
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
@@ -20,6 +21,7 @@ Note: Tool installation should be done via 'make install'.
 import os
 import sys
 import subprocess
+import shutil
 from pathlib import Path
 from typing import Optional
 
@@ -38,12 +40,7 @@ class DevelopmentSetup:
 
     def check_command(self, command: str) -> bool:
         """Check if a command is available in PATH."""
-        try:
-            result = subprocess.run(['which', command],
-                                  capture_output=True, text=True, check=False)
-            return result.returncode == 0
-        except Exception:
-            return False
+        return shutil.which(command) is not None
 
     def ensure_path_configured(self) -> None:
         """Ensure user's local bin is in PATH."""
@@ -60,21 +57,83 @@ class DevelopmentSetup:
 
         # Check for pre-commit
         if not self.check_command('pre-commit'):
-            logger.error("pre-commit is not installed")
-            logger.info("Install with: make install")
-            all_tools_present = False
+            logger.warn("pre-commit is not installed, installing...")
+            if not self.install_dev_tools():
+                logger.error("Failed to install pre-commit")
+                all_tools_present = False
+            else:
+                logger.info("✓ pre-commit installed successfully")
         else:
             logger.info("✓ pre-commit is installed")
 
         # Check for yamllint
         if not self.check_command('yamllint'):
             logger.warn("yamllint is not installed (optional but recommended)")
-            logger.info("Install with: make install")
-            # Don't fail for yamllint as it's optional
+            logger.info("Installing yamllint...")
+            self.install_yamllint()  # Don't fail if yamllint install fails
         else:
             logger.info("✓ yamllint is installed")
 
         return all_tools_present
+
+    def install_dev_tools(self) -> bool:
+        """Install pre-commit using pip."""
+        try:
+            # Determine the appropriate pip command based on environment
+            # This is environment-aware, not OS-aware
+            if 'uv' in sys.executable.lower() or 'UV_PROJECT_ROOT' in os.environ:
+                pip_cmd = ['uv', 'pip']
+                logger.info("Installing pre-commit using uv pip...")
+            else:
+                # Find available pip command
+                pip_exe = shutil.which('pip') or shutil.which('pip3')
+                if not pip_exe:
+                    logger.error("pip is not available. Please install Python with pip.")
+                    return False
+                pip_cmd = [pip_exe]
+                logger.info(f"Installing pre-commit using {os.path.basename(pip_exe)}...")
+
+            # Install pre-commit
+            result = subprocess.run(pip_cmd + ['install', 'pre-commit'],
+                                  capture_output=True, text=True, check=False)
+
+            if result.returncode == 0:
+                return True
+            else:
+                logger.error(f"Failed to install pre-commit: {result.stderr}")
+                return False
+
+        except Exception as e:
+            logger.error(f"Failed to install pre-commit: {e}")
+            return False
+
+    def install_yamllint(self) -> bool:
+        """Install yamllint using pip (optional tool)."""
+        try:
+            # Determine the appropriate pip command based on environment
+            if 'uv' in sys.executable.lower() or 'UV_PROJECT_ROOT' in os.environ:
+                pip_cmd = ['uv', 'pip']
+                logger.info("Installing yamllint using uv pip...")
+            else:
+                pip_exe = shutil.which('pip') or shutil.which('pip3')
+                if not pip_exe:
+                    return False  # Optional tool, don't error
+                pip_cmd = [pip_exe]
+                logger.info(f"Installing yamllint using {os.path.basename(pip_exe)}...")
+
+            # Install yamllint
+            result = subprocess.run(pip_cmd + ['install', 'yamllint'],
+                                  capture_output=True, text=True, check=False)
+
+            if result.returncode == 0:
+                logger.info("✓ yamllint installed successfully")
+                return True
+
+            return False
+
+        except Exception as e:
+            logger.debug(f"Could not install yamllint: {e}")
+            return False
 
     def setup_precommit_hooks(self) -> bool:
         """Install pre-commit hooks in the repository."""
@@ -86,8 +145,20 @@ class DevelopmentSetup:
         logger.info("[Install] Installing pre-commit hooks...")
 
         try:
-            # Run pre-commit install
-            result = subprocess.run(['pre-commit', 'install'],
+            # Try direct command first (may not be in PATH yet)
+            try:
+                result = subprocess.run(['pre-commit', 'install'],
+                                      capture_output=True, text=True, check=False)
+                if result.returncode == 0:
+                    logger.info("[Install] Pre-commit hooks installed successfully ✅")
+                    return True
+            except (FileNotFoundError, OSError):
+                # Command not found, try Python module approach
+                pass
+
+            # Try using Python module (more reliable when just installed)
+            logger.debug("Trying python -m pre_commit...")
+            result = subprocess.run([sys.executable, '-m', 'pre_commit', 'install'],
                                   capture_output=True, text=True, check=False)
 
             if result.returncode == 0:

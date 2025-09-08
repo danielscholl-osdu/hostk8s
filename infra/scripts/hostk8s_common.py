@@ -1,4 +1,5 @@
 #!/usr/bin/env -S uv run
+# -*- coding: utf-8 -*-
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
@@ -33,8 +34,10 @@ class HostK8sLogger:
     """
 
     def __init__(self):
-        self.console = Console()
-        self.console_err = Console(stderr=True)  # Separate console for stderr
+        # Use Rich's modern Windows console handling for proper Unicode support
+        # This works cross-platform - Rich handles the differences internally
+        self.console = Console(legacy_windows=False)
+        self.console_err = Console(stderr=True, legacy_windows=False)
         self.log_level = os.getenv('LOG_LEVEL', 'debug').lower()
         self.quiet = os.getenv('QUIET', 'false').lower() == 'true'
 

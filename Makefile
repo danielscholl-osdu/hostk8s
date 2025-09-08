@@ -5,13 +5,25 @@
 .PHONY: help install start stop up down restart clean status deploy remove sync suspend resume logs build
 
 # Python Detection for uv-based scripts
-UV_AVAILABLE := $(shell command -v uv 2>/dev/null)
+ifeq ($(OS),Windows_NT)
+    UV_AVAILABLE := $(shell where uv 2>NUL)
+    # Set UTF-8 encoding for Python scripts on Windows
+    export PYTHONIOENCODING := utf-8
+else
+    UV_AVAILABLE := $(shell command -v uv 2>/dev/null)
+endif
 PYTHON_AVAILABLE := $(if $(UV_AVAILABLE),true,false)
 
-# Script routing system - Python takes priority if available
+# Script routing system - Python takes priority if available AND uv is installed
+ifeq ($(OS),Windows_NT)
 define SCRIPT_RUNNER_FUNC
-$(if $(shell test -f ./infra/scripts/$(1).py && echo "exists"),uv run ./infra/scripts/$(1).py,$(call SHELL_SCRIPT_FUNC,$(1)))
+$(if $(and $(UV_AVAILABLE),$(shell powershell -Command "if (Test-Path '.\infra\scripts\$(1).py') { Write-Host 'exists' }")),uv run ./infra/scripts/$(1).py,$(call SHELL_SCRIPT_FUNC,$(1)))
 endef
+else
+define SCRIPT_RUNNER_FUNC
+$(if $(and $(UV_AVAILABLE),$(shell test -f ./infra/scripts/$(1).py && echo "exists")),uv run ./infra/scripts/$(1).py,$(call SHELL_SCRIPT_FUNC,$(1)))
+endef
+endif
 
 # OS Detection for cross-platform shell script execution
 ifeq ($(OS),Windows_NT)

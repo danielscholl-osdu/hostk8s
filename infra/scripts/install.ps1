@@ -133,7 +133,7 @@ function Show-Usage {
     Write-Host "Options:"
     Write-Host "  -h, -help    Show this help"
     Write-Host ""
-    Write-Host "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, yq, docker"
+    Write-Host "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, uv, docker"
     Write-Host ""
     Write-Host "Supported package managers:"
     Write-Host "  - Winget (winget) - Windows 10/11 (preferred)"
@@ -184,18 +184,18 @@ function Test-Tool {
                     }
                 } catch { }
             }
-            "yq" {
-                try {
-                    $output = yq --version 2>$null
-                    if ($LASTEXITCODE -eq 0 -and $output -match 'version\s+v?([0-9.]+)') {
-                        $version = $matches[1]
-                    }
-                } catch { }
-            }
             "flux-operator-mcp" {
                 try {
                     $output = flux-operator-mcp --version 2>$null
                     if ($LASTEXITCODE -eq 0 -and $output -match 'v?([0-9.]+)') {
+                        $version = $matches[1]
+                    }
+                } catch { }
+            }
+            "uv" {
+                try {
+                    $output = uv --version 2>$null
+                    if ($LASTEXITCODE -eq 0 -and $output -match 'uv\s+v?([0-9.]+)') {
                         $version = $matches[1]
                     }
                 } catch { }
@@ -271,18 +271,18 @@ function Test-Tool {
                     }
                 } catch { }
             }
-            "yq" {
-                try {
-                    $output = yq --version 2>$null
-                    if ($LASTEXITCODE -eq 0 -and $output -match 'version\s+v?([0-9.]+)') {
-                        $version = $matches[1]
-                    }
-                } catch { }
-            }
             "flux-operator-mcp" {
                 try {
                     $output = flux-operator-mcp --version 2>$null
                     if ($LASTEXITCODE -eq 0 -and $output -match 'v?([0-9.]+)') {
+                        $version = $matches[1]
+                    }
+                } catch { }
+            }
+            "uv" {
+                try {
+                    $output = uv --version 2>$null
+                    if ($LASTEXITCODE -eq 0 -and $output -match 'uv\s+v?([0-9.]+)') {
                         $version = $matches[1]
                     }
                 } catch { }
@@ -419,10 +419,8 @@ function Install-WithWinget {
         @{ Name = "kubectl"; Command = "winget install Kubernetes.kubectl --accept-source-agreements --accept-package-agreements"; WingetPackage = "Kubernetes.kubectl" }
         @{ Name = "helm"; Command = "winget install Helm.Helm --accept-source-agreements --accept-package-agreements"; WingetPackage = "Helm.Helm" }
         @{ Name = "flux"; Command = "winget install FluxCD.Flux --accept-source-agreements --accept-package-agreements"; WingetPackage = "FluxCD.Flux" }
-        @{ Name = "yq"; Command = "winget install MikeFarah.yq --accept-source-agreements --accept-package-agreements"; WingetPackage = "MikeFarah.yq" }
+        @{ Name = "uv"; Command = "winget install astral-sh.uv --accept-source-agreements --accept-package-agreements"; WingetPackage = "astral-sh.uv" }
         @{ Name = "flux-operator-mcp"; Command = "Invoke-WebRequest -Uri 'https://github.com/controlplaneio-fluxcd/flux-operator/releases/download/v0.27.0/flux-operator-mcp_0.27.0_windows_amd64.zip' -OutFile 'flux-operator-mcp.zip'; Expand-Archive -Path 'flux-operator-mcp.zip' -DestinationPath 'temp-flux' -Force; `$fluxPath = Split-Path (Get-Command flux).Source; Move-Item 'temp-flux/flux-operator-mcp.exe' `$fluxPath; Remove-Item 'flux-operator-mcp.zip', 'temp-flux' -Force -Recurse"; WingetPackage = "" }
-        @{ Name = "pre-commit"; Command = "pip install pre-commit"; WingetPackage = "" }
-        @{ Name = "yamllint"; Command = "pip install yamllint"; WingetPackage = "" }
     )
 
     $allSuccess = $true
@@ -449,10 +447,8 @@ function Install-WithChocolatey {
         @{ Name = "kubectl"; Command = "choco install kubernetes-cli -y" }
         @{ Name = "helm"; Command = "choco install kubernetes-helm -y" }
         @{ Name = "flux"; Command = "choco install flux -y" }
-        @{ Name = "yq"; Command = "choco install yq -y" }
+        @{ Name = "uv"; Command = "choco install uv -y" }
         @{ Name = "flux-operator-mcp"; Command = "Invoke-WebRequest -Uri 'https://github.com/controlplaneio-fluxcd/flux-operator/releases/download/v0.27.0/flux-operator-mcp_0.27.0_windows_amd64.zip' -OutFile 'flux-operator-mcp.zip'; Expand-Archive -Path 'flux-operator-mcp.zip' -DestinationPath 'temp-flux' -Force; `$fluxPath = Split-Path (Get-Command flux).Source; Move-Item 'temp-flux/flux-operator-mcp.exe' `$fluxPath; Remove-Item 'flux-operator-mcp.zip', 'temp-flux' -Force -Recurse" }
-        @{ Name = "pre-commit"; Command = "pip install pre-commit" }
-        @{ Name = "yamllint"; Command = "pip install yamllint" }
     )
 
     $allSuccess = $true
@@ -478,7 +474,6 @@ function Install-WithAPT {
         @{ Name = "helm"; Command = "curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null && echo 'deb [arch=`$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main' | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list && sudo apt update && sudo apt install -y helm" }
         @{ Name = "flux"; Command = "curl -s https://fluxcd.io/install.sh | sudo bash" }
         @{ Name = "flux-operator-mcp"; Command = "curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/" }
-        @{ Name = "yq"; Command = "sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq" }
         @{ Name = "pre-commit"; Command = "pip3 install --user pre-commit || sudo apt install -y pre-commit" }
         @{ Name = "yamllint"; Command = "pip3 install --user yamllint || sudo apt install -y yamllint" }
     )
@@ -502,7 +497,6 @@ function Install-WithAPK {
         @{ Name = "helm"; Command = "sudo apk add --no-cache helm" }
         @{ Name = "flux"; Command = "curl -s https://fluxcd.io/install.sh | sudo sh" }
         @{ Name = "flux-operator-mcp"; Command = "curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/" }
-        @{ Name = "yq"; Command = "sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq" }
         @{ Name = "pre-commit"; Command = "pip3 install --user pre-commit" }
         @{ Name = "yamllint"; Command = "pip3 install --user yamllint || sudo apk add --no-cache yamllint" }
     )
@@ -525,9 +519,7 @@ function Install-Manually {
     Log-Info "  - helm: https://helm.sh/docs/intro/install/#from-chocolatey-windows"
     Log-Info "  - flux: https://fluxcd.io/flux/installation/#install-the-flux-cli"
     Log-Info "  - flux-operator-mcp: https://github.com/controlplaneio-fluxcd/flux-operator/releases/latest"
-    Log-Info "  - yq: https://github.com/mikefarah/yq#install"
-    Log-Info "  - pre-commit: https://pre-commit.com/#installation"
-    Log-Info "  - yamllint: https://yamllint.readthedocs.io/en/stable/quickstart.html#installing-yamllint"
+    Log-Info "  - uv: https://github.com/astral-sh/uv#installation"
 
     Log-Info ""
     Log-Info "Alternatively, install a package manager:"
@@ -541,7 +533,7 @@ function Validate-CIEnvironment {
     param([string]$EnvName)
     Log-Debug "$EnvName environment detected - dependencies should be pre-installed"
 
-    $tools = @("kind", "kubectl", "helm", "flux", "flux-operator-mcp", "yq")
+    $tools = @("kind", "kubectl", "helm", "flux", "flux-operator-mcp", "uv")
     $missingTools = @()
 
     foreach ($tool in $tools) {
@@ -585,13 +577,14 @@ function Install-Dependencies {
                 Log-Info "------------------------"
             }
             Log-Error "No supported package manager found (winget or chocolatey)."
-            Log-Info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, yq, docker"
+            Log-Info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, uv, docker"
             Log-Info "Installation guides:"
             Log-Info "  - kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
             Log-Info "  - kubectl: https://kubernetes.io/docs/tasks/tools/"
             Log-Info "  - helm: https://helm.sh/docs/intro/install/"
             Log-Info "  - flux: https://fluxcd.io/flux/installation/"
             Log-Info "  - flux-operator-mcp: https://fluxcd.control-plane.io/mcp/install/"
+            Log-Info "  - uv: https://github.com/astral-sh/uv#installation"
             $success = Install-Manually
         }
     } elseif ($env:PACKAGE_MANAGER -eq "winget") {
