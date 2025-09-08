@@ -1,6 +1,42 @@
 #!/bin/bash
 # infra/scripts/install.sh - Install required dependencies
-source "$(dirname "$0")/common.sh"
+set -euo pipefail
+
+# Colors and formatting
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Logging functions with log levels
+# LOG_LEVEL can be: debug (default) or info
+# debug: shows all messages
+# info: shows only info, warn, error (hides debug messages)
+
+log_debug() {
+    # Only show debug messages if LOG_LEVEL is not set to info
+    if [ "${LOG_LEVEL:-debug}" != "info" ]; then
+        echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"
+    fi
+}
+
+log_info() {
+    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $*"
+}
+
+log_success() {
+    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $*"
+}
+
+log_error() {
+    if [ "${QUIET:-false}" = "true" ]; then
+        echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $*" >&2
+    else
+        echo -e "${RED}[$(date +'%H:%M:%S')] ❌${NC} $*" >&2
+    fi
+}
 
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -39,17 +75,16 @@ check_tool() {
                 ;;
             "flux-operator-mcp")
                 version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
+                ;;
             "yq")
                 version=$(yq --version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
                 ;;
         esac
 
-        if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-            if [ -n "$version" ]; then
-                log_debug "  $tool: ${CYAN}$version${NC}"
-            else
-                log_debug "  $tool: ${CYAN}installed${NC}"
-            fi
+        if [ -n "$version" ]; then
+            log_info "  $tool: ${CYAN}$version${NC}"
+        else
+            log_info "  $tool: ${CYAN}installed${NC}"
         fi
         return 0
     fi
@@ -74,17 +109,16 @@ check_tool() {
                 ;;
             "flux-operator-mcp")
                 version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
+                ;;
             "yq")
                 version=$(yq --version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
                 ;;
         esac
 
-        if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-            if [ -n "$version" ]; then
-                log_debug "  $tool: ${CYAN}$version${NC}"
-            else
-                log_debug "  $tool: ${CYAN}installed${NC}"
-            fi
+        if [ -n "$version" ]; then
+            log_info "  $tool: ${CYAN}$version${NC}"
+        else
+            log_info "  $tool: ${CYAN}installed${NC}"
         fi
     else
         log_error "$tool not found"
@@ -102,6 +136,8 @@ install_with_homebrew() {
         "flux:brew install fluxcd/tap/flux"
         "flux-operator-mcp:brew install controlplaneio-fluxcd/tap/flux-operator-mcp"
         "yq:brew install yq"
+        "pre-commit:brew install pre-commit"
+        "yamllint:brew install yamllint"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -124,6 +160,8 @@ install_with_apt() {
         "flux:curl -s https://fluxcd.io/install.sh | sudo bash"
         "flux-operator-mcp:curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/"
         "yq:sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
+        "pre-commit:pip3 install --user pre-commit || sudo apt install -y pre-commit"
+        "yamllint:pip3 install --user yamllint || sudo apt install -y yamllint"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -143,6 +181,8 @@ install_with_apk() {
         "flux:curl -s https://fluxcd.io/install.sh | sudo sh"
         "flux-operator-mcp:curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/"
         "yq:sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
+        "pre-commit:pip3 install --user pre-commit"
+        "yamllint:pip3 install --user yamllint || sudo apk add --no-cache yamllint"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -174,7 +214,8 @@ validate_ci_environment() {
 }
 
 install_dependencies() {
-    log_info "Checking dependencies..."
+    log_info "[Script 💻] Running script: install.sh"
+    log_info "[Install] Checking dependencies..."
     log_info "------------------------"
     log_info "Dependency Configuration"
 
@@ -182,13 +223,13 @@ install_dependencies() {
     if [ -z "$PACKAGE_MANAGER" ]; then
         # Auto-detect: prefer brew, then native
         if command -v brew >/dev/null 2>&1; then
-            log_info "  Package Manager: Homebrew (auto-detected)"
-            log_info "  Platform: $(uname -s)"
+            log_info "  Package Manager: ${CYAN}Homebrew (auto-detected)${NC}"
+            log_info "  Platform: ${CYAN}$(uname -s)${NC}"
             log_info "------------------------"
             install_with_homebrew
         elif command -v apt >/dev/null 2>&1; then
-            log_info "  Package Manager: APT (auto-detected)"
-            log_info "  Platform: $(uname -s)"
+            log_info "  Package Manager: ${CYAN}APT (auto-detected)${NC}"
+            log_info "  Platform: ${CYAN}$(uname -s)${NC}"
             log_info "------------------------"
             install_with_apt
         elif command -v apk >/dev/null 2>&1; then
@@ -260,7 +301,7 @@ install_dependencies() {
     fi
 
     log_info "------------------------"
-    log_info "All dependencies verified"
+    log_info "[Install] All dependencies verified ✅"
 }
 
 # Main function

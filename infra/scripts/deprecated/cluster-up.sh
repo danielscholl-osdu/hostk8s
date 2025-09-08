@@ -7,6 +7,22 @@ set +x
 # Source shared utilities
 source "$(dirname "$0")/common.sh"
 
+# Script runner function - uses Python if available, falls back to shell
+run_script() {
+    local script_name="$1"
+    shift  # Remove script name from arguments
+
+    # Check if Python version exists
+    if [ -f "infra/scripts/python/${script_name}.py" ] && command -v uv >/dev/null 2>&1; then
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" uv run "infra/scripts/python/${script_name}.py" "$@"
+    elif [ -f "infra/scripts/${script_name}.sh" ]; then
+        KUBECONFIG="${KUBECONFIG_FULL_PATH}" "./infra/scripts/${script_name}.sh" "$@"
+    else
+        log_warn "${script_name} script not found, skipping..."
+        return 1
+    fi
+}
+
 # Validate required tools are installed
 check_dependencies() {
     local missing_tools=()
@@ -243,56 +259,32 @@ fi
 # Setup add-ons if enabled (using host-installed kubectl/helm)
 if [[ "${METALLB_ENABLED}" == "true" ]]; then
     log_info "Setting up MetalLB..."
-    if [ -f "infra/scripts/setup-metallb.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-metallb.sh || log_warn "MetalLB setup failed, continuing..."
-    else
-        log_warn "MetalLB setup script not found, skipping..."
-    fi
+    run_script setup-metallb || log_warn "MetalLB setup failed, continuing..."
 fi
 
 if [[ "${INGRESS_ENABLED}" == "true" ]]; then
     log_info "Setting up NGINX Ingress..."
-    if [ -f "infra/scripts/setup-ingress.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-ingress.sh || log_warn "Ingress setup failed, continuing..."
-    else
-        log_warn "Ingress setup script not found, skipping..."
-    fi
+    run_script setup-ingress || log_warn "Ingress setup failed, continuing..."
 fi
 
 if [[ "${REGISTRY_ENABLED}" == "true" ]]; then
     log_info "Setting up Container Registry..."
-    if [ -f "infra/scripts/setup-registry.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-registry.sh || log_warn "Registry setup failed, continuing..."
-    else
-        log_warn "Registry setup script not found, skipping..."
-    fi
+    run_script setup-registry || log_warn "Registry setup failed, continuing..."
 fi
 
 if [[ "${METRICS_DISABLED}" != "true" ]]; then
     log_info "Setting up Metrics Server..."
-    if [ -f "infra/scripts/setup-metrics.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-metrics.sh || log_warn "Metrics Server setup failed, continuing..."
-    else
-        log_warn "Metrics Server setup script not found, skipping..."
-    fi
+    run_script setup-metrics || log_warn "Metrics Server setup failed, continuing..."
 fi
 
 if [[ "${VAULT_ENABLED}" == "true" ]]; then
     log_info "Setting up Vault secret management..."
-    if [ -f "infra/scripts/setup-vault.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-vault.sh || log_warn "Vault setup failed, continuing..."
-    else
-        log_warn "Vault setup script not found, skipping..."
-    fi
+    run_script setup-vault || log_warn "Vault setup failed, continuing..."
 fi
 
 if [[ "${FLUX_ENABLED}" == "true" ]]; then
     log_info "Setting up Flux GitOps..."
-    if [ -f "infra/scripts/setup-flux.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-flux.sh || log_warn "Flux setup failed, continuing..."
-    else
-        log_warn "Flux setup script not found, skipping..."
-    fi
+    run_script setup-flux || log_warn "Flux setup failed, continuing..."
 fi
 
 # Final cluster readiness check already shown above

@@ -93,6 +93,7 @@ load_environment() {
     export REGISTRY_ENABLED=${REGISTRY_ENABLED:-false}
     export METRICS_DISABLED=${METRICS_DISABLED:-false}
     export FLUX_ENABLED=${FLUX_ENABLED:-false}
+    export VAULT_ENABLED=${VAULT_ENABLED:-false}
     export PACKAGE_MANAGER=${PACKAGE_MANAGER:-}
     export KUBECONFIG_PATH="${PWD}/data/kubeconfig/config"
     export KUBECONFIG="$KUBECONFIG_PATH"

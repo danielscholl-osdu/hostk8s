@@ -9,6 +9,22 @@ source "$(dirname "$0")/common.sh"
 # Load environment configuration
 load_environment
 
+# Script runner function - uses Python if available, falls back to shell
+run_script() {
+    local script_name="$1"
+    shift  # Remove script name from arguments
+
+    # Check if Python version exists
+    if [ -f "infra/scripts/python/${script_name}.py" ] && command -v uv >/dev/null 2>&1; then
+        FLUX_ENABLED=true uv run "infra/scripts/python/${script_name}.py" "$@"
+    elif [ -f "infra/scripts/${script_name}.sh" ]; then
+        FLUX_ENABLED=true "./infra/scripts/${script_name}.sh" "$@"
+    else
+        log_error "${script_name} script not found"
+        return 1
+    fi
+}
+
 show_usage() {
     echo "Usage: $0 [down] [STACK_NAME]"
     echo ""
@@ -152,10 +168,10 @@ fi
 # Check if Flux is installed, install if not
 if ! kubectl --kubeconfig="${KUBECONFIG_PATH}" get namespace flux-system >/dev/null 2>&1; then
     log_info "Flux not found. Installing Flux first..."
-    FLUX_ENABLED=true ./infra/scripts/setup-flux.sh
+    run_script setup-flux
 elif ! kubectl --kubeconfig="${KUBECONFIG_PATH}" get pods -n flux-system -l app.kubernetes.io/part-of=flux | grep -q Running; then
     log_info "Flux installation incomplete. Completing installation..."
-    FLUX_ENABLED=true ./infra/scripts/setup-flux.sh
+    run_script setup-flux
 else
     log_info "Flux is already installed and running"
 fi

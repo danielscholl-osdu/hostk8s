@@ -3,6 +3,32 @@ param([string]$ConfigName = "")
 
 . "$PSScriptRoot\common.ps1"
 
+# Script runner function - uses Python if available, falls back to PowerShell
+function Invoke-Script {
+    param(
+        [string]$ScriptName,
+        [string[]]$Arguments = @()
+    )
+
+    $pythonScript = Join-Path (Join-Path $PSScriptRoot "python") "$ScriptName.py"
+    $powerShellScript = Join-Path $PSScriptRoot "$ScriptName.ps1"
+
+    # Check if Python version exists and uv is available
+    if ((Test-Path $pythonScript) -and (Test-Command "uv")) {
+        $env:KUBECONFIG = (Resolve-Path $kubeconfigPath -ErrorAction SilentlyContinue).Path
+        & uv run $pythonScript @Arguments
+    }
+    elseif (Test-Path $powerShellScript) {
+        $env:KUBECONFIG = (Resolve-Path $kubeconfigPath -ErrorAction SilentlyContinue).Path
+        & $powerShellScript @Arguments
+    }
+    else {
+        Log-Warn "$ScriptName script not found, skipping..."
+        return $false
+    }
+    return $true
+}
+
 # Handle KIND_CONFIG from command line argument
 if ($ConfigName) {
     $env:KIND_CONFIG = $ConfigName
@@ -286,91 +312,43 @@ try {
     # Setup add-ons if enabled
     if ($env:METALLB_ENABLED -eq "true") {
         Log-Info "Setting up MetalLB..."
-        $metallbScript = Join-Path $PSScriptRoot "setup-metallb.ps1"
-        if (Test-Path $metallbScript) {
-            try {
-                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-                & $metallbScript
-            } catch {
-                Log-Warn "MetalLB setup failed, continuing..."
-            }
-        } else {
-            Log-Warn "MetalLB setup script not found, skipping..."
+        if (-not (Invoke-Script "setup-metallb")) {
+            Log-Warn "MetalLB setup failed, continuing..."
         }
     }
 
     if ($env:INGRESS_ENABLED -eq "true") {
         Log-Info "Setting up NGINX Ingress..."
-        $ingressScript = Join-Path $PSScriptRoot "setup-ingress.ps1"
-        if (Test-Path $ingressScript) {
-            try {
-                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-                & $ingressScript
-            } catch {
-                Log-Warn "Ingress setup failed, continuing..."
-            }
-        } else {
-            Log-Warn "Ingress setup script not found, skipping..."
+        if (-not (Invoke-Script "setup-ingress")) {
+            Log-Warn "Ingress setup failed, continuing..."
         }
     }
 
     if ($env:REGISTRY_ENABLED -eq "true") {
         Log-Info "Setting up Container Registry..."
-        $registryScript = Join-Path $PSScriptRoot "setup-registry.ps1"
-        if (Test-Path $registryScript) {
-            try {
-                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-                & $registryScript
-            } catch {
-                Log-Warn "Registry setup failed, continuing..."
-            }
-        } else {
-            Log-Warn "Registry setup script not found, skipping..."
+        if (-not (Invoke-Script "setup-registry")) {
+            Log-Warn "Registry setup failed, continuing..."
         }
     }
 
     if ($env:METRICS_DISABLED -ne "true") {
         Log-Info "Setting up Metrics Server..."
-        $metricsScript = Join-Path $PSScriptRoot "setup-metrics.ps1"
-        if (Test-Path $metricsScript) {
-            try {
-                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-                & $metricsScript
-            } catch {
-                Log-Warn "Metrics Server setup failed, continuing..."
-            }
-        } else {
-            Log-Warn "Metrics Server setup script not found, skipping..."
+        if (-not (Invoke-Script "setup-metrics")) {
+            Log-Warn "Metrics Server setup failed, continuing..."
         }
     }
 
     if ($env:VAULT_ENABLED -eq "true") {
         Log-Info "Setting up Vault secret management..."
-        $vaultScript = Join-Path $PSScriptRoot "setup-vault.ps1"
-        if (Test-Path $vaultScript) {
-            try {
-                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-                & $vaultScript
-            } catch {
-                Log-Warn "Vault setup failed, continuing..."
-            }
-        } else {
-            Log-Warn "Vault setup script not found, skipping..."
+        if (-not (Invoke-Script "setup-vault")) {
+            Log-Warn "Vault setup failed, continuing..."
         }
     }
 
     if ($env:FLUX_ENABLED -eq "true") {
         Log-Info "Setting up Flux GitOps..."
-        $fluxScript = Join-Path $PSScriptRoot "setup-flux.ps1"
-        if (Test-Path $fluxScript) {
-            try {
-                $env:KUBECONFIG = (Resolve-Path $kubeconfigPath).Path
-                & $fluxScript
-            } catch {
-                Log-Warn "Flux setup failed, continuing..."
-            }
-        } else {
-            Log-Warn "Flux setup script not found, skipping..."
+        if (-not (Invoke-Script "setup-flux")) {
+            Log-Warn "Flux setup failed, continuing..."
         }
     }
 

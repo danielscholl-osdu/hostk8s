@@ -11,14 +11,14 @@ function Show-Usage {
 
 function Show-Logs {
     param([string]$PodName = "")
-    
+
     if ($PodName) {
         Log-Info "Showing logs for pod: $PodName"
         kubectl logs $PodName --tail=100 --follow
     } else {
         Log-Info "Showing recent cluster events..."
         kubectl get events --sort-by=.metadata.creationTimestamp --all-namespaces
-        
+
         Write-Host ""
         Log-Info "Showing pod status..."
         kubectl get pods --all-namespaces
@@ -27,15 +27,15 @@ function Show-Logs {
 
 function Main {
     param([string[]]$Arguments)
-    
+
     if ($Arguments.Count -eq 0) {
         Show-Usage
         return 1
     }
-    
+
     $command = $Arguments[0]
     $remainingArgs = $Arguments[1..($Arguments.Count-1)]
-    
+
     switch ($command) {
         "logs" {
             Test-ClusterRunning

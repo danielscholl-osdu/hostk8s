@@ -4,6 +4,33 @@
 # Load environment configuration
 Load-Environment
 
+# Script runner function - uses Python if available, falls back to PowerShell
+function Invoke-Script {
+    param(
+        [string]$ScriptName,
+        [string[]]$Arguments = @()
+    )
+
+    $pythonScript = Join-Path (Join-Path $PSScriptRoot "python") "$ScriptName.py"
+    $powerShellScript = Join-Path $PSScriptRoot "$ScriptName.ps1"
+
+    # Check if Python version exists and uv is available
+    if ((Test-Path $pythonScript) -and (Test-Command "uv")) {
+        $env:FLUX_ENABLED = "true"
+        & uv run $pythonScript @Arguments
+        return $LASTEXITCODE -eq 0
+    }
+    elseif (Test-Path $powerShellScript) {
+        $env:FLUX_ENABLED = "true"
+        & $powerShellScript @Arguments
+        return $LASTEXITCODE -eq 0
+    }
+    else {
+        Log-Error "$ScriptName script not found"
+        return $false
+    }
+}
+
 function Show-Usage {
     Write-Host "Usage: deploy-stack.ps1 [down] [STACK_NAME]"
     Write-Host ""
@@ -295,9 +322,7 @@ function Main {
 
     if (-not $fluxNamespaceExists) {
         Log-Info "Flux not found. Installing Flux first..."
-        $env:FLUX_ENABLED = "true"
-        & "$PSScriptRoot\setup-flux.ps1"
-        if ($LASTEXITCODE -ne 0) {
+        if (-not (Invoke-Script "setup-flux")) {
             Log-Error "Failed to install Flux"
             return 1
         }
@@ -308,9 +333,7 @@ function Main {
             $runningPods = $fluxPods | Where-Object { $_ -match "Running" }
             if (-not $runningPods) {
                 Log-Info "Flux installation incomplete. Completing installation..."
-                $env:FLUX_ENABLED = "true"
-                & "$PSScriptRoot\setup-flux.ps1"
-                if ($LASTEXITCODE -ne 0) {
+                if (-not (Invoke-Script "setup-flux")) {
                     Log-Error "Failed to complete Flux installation"
                     return 1
                 }
@@ -319,9 +342,7 @@ function Main {
             }
         } catch {
             Log-Info "Flux installation incomplete. Completing installation..."
-            $env:FLUX_ENABLED = "true"
-            & "$PSScriptRoot\setup-flux.ps1"
-            if ($LASTEXITCODE -ne 0) {
+            if (-not (Invoke-Script "setup-flux")) {
                 Log-Error "Failed to complete Flux installation"
                 return 1
             }

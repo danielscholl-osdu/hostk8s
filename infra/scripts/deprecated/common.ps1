@@ -182,7 +182,10 @@ function Load-Environment {
     if (-not $env:KIND_CONFIG) { $env:KIND_CONFIG = "" }
     if (-not $env:METALLB_ENABLED) { $env:METALLB_ENABLED = "false" }
     if (-not $env:INGRESS_ENABLED) { $env:INGRESS_ENABLED = "false" }
+    if (-not $env:REGISTRY_ENABLED) { $env:REGISTRY_ENABLED = "false" }
+    if (-not $env:METRICS_DISABLED) { $env:METRICS_DISABLED = "false" }
     if (-not $env:FLUX_ENABLED) { $env:FLUX_ENABLED = "false" }
+    if (-not $env:VAULT_ENABLED) { $env:VAULT_ENABLED = "false" }
     if (-not $env:PACKAGE_MANAGER) { $env:PACKAGE_MANAGER = "" }
 
     # Set KUBECONFIG paths using PowerShell path joining
