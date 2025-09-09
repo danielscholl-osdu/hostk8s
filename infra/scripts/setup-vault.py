@@ -43,7 +43,7 @@ class VaultSetup:
         self.prefix = "[Vault]"
         self.namespace = "hostk8s"
         self.vault_token = "hostk8s"
-        self.vault_enabled = get_env('VAULT_ENABLED', 'false').lower() == 'true'
+        self.vault_enabled = get_env('VAULT_ENABLED', 'false').strip().lower() == 'true'
 
     def log_info(self, message: str):
         """Log with Vault prefix."""
@@ -379,7 +379,7 @@ stringData:
         load_environment()
 
         # Update configuration from environment (in case .env changed values)
-        self.vault_enabled = get_env('VAULT_ENABLED', 'false').lower() == 'true'
+        self.vault_enabled = get_env('VAULT_ENABLED', 'false').strip().lower() == 'true'
 
         # Check prerequisites
         self.check_prerequisites()

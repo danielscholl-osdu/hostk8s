@@ -44,20 +44,20 @@ class ClusterSetup:
         self.kind_config = get_env('KIND_CONFIG', '')
         self.kind_config_file = None  # Will be set in determine_kind_config
 
-        # Addon flags
-        self.metallb_enabled = get_env('METALLB_ENABLED', 'false').lower() == 'true'
-        self.ingress_enabled = get_env('INGRESS_ENABLED', 'true').lower() == 'true'
-        self.registry_enabled = get_env('REGISTRY_ENABLED', 'false').lower() == 'true'
-        self.metrics_disabled = get_env('METRICS_DISABLED', 'false').lower() == 'true'
-        self.vault_enabled = get_env('VAULT_ENABLED', 'false').lower() == 'true'
-        self.flux_enabled = get_env('FLUX_ENABLED', 'false').lower() == 'true'
+        # Addon flags (strip spaces from env values to handle .env formatting)
+        self.metallb_enabled = get_env('METALLB_ENABLED', 'false').strip().lower() == 'true'
+        self.ingress_enabled = get_env('INGRESS_ENABLED', 'true').strip().lower() == 'true'
+        self.registry_enabled = get_env('REGISTRY_ENABLED', 'false').strip().lower() == 'true'
+        self.metrics_disabled = get_env('METRICS_DISABLED', 'false').strip().lower() == 'true'
+        self.vault_enabled = get_env('VAULT_ENABLED', 'false').strip().lower() == 'true'
+        self.flux_enabled = get_env('FLUX_ENABLED', 'false').strip().lower() == 'true'
 
         # Registry configuration
         self.registry_name = "hostk8s-registry"
         self.registry_port = get_env('REGISTRY_PORT', '5002')  # Use 5002 to avoid conflict with Kind NodePort on 5001
 
         # Paths
-        self.script_dir = Path(__file__).parent.parent
+        self.script_dir = Path(__file__).parent  # infra/scripts directory
         self.project_root = self.script_dir.parent.parent
 
     def check_dependencies(self) -> None:
@@ -400,14 +400,15 @@ http:
                 logger.warn(f"Could not create namespace: {e}")
 
     def run_addon_script(self, script_name: str) -> bool:
-        """Run an addon setup script (Python or shell)."""
-        # Try Python script first
-        python_script = self.script_dir / 'python' / f'{script_name}.py'
+        """Run an addon setup script (Python-only for OS independence)."""
+        # Python scripts handle all OS-specific logic internally
+        python_script = self.script_dir / f'{script_name}.py'
         if python_script.exists() and shutil.which('uv'):
             logger.info(f"[Script 🐍] Running script: [cyan]{script_name}.py[/cyan]")
             try:
                 env = os.environ.copy()
                 env['KUBECONFIG'] = str(self.kubeconfig_path)
+                # Python scripts are OS-agnostic, handling platform differences internally
                 result = subprocess.run(['uv', 'run', str(python_script)],
                                       env=env, check=False)
                 return result.returncode == 0
@@ -415,19 +416,9 @@ http:
                 logger.debug(f"Error running Python script: {e}")
                 return False
 
-        # Fall back to shell script
-        shell_script = self.script_dir / f'{script_name}.sh'
-        if shell_script.exists():
-            logger.debug(f"Running shell script: {script_name}.sh")
-            try:
-                env = os.environ.copy()
-                env['KUBECONFIG'] = str(self.kubeconfig_path)
-                result = subprocess.run([str(shell_script)], env=env, check=False)
-                return result.returncode == 0
-            except Exception:
-                return False
-
-        logger.warn(f"{script_name} script not found, skipping")
+        # Only log warning if Python script doesn't exist
+        # No shell script fallback - Python handles everything
+        logger.warn(f"{script_name}.py script not found, skipping")
         return False
 
     def setup_addons(self) -> None:

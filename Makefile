@@ -4,38 +4,35 @@
 .DEFAULT_GOAL := help
 .PHONY: help install start stop up down restart clean status deploy remove sync suspend resume logs build
 
-# Python Detection for uv-based scripts
+# Load .env file if it exists
+-include .env
+export
+
+# Set UTF-8 encoding for Python scripts on Windows
 ifeq ($(OS),Windows_NT)
-    UV_AVAILABLE := $(shell where uv 2>NUL)
-    # Set UTF-8 encoding for Python scripts on Windows
     export PYTHONIOENCODING := utf-8
-else
-    UV_AVAILABLE := $(shell command -v uv 2>/dev/null)
-endif
-PYTHON_AVAILABLE := $(if $(UV_AVAILABLE),true,false)
-
-# Script routing system - Python takes priority if available AND uv is installed
-ifeq ($(OS),Windows_NT)
-define SCRIPT_RUNNER_FUNC
-$(if $(and $(UV_AVAILABLE),$(shell powershell -Command "if (Test-Path '.\infra\scripts\$(1).py') { Write-Host 'exists' }")),uv run ./infra/scripts/$(1).py,$(call SHELL_SCRIPT_FUNC,$(1)))
-endef
-else
-define SCRIPT_RUNNER_FUNC
-$(if $(and $(UV_AVAILABLE),$(shell test -f ./infra/scripts/$(1).py && echo "exists")),uv run ./infra/scripts/$(1).py,$(call SHELL_SCRIPT_FUNC,$(1)))
-endef
 endif
 
-# OS Detection for cross-platform shell script execution
+# Script routing system - All scripts are Python except install
+# No fallback needed since uv is a requirement
+define SCRIPT_RUNNER_FUNC
+uv run ./infra/scripts/$(1).py
+endef
+
+# OS Detection for cross-platform compatibility
 ifeq ($(OS),Windows_NT)
     SCRIPT_EXT := .ps1
-    SHELL_RUNNER := pwsh -ExecutionPolicy Bypass -NoProfile -File
+    # Only used for install script now - all others use uv run
+    INSTALL_RUNNER := pwsh -ExecutionPolicy Bypass -NoProfile -File
     PWD_CMD := $$(pwsh -Command "(Get-Location).Path")
     PATH_SEP := \\
+    NULL_DEVICE := nul
 else
     SCRIPT_EXT := .sh
-    SHELL_RUNNER :=
+    INSTALL_RUNNER :=
     PWD_CMD := $$(pwd)
     PATH_SEP := /
+    NULL_DEVICE := /dev/null
     # Unix uses printf with ANSI color codes
     ECHO := printf
     CYAN := \033[36m
@@ -43,13 +40,9 @@ else
     RESET := \033[0m
 endif
 
-# Shell script fallback function
-define SHELL_SCRIPT_FUNC
-$(SHELL_RUNNER) ./infra/scripts/$(1)$(SCRIPT_EXT)
-endef
-
-# Backwards compatibility - SCRIPT_RUNNER for scripts not yet migrated
-SCRIPT_RUNNER := $(SHELL_RUNNER)
+# Install script runner - only used for make install target
+# This is the ONLY script that's not Python
+SCRIPT_RUNNER := $(INSTALL_RUNNER)
 
 # Environment setup - Cross-platform path resolution
 ifeq ($(OS),Windows_NT)
@@ -75,7 +68,7 @@ install: ## Install dependencies and setup environment (Usage: make install [dev
 ifeq ($(word 2,$(MAKECMDGOALS)),dev)
 	@$(call SCRIPT_RUNNER_FUNC,prepare)
 else
-	@$(SCRIPT_RUNNER) ./infra/scripts/install$(SCRIPT_EXT)
+	@$(INSTALL_RUNNER) ./infra/scripts/install$(SCRIPT_EXT)
 endif
 
 # Handle dev argument as target to avoid "No rule to make target" errors
@@ -91,7 +84,7 @@ stop: ## Stop cluster
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down)
 
 up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
-	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) 2>/dev/null || true
+	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) || true
 	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 
 # Handle arguments as targets to avoid "No rule to make target" errors
@@ -115,19 +108,19 @@ extension/%:
 	@:
 
 down: ## Remove software stack (Usage: make down <stack-name>)
-	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) remove "$(word 2,$(MAKECMDGOALS))" 2>/dev/null || true
+	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) remove "$(word 2,$(MAKECMDGOALS))" || true
 	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) down "$(word 2,$(MAKECMDGOALS))"
 
 restart: ## Quick cluster reset for development iteration (Usage: make restart [stack-name])
 	@$(call SCRIPT_RUNNER_FUNC,cluster-restart) $(word 2,$(MAKECMDGOALS))
 
 clean: ## Complete cleanup (destroy cluster and data)
-	@$(call SCRIPT_RUNNER_FUNC,cluster-down) 2>/dev/null || true
-	@kind delete cluster --name hostk8s 2>/dev/null || true
+	@$(call SCRIPT_RUNNER_FUNC,cluster-down) || true
+	@kind delete cluster --name hostk8s 2>$(NULL_DEVICE) || true
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>nul || echo ""
+	@powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>$(NULL_DEVICE) || true
 else
-	@rm -rf data/ 2>/dev/null || true
+	@rm -rf data/ 2>$(NULL_DEVICE) || true
 endif
 
 status: ## Show cluster health and running services

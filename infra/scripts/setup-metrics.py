@@ -61,7 +61,7 @@ class MetricsSetup:
 
     def check_if_disabled(self) -> bool:
         """Check if metrics server should be disabled."""
-        if get_env('METRICS_DISABLED', 'false').lower() == 'true':
+        if get_env('METRICS_DISABLED', 'false').strip().lower() == 'true':
             self.log_info("⏭️  Metrics Server disabled by METRICS_DISABLED=true")
             return True
         return False

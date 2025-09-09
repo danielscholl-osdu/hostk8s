@@ -25,6 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
+from rich.console import Console
 
 # Import common utilities
 from hostk8s_common import (
@@ -32,6 +33,9 @@ from hostk8s_common import (
     run_kubectl, run_flux, has_flux, has_flux_cli,
     detect_kubeconfig, get_env
 )
+
+# Create a console instance for Rich formatted output
+console = Console()
 
 
 class EnhancedClusterStatusChecker:
@@ -223,7 +227,7 @@ class EnhancedClusterStatusChecker:
                                                         '--no-headers'], check=False)
 
                             if ingress_result.returncode == 0:
-                                print(f"   Web UI: Available at [cyan]http://localhost:8080/registry/[/cyan]")
+                                console.print(f"   Web UI: Available at [cyan]http://localhost:8080/registry/[/cyan]")
                             else:
                                 print(f"   Web UI: Deployed but no ingress configured")
                         else:
@@ -269,7 +273,7 @@ class EnhancedClusterStatusChecker:
 
                     print(f"   Status: Secret management available (dev mode)")
                     if ingress_result.returncode == 0:
-                        print(f"   Web UI: Available at [cyan]http://localhost:8080/ui/vault/auth[/cyan]")
+                        console.print(f"   Web UI: Available at [cyan]http://localhost:8080/ui/vault/auth[/cyan]")
                 else:
                     print(f"🔐 Vault: Starting")
                     print(f"   Status: Vault pod not yet running")

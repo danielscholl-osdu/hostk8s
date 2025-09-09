@@ -259,14 +259,16 @@ def load_env_file(env_file: str = '.env') -> Dict[str, str]:
                 # Skip comments and empty lines
                 if line and not line.startswith('#') and '=' in line:
                     key, value = line.split('=', 1)
+                    key = key.strip()  # Strip whitespace from key
                     # Remove inline comments (everything after #)
                     if '#' in value:
                         value = value.split('#', 1)[0]
                     # Strip whitespace and remove quotes if present
                     value = value.strip().strip('\'"')
                     env_vars[key] = value
-                    # Set in current process environment
-                    os.environ[key] = value
+                    # Only set if not already in environment (preserve Make exports)
+                    if key not in os.environ:
+                        os.environ[key] = value
 
     return env_vars
 
