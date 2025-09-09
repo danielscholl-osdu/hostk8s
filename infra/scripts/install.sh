@@ -214,7 +214,7 @@ install_dependencies() {
     log_info "Dependency Configuration"
 
     # Select package manager based on PACKAGE_MANAGER setting
-    if [ -z "$PACKAGE_MANAGER" ]; then
+    if [ -z "${PACKAGE_MANAGER:-}" ]; then
         # Auto-detect: prefer brew, then native
         if command -v brew >/dev/null 2>&1; then
             log_info "  Package Manager: ${CYAN}Homebrew (auto-detected)${NC}"
@@ -247,7 +247,7 @@ install_dependencies() {
             log_info "  - flux-operator-mcp: https://fluxcd.control-plane.io/mcp/install/"
             return 1
         fi
-    elif [ "$PACKAGE_MANAGER" = "brew" ]; then
+    elif [ "${PACKAGE_MANAGER:-}" = "brew" ]; then
         # Force Homebrew
         if command -v brew >/dev/null 2>&1; then
             if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -261,7 +261,7 @@ install_dependencies() {
             log_info "Install Homebrew: https://brew.sh/"
             return 1
         fi
-    elif [ "$PACKAGE_MANAGER" = "native" ]; then
+    elif [ "${PACKAGE_MANAGER:-}" = "native" ]; then
         # Force native package manager
         if command -v apt >/dev/null 2>&1; then
             if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -282,7 +282,7 @@ install_dependencies() {
             return 1
         fi
     else
-        log_error "Invalid PACKAGE_MANAGER value: '$PACKAGE_MANAGER'"
+        log_error "Invalid PACKAGE_MANAGER value: '${PACKAGE_MANAGER:-}'"
         log_info "Valid options: brew, native"
         return 1
     fi
