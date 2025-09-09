@@ -2,25 +2,47 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install start stop up down restart clean status deploy remove sync suspend resume logs build
+.PHONY: help install start stop up down restart clean status deploy remove sync suspend resume build
 
-# OS Detection for cross-platform script execution
+# Load .env file if it exists
+-include .env
+export
+
+# Set UTF-8 encoding for Python scripts on Windows
+ifeq ($(OS),Windows_NT)
+    export PYTHONIOENCODING := utf-8
+endif
+
+# Script routing system - All scripts are Python except install
+# No fallback needed since uv is a requirement
+define SCRIPT_RUNNER_FUNC
+uv run ./infra/scripts/$(1).py
+endef
+
+# OS Detection for cross-platform compatibility
 ifeq ($(OS),Windows_NT)
     SCRIPT_EXT := .ps1
-    SCRIPT_RUNNER := pwsh -ExecutionPolicy Bypass -NoProfile -File
+    # Only used for install script now - all others use uv run
+    INSTALL_RUNNER := pwsh -ExecutionPolicy Bypass -NoProfile -File
     PWD_CMD := $$(pwsh -Command "(Get-Location).Path")
     PATH_SEP := \\
+    NULL_DEVICE := nul
 else
     SCRIPT_EXT := .sh
-    SCRIPT_RUNNER :=
+    INSTALL_RUNNER :=
     PWD_CMD := $$(pwd)
     PATH_SEP := /
+    NULL_DEVICE := /dev/null
     # Unix uses printf with ANSI color codes
     ECHO := printf
     CYAN := \033[36m
     BOLD := \033[1m
     RESET := \033[0m
 endif
+
+# Install script runner - only used for make install target
+# This is the ONLY script that's not Python
+SCRIPT_RUNNER := $(INSTALL_RUNNER)
 
 # Environment setup - Cross-platform path resolution
 ifeq ($(OS),Windows_NT)
@@ -35,13 +57,18 @@ endif
 ##@ Setup
 
 help: ## Show this help message
-	@$(SCRIPT_RUNNER) ./infra/scripts/show-help$(SCRIPT_EXT)
+	@echo "HostK8s - Host-Mode Kubernetes Development Platform"
+	@echo ""
+	@echo "Usage:"
+	@echo "  make <target>"
+	@echo ""
+	@awk 'BEGIN {FS = ":.*##"; printf "\nAvailable targets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
 
 install: ## Install dependencies and setup environment (Usage: make install [dev])
 ifeq ($(word 2,$(MAKECMDGOALS)),dev)
-	@$(SCRIPT_RUNNER) ./infra/scripts/prepare$(SCRIPT_EXT)
+	@$(call SCRIPT_RUNNER_FUNC,prepare)
 else
-	@$(SCRIPT_RUNNER) ./infra/scripts/install$(SCRIPT_EXT)
+	@$(INSTALL_RUNNER) ./infra/scripts/install$(SCRIPT_EXT)
 endif
 
 # Handle dev argument as target to avoid "No rule to make target" errors
@@ -51,14 +78,25 @@ dev:
 ##@ Infrastructure
 
 start: ## Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)
-	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-up$(SCRIPT_EXT) $(word 2,$(MAKECMDGOALS))
+	@$(call SCRIPT_RUNNER_FUNC,cluster-up) $(word 2,$(MAKECMDGOALS))
+	@if [ -n "$(SOFTWARE_STACK)" ]; then \
+		STACK_NAME=$$(echo "$(SOFTWARE_STACK)" | xargs); \
+		echo "[Cluster] SOFTWARE_STACK detected: $$STACK_NAME"; \
+		BUILD_TARGET=$$(echo "$${SOFTWARE_BUILD:-$$STACK_NAME}" | xargs); \
+		if [ -n "$$BUILD_TARGET" ] && [ -d "src/$$BUILD_TARGET" ]; then \
+			echo "[Cluster] Auto-building: src/$$BUILD_TARGET"; \
+			$(MAKE) build "src/$$BUILD_TARGET"; \
+		fi; \
+		echo "[Cluster] Auto-deploying stack..."; \
+		$(MAKE) up "$$STACK_NAME"; \
+	fi
 
 stop: ## Stop cluster
-	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT)
+	@$(call SCRIPT_RUNNER_FUNC,cluster-down)
 
 up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) 2>/dev/null || true
-	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) || true
+	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 
 # Handle arguments as targets to avoid "No rule to make target" errors
 minimal:
@@ -81,50 +119,50 @@ extension/%:
 	@:
 
 down: ## Remove software stack (Usage: make down <stack-name>)
-	@$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) remove "$(word 2,$(MAKECMDGOALS))" 2>/dev/null || true
-	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) down "$(word 2,$(MAKECMDGOALS))"
+	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) remove "$(word 2,$(MAKECMDGOALS))" || true
+	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) down "$(word 2,$(MAKECMDGOALS))"
 
 restart: ## Quick cluster reset for development iteration (Usage: make restart [stack-name])
-	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-restart$(SCRIPT_EXT) $(word 2,$(MAKECMDGOALS))
+	@$(call SCRIPT_RUNNER_FUNC,cluster-restart) $(word 2,$(MAKECMDGOALS))
 
 clean: ## Complete cleanup (destroy cluster and data)
+	@$(call SCRIPT_RUNNER_FUNC,cluster-down) || true
+	@kind delete cluster --name hostk8s 2>$(NULL_DEVICE) || true
 ifeq ($(OS),Windows_NT)
-	@pwsh -ExecutionPolicy Bypass -NoProfile -File ./infra/scripts/cluster-down.ps1 2>nul || echo ""
-	@kind delete cluster --name hostk8s 2>nul || echo ""
-	@powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>nul || echo ""
+	@if exist data (echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] Removing data directory and persistent volumes..." & powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>$(NULL_DEVICE) & echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] Data cleanup completed") else (echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] No data directory found - already clean")
 else
-	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-down$(SCRIPT_EXT) 2>/dev/null || true
-	@kind delete cluster --name hostk8s 2>/dev/null || true
-	@rm -rf data/ 2>/dev/null || true
+	@echo "[$$(date '+%H:%M:%S')] [Clean] Cleaning data directory and persistent volumes..."
+	@rm -rf data/ 2>$(NULL_DEVICE) || true
+	@echo "[$$(date '+%H:%M:%S')] [Clean] Data cleanup completed"
 endif
 
 status: ## Show cluster health and running services
-	@$(SCRIPT_RUNNER) ./infra/scripts/cluster-status$(SCRIPT_EXT)
+	@$(call SCRIPT_RUNNER_FUNC,cluster-status)
 
 sync: ## Force Flux reconciliation (Usage: make sync [stack-name] or REPO=name/KUSTOMIZATION=name make sync)
 ifdef REPO
-	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --repo "$(REPO)"
+	@$(call SCRIPT_RUNNER_FUNC,flux-sync) --repo "$(REPO)"
 else ifdef KUSTOMIZATION
-	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --kustomization "$(KUSTOMIZATION)"
+	@$(call SCRIPT_RUNNER_FUNC,flux-sync) --kustomization "$(KUSTOMIZATION)"
 else ifneq ($(word 2,$(MAKECMDGOALS)),)
-	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT) --stack "$(word 2,$(MAKECMDGOALS))"
+	@$(call SCRIPT_RUNNER_FUNC,flux-sync) --stack "$(word 2,$(MAKECMDGOALS))"
 else
-	@$(SCRIPT_RUNNER) ./infra/scripts/flux-sync$(SCRIPT_EXT)
+	@$(call SCRIPT_RUNNER_FUNC,flux-sync)
 endif
 
 suspend: ## Suspend GitOps reconciliation (pause all GitRepository sources)
-	@$(SCRIPT_RUNNER) ./infra/scripts/flux-suspend$(SCRIPT_EXT) suspend
+	@$(call SCRIPT_RUNNER_FUNC,flux-suspend) suspend
 
 resume: ## Resume GitOps reconciliation (restore all GitRepository sources)
-	@$(SCRIPT_RUNNER) ./infra/scripts/flux-suspend$(SCRIPT_EXT) resume
+	@$(call SCRIPT_RUNNER_FUNC,flux-suspend) resume
 
 ##@ Applications
 
 deploy: ## Deploy application (Usage: make deploy [app-name] [namespace] - defaults to 'simple')
-	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),simple) $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),default)
+	@$(call SCRIPT_RUNNER_FUNC,deploy-app) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),simple) $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),default)
 
 remove: ## Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)
-	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) remove "$(word 2,$(MAKECMDGOALS))" $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),$(if $(NAMESPACE),$(NAMESPACE),default))
+	@$(call SCRIPT_RUNNER_FUNC,deploy-app) remove "$(word 2,$(MAKECMDGOALS))" $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),$(if $(NAMESPACE),$(NAMESPACE),default))
 
 # Handle app and namespace arguments as targets to avoid "No rule to make target" errors
 %:
@@ -137,8 +175,6 @@ src/%:
 
 ##@ Development Tools
 
-logs: ## View recent cluster events and logs
-	@$(SCRIPT_RUNNER) ./infra/scripts/utils$(SCRIPT_EXT) logs $(filter-out logs,$(MAKECMDGOALS))
 
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
-	@$(SCRIPT_RUNNER) ./infra/scripts/build$(SCRIPT_EXT) "$(word 2,$(MAKECMDGOALS))"
+	@$(call SCRIPT_RUNNER_FUNC,build) "$(word 2,$(MAKECMDGOALS))"

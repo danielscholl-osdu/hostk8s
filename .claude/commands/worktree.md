@@ -12,7 +12,7 @@ I'll create your isolated development worktree with unique ports and GitOps conf
 First, let me run the worktree setup script:
 
 ```bash
-./infra/scripts/worktree-setup.sh {{args}}
+uv run ./infra/scripts/worktree-setup.py {{args}}
 ```
 
 Now let me show you information about your new worktree environment:

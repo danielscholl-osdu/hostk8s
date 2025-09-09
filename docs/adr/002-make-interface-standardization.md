@@ -4,17 +4,17 @@
 **Accepted** - 2025-07-28
 
 ## Context
-HostK8s consists of multiple shell scripts for cluster management, each with different calling conventions and environment requirements. Developers needed a consistent, discoverable interface that handles environment setup (KUBECONFIG), validation, and provides standardized commands regardless of the underlying script complexity.
+HostK8s consists of multiple Python scripts for cluster management, each with different calling conventions and environment requirements. Developers needed a consistent, discoverable interface that handles environment setup (KUBECONFIG), validation, and provides standardized commands regardless of the underlying script complexity.
 
 ## Decision
-Implement a **Make interface as thin orchestration layer** that provides consistent command patterns while delegating complex operations to dedicated, purpose-built platform-native scripts (bash for Unix/Linux/Mac, PowerShell for Windows). Make handles interface concerns (argument parsing, environment setup, dependency chains, cross-platform script selection) while scripts handle operational complexity.
+Implement a **Make interface as thin orchestration layer** that provides consistent command patterns while delegating complex operations to dedicated, cross-platform Python scripts. Make handles interface concerns (argument parsing, environment setup, dependency chains) while Python scripts provide unified operational logic across all platforms via `uv` execution.
 
 ## Rationale
-1. **Separation of Concerns**: Make excels at interface/orchestration; platform-native scripts excel at complex operations
+1. **Separation of Concerns**: Make excels at interface/orchestration; Python scripts excel at cross-platform operations
 2. **Universal Familiarity**: Standard `make start`, `make test`, `make clean` patterns developers expect
-3. **Maintainability**: Complex logic in dedicated scripts is easier to test, debug, and modify
+3. **Maintainability**: Complex logic in dedicated Python scripts is easier to test, debug, and modify
 4. **Discoverability**: `make help` provides consistent interface while scripts offer detailed help
-5. **Platform Consistency**: Same Make interface across all platforms (Unix/Linux/Mac/Windows), with automatic platform detection and script selection
+5. **Platform Consistency**: Same Make interface across all platforms with unified Python execution via `uv`
 6. **Evolution**: Scripts can be enhanced independently without changing user interface
 
 ## Architecture Design
@@ -24,41 +24,42 @@ Implement a **Make interface as thin orchestration layer** that provides consist
 - **Argument Parsing**: Extract and validate arguments using Make's `$(word)` functions
 - **Environment Setup**: KUBECONFIG management and variable passing to scripts
 - **Dependency Chains**: Ensure prerequisite operations (`up: install`)
-- **Cross-Platform Detection**: Automatic OS detection and script selection (.sh/.ps1)
-- **Script Orchestration**: Route commands to appropriate platform-native scripts
+- **Script Orchestration**: Route commands to Python scripts via `uv run`
 
-### Script Responsibilities (Complex Operations)
-- **Operational Logic**: All complex platform-native operations, validations, and integrations
-- **Error Handling**: Detailed error messages and recovery suggestions
-- **Help Systems**: Comprehensive usage documentation with examples
-- **Shared Utilities**: Platform-specific common functions (common.sh/common.ps1) for logging, validation, and kubectl operations
-- **Functional Parity**: Identical behavior across platforms despite implementation differences
-- **Independent Testing**: Each script can be tested and debugged in isolation
+### Python Script Responsibilities (Cross-Platform Operations)
+- **Operational Logic**: All complex operations, validations, and integrations
+- **Error Handling**: Structured exceptions with detailed error messages and recovery suggestions
+- **Help Systems**: Comprehensive argparse-based help with examples
+- **Shared Utilities**: Cross-platform common module (`hostk8s_common.py`) for logging, validation, and kubectl operations
+- **Self-Contained Dependencies**: PEP 723 headers define script-specific requirements
+- **Independent Testing**: Each script can be tested and debugged in isolation across all platforms
 
 ### Division of Labor Example
 ```makefile
-# OS Detection for cross-platform script execution
-ifeq ($(OS),Windows_NT)
-    SCRIPT_EXT := .ps1
-    SCRIPT_RUNNER := pwsh -ExecutionPolicy Bypass -NoProfile -File
-else
-    SCRIPT_EXT := .sh
-    SCRIPT_RUNNER :=
-endif
+# Unified Python script execution via uv
+define SCRIPT_RUNNER_FUNC
+uv run ./infra/scripts/$(1).py
+endef
 
-# Make handles interface, OS detection, and routing
+# Make handles interface and routing to Python scripts
 deploy: ## Deploy application (Usage: make deploy [sample/app1])
-	@$(SCRIPT_RUNNER) ./infra/scripts/deploy-app$(SCRIPT_EXT) $(word 2,$(MAKECMDGOALS))
+	@$(call SCRIPT_RUNNER_FUNC,deploy-app) $(word 2,$(MAKECMDGOALS))
 ```
 
-```bash
-# Unix/Linux/Mac script handles operational complexity
-./infra/scripts/deploy-app.sh sample/app2
-```
+```python
+# Cross-platform Python script handles operational complexity
+#!/usr/bin/env -S uv run
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "pyyaml>=6.0",
+#     "rich>=13.0.0"
+# ]
+# ///
 
-```powershell
-# Windows PowerShell script provides identical functionality
-./infra/scripts/deploy-app.ps1 sample/app2
+# Unified implementation works across all platforms
+from hostk8s_common import logger, run_kubectl
+# ... implementation
 ```
 
 ## Alternatives Considered
@@ -163,42 +164,46 @@ up: ## Deploy software stack with extension support
 - **Feature Coverage**: Comprehensive support for applications, source builds, and extensions
 
 **Negative:**
-- **Two-Layer System**: Understanding requires familiarity with both Make patterns and script organization
+- **Two-Layer System**: Understanding requires familiarity with both Make patterns and Python script organization
 - **Indirection**: Simple operations now route through script calls
-- **Platform Dependencies**: Requires Make plus platform-native scripting (bash on Unix/Linux/Mac, PowerShell 7+ on Windows)
-- **Dual Maintenance**: Cross-platform functional parity requires maintaining script pairs
+- **Platform Dependencies**: Requires Make, Python 3.8+, and `uv` tool
 
 ## Implementation Results
 
 ### Script Organization
-**Cross-Platform Script Pairs (.sh/.ps1):**
-- `infra/scripts/common.[sh|ps1]` - Platform-specific utilities (logging, validation, kubectl helpers)
-- `infra/scripts/install.[sh|ps1]` - Dependency installation using platform package managers
-- `infra/scripts/prepare.[sh|ps1]` - Development environment setup
-- `infra/scripts/cluster-status.[sh|ps1]` - Comprehensive cluster status reporting
-- `infra/scripts/deploy-app.[sh|ps1]` - Application deployment with validation
-- `infra/scripts/flux-sync.[sh|ps1]` - Flux reconciliation operations
-- `infra/scripts/build.[sh|ps1]` - Docker application build and registry push
-- `infra/scripts/deploy-stack.[sh|ps1]` - Software stack deployment and management
-- `infra/scripts/cluster-up.[sh|ps1]` - Advanced cluster creation with fallback configuration
-- `infra/scripts/cluster-restart.[sh|ps1]` - Development iteration optimization
+**Cross-Platform Python Scripts:**
+- `infra/scripts/hostk8s_common.py` - Shared utilities (logging, validation, kubectl helpers)
+- `infra/scripts/install.[sh|ps1]` - Platform-specific dependency installation (only remaining shell scripts)
+- `infra/scripts/prepare.py` - Development environment setup
+- `infra/scripts/cluster-status.py` - Comprehensive cluster status reporting
+- `infra/scripts/deploy-app.py` - Application deployment with validation
+- `infra/scripts/flux-sync.py` - Flux reconciliation operations
+- `infra/scripts/build.py` - Docker application build and registry push
+- `infra/scripts/deploy-stack.py` - Software stack deployment and management
+- `infra/scripts/cluster-up.py` - Advanced cluster creation with fallback configuration
+- `infra/scripts/cluster-restart.py` - Development iteration optimization
+- `infra/scripts/setup-*.py` - Infrastructure component setup scripts
+- `infra/scripts/worktree-setup.py` - Git worktree development environments
 
-**Platform-Specific Implementations:**
-- **Unix/Linux/Mac**: Uses brew, apt, native package managers; bash scripting conventions
-- **Windows**: Uses winget, chocolatey; PowerShell 7+ scripting conventions
-- **Functional Parity**: Identical user experience and outcomes across all platforms
+**Implementation Features:**
+- **Cross-Platform**: Single Python implementation works across all platforms via `uv`
+- **Self-Contained**: PEP 723 headers define script-specific dependencies
+- **Rich Output**: Enhanced terminal experience with colors, emojis, and progress indicators
+- **Structured Error Handling**: Python exceptions provide detailed error information
 
 ### Makefile Evolution
 - **Original**: Complex inline bash logic, difficult to maintain and test
 - **Optimized**: Thin routing layer with controlled growth for feature completeness
-- **Pattern**: `make target` → argument extraction → `./infra/scripts/target.sh args`
+- **Pattern**: `make target` → argument extraction → `uv run ./infra/scripts/target.py args`
 - **Scope Expansion**: Added comprehensive application deployment, source code builds, and extension support
-- **Current Size**: 190 lines supporting full platform feature set while maintaining thin layer principle
+- **Current Size**: ~172 lines supporting full platform feature set while maintaining thin layer principle
+- **Simplified**: Eliminated OS detection complexity - unified Python execution via `uv`
 
 ## Success Criteria
 - All operations accessible via consistent `make <command>` pattern
 - Self-documenting help system (`make help`) always current
 - Automatic environment management eliminates KUBECONFIG errors
 - New developers can discover and use all functions in < 5 minutes
-- Scripts can evolve without breaking user interface
-- Cross-platform consistency (same commands, same behavior across Unix/Linux/Mac/Windows)
+- Python scripts can evolve without breaking user interface
+- Cross-platform consistency via unified Python execution (same commands, same behavior across all platforms)
+- Single script implementation eliminates dual maintenance burden

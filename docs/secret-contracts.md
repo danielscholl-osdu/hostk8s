@@ -2,7 +2,7 @@
 
 ## Overview
 
-Secret contracts allow stacks to declare their secret requirements without storing any sensitive data in git. Secrets are generated automatically during stack deployment and exist only in the Kubernetes cluster.
+Secret contracts allow stacks to declare their secret requirements without storing any sensitive data in git. Secrets are generated automatically during stack deployment, stored in HashiCorp Vault, and synced to Kubernetes via the External Secrets Operator (ESO).
 
 ## Contract Schema
 
@@ -124,9 +124,54 @@ spec:
           value: development
 ```
 
-## Generated Secret Format
+## Architecture: Vault + External Secrets Operator
 
-All generated secrets follow Kubernetes Secret conventions:
+The secret management architecture uses HashiCorp Vault as the backend storage with External Secrets Operator syncing to Kubernetes:
+
+### Vault Storage
+Secrets are stored in Vault's KV v2 engine at path: `secret/{stack}/{namespace}/{secret-name}`
+
+Example Vault storage:
+```bash
+# Path: secret/sample-app/sample-app/postgres-credentials
+{
+  "username": "postgres",
+  "password": "A1b2C3!@#$%^&*Xy9Z",
+  "database": "voting",
+  "host": "voting-db-rw.sample-app.svc.cluster.local",
+  "port": "5432"
+}
+```
+
+### ExternalSecret Manifests
+Generated ExternalSecret manifests sync Vault secrets to Kubernetes:
+
+```yaml
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: {secret-name}
+  namespace: {namespace}
+  labels:
+    hostk8s.io/managed: "true"
+    hostk8s.io/contract: "{stack-name}"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: {secret-name}
+    creationPolicy: Owner
+  data:
+  - secretKey: {key}
+    remoteRef:
+      key: {stack}/{namespace}/{secret-name}
+      property: {key}
+```
+
+### Resulting Kubernetes Secret
+External Secrets Operator creates the final Kubernetes secret:
 
 ```yaml
 apiVersion: v1
@@ -138,8 +183,8 @@ metadata:
     hostk8s.io/managed: "true"
     hostk8s.io/contract: "{stack-name}"
 type: Opaque
-stringData:
-  {field}: {value}
+data:
+  {field}: {base64-encoded-value}
 ```
 
 ## Usage in Deployments
@@ -220,46 +265,82 @@ env:
 Secret contracts are automatically processed during stack deployment:
 
 ```bash
-make up {stack-name}  # Deploys stack and generates secrets if hostk8s.secrets.yaml exists
+make up {stack-name}  # Deploys stack and processes secrets if hostk8s.secrets.yaml exists
 ```
 
-### Automatic Generation Workflow
+### Enhanced Vault+ESO Workflow
 
-Secret generation happens automatically as part of `make up <stack>` when a `hostk8s.secrets.yaml` file exists:
+The current architecture integrates Vault storage with GitOps deployment:
 
 ```mermaid
 graph TD
-    A[make up stack-name] --> B[Deploy Stack via Flux]
-    B --> C[Wait for Namespaces]
-    C --> D{hostk8s.secrets.yaml exists?}
-    D -->|Yes| E[Parse Contract]
-    D -->|No| F[Complete - No Secrets]
-    E --> G[Generate Missing Secrets]
-    G --> H[Apply to Cluster]
-    H --> I[Complete - Secrets Ready]
+    A[make up stack-name] --> B[manage-secrets.py add stack]
+    B --> C[Store secrets in Vault KV]
+    B --> D[Generate external-secrets.yaml]
+    A --> E[Flux deploys stack]
+    D --> E
+    E --> F[ESO syncs Vault → K8s]
+    C --> F
+    F --> G[Kubernetes Secrets ready]
 ```
 
 | Step | Action | Details |
 |------|--------|---------|
-| 1 | **Deploy Stack** | Flux deploys manifests and creates namespaces |
-| 2 | **Wait for Namespaces** | 60-second timeout for namespace readiness |
-| 3 | **Parse Contract** | Read and validate `hostk8s.secrets.yaml` |
-| 4 | **Generate Secrets** | Create only missing secrets (idempotent) |
-| 5 | **Apply to Cluster** | Use `kubectl apply` to create secrets |
+| 1 | **Process Secret Contract** | `manage-secrets.py` parses `hostk8s.secrets.yaml` |
+| 2 | **Store in Vault** | Generated secrets stored in Vault KV v2 at `secret/{stack}/{namespace}/{secret-name}` |
+| 3 | **Generate ESO Manifests** | Create `external-secrets.yaml` for GitOps deployment |
+| 4 | **Deploy Stack** | Flux deploys stack manifests including ExternalSecret resources |
+| 5 | **Sync to Kubernetes** | External Secrets Operator pulls from Vault and creates K8s secrets |
+
+### Command Interface
+
+Enhanced secret lifecycle management:
+
+```bash
+# Automatically called by make up
+manage-secrets.py add {stack-name}     # Store in Vault + generate manifests
+
+# Manual lifecycle operations
+manage-secrets.py remove {stack-name}  # Remove from Vault
+manage-secrets.py list [stack-name]    # List stored secrets
+```
 
 ### Troubleshooting
 
-If secrets are not generating as expected:
+#### Vault + ESO Troubleshooting
 
-1. **Check Contract Syntax**: Validate your `hostk8s.secrets.yaml` with `yq`
-2. **Verify Namespace**: Ensure the target namespace exists after stack deployment
-3. **Review Logs**: Check stack deployment logs for any Flux reconciliation issues
-4. **Force Regeneration**: Delete the entire namespace and redeploy with `make up <stack>`
+If secrets are not available in Kubernetes:
 
-#### Debugging Secret Values
+1. **Check Vault Storage**: Verify secrets are stored in Vault
+2. **Check ESO Status**: Ensure External Secrets Operator is functioning
+3. **Check ExternalSecret Resources**: Verify ExternalSecret manifests are deployed
+4. **Check Contract Syntax**: Validate your `hostk8s.secrets.yaml` with `yq`
 
-To verify generated secret contents during troubleshooting:
+#### Debugging Commands
 
+**Vault Secret Inspection:**
+```bash
+# List secrets in Vault for a stack
+manage-secrets.py list sample-app
+
+# Access Vault UI for visual inspection
+open http://localhost:8080/ui/vault
+# Login token: hostk8s
+```
+
+**External Secrets Operator Status:**
+```bash
+# Check ExternalSecret resources
+kubectl get externalsecrets -n {namespace}
+
+# Check ExternalSecret status and sync
+kubectl describe externalsecret {secret-name} -n {namespace}
+
+# Check ESO controller logs
+kubectl logs -n hostk8s -l app.kubernetes.io/name=external-secrets
+```
+
+**Kubernetes Secret Verification:**
 ```bash
 # View all keys in a secret
 kubectl get secret {secret-name} -n {namespace} -o jsonpath='{.data}' | jq
@@ -267,12 +348,22 @@ kubectl get secret {secret-name} -n {namespace} -o jsonpath='{.data}' | jq
 # Decode a specific secret value
 kubectl get secret {secret-name} -n {namespace} -o jsonpath='{.data.{key}}' | base64 -d
 
-# View all secrets with labels (HostK8s managed secrets)
+# View all managed secrets
 kubectl get secrets -n {namespace} -l hostk8s.io/managed=true
 
 # Example: Check postgres password
 kubectl get secret postgres-credentials -n sample-app -o jsonpath='{.data.password}' | base64 -d
 ```
 
-> **🔄 Regeneration**: Secrets automatically regenerate when missing - delete the namespace for a complete reset
+#### Common Issues
+
+| Issue | Symptoms | Resolution |
+|-------|----------|------------|
+| **Vault not accessible** | ESO can't sync secrets | Check Vault addon is running: `make status` |
+| **ExternalSecret not deployed** | No K8s secrets created | Ensure `external-secrets.yaml` is committed to Git |
+| **ESO permission issues** | ESO can't access Vault | Check ClusterSecretStore configuration |
+| **Namespace timing** | ExternalSecret deployed before namespace | Flux handles sequencing automatically |
+
+> **🔄 Complete Reset**: Run `make down {stack}` then `make up {stack}` for full secret regeneration
+> **🔍 Debug Access**: Use Vault UI at `http://localhost:8080/ui/vault` (token: `hostk8s`) for visual secret inspection
 > **⚠️ Security**: Only decode secret values in secure environments for debugging purposes

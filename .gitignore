@@ -38,3 +38,7 @@ src/*
 # OS generated files
 .DS_Store
 Thumbs.db
+
+# Ignore Python cache in infra/scripts
+infra/scripts/__pycache__/
+infra/scripts/*.pyc
