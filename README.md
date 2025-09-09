@@ -177,15 +177,18 @@ Duplicate `.env.example` to `.env` and customize as needed.
 | ----------------- | --------------------------------------------- | --------- |
 | `LOG_LEVEL`       | Logging verbosity (debug, info, warn, error)  | `debug`   |
 | `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
-| `K8S_VERSION`     | Kubernetes version to use                     | `latest`  |
-| `KIND_CONFIG`     | Kind config file (if not set, uses kind-config.yaml or kind-custom.yaml) | *(none)* |
-| `PACKAGE_MANAGER` | Package manager preference (brew, native, winget, chocolatey) | `auto` |
-| `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |
+| `K8S_VERSION`     | Kubernetes version to use                     | `v1.33.2` |
+| `KIND_CONFIG`     | Kind config (minimal, simple, default)       | `default` |
+| `PACKAGE_MANAGER` | Package manager preference (brew, native)    | `auto`    |
+| `METRICS_DISABLED`| Disable metrics-server addon                 | `false`   |
 | `METALLB_ENABLED` | Enable MetalLB for LoadBalancer support       | `false`   |
 | `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
+| `REGISTRY_ENABLED`| Enable local container registry               | `false`   |
+| `VAULT_ENABLED`   | Enable Vault secret management addon         | `false`   |
+| `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |
 | `GITOPS_REPO`     | Git repository URL for Flux sync (if enabled) | *(none)*  |
 | `GITOPS_BRANCH`   | Git branch to use for Flux sync               | `main`    |
 | `COMPONENTS_REPO` | Git repository URL for infrastructure components | *(none)*  |
-| `COMPONENTS_BRANCH` | Git branch for components repository         | `main`    |
+| `COMPONENTS_BRANCH` | Git branch for components repository         | `components` |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
-| `NAMESPACE`       | Default namespace for app deployments         | `default` |
+| `SOFTWARE_BUILD`  | Source code to build                          | *(none)*  |
