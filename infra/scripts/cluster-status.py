@@ -32,7 +32,7 @@ from rich.console import Console
 from hostk8s_common import (
     logger, HostK8sError, KubectlError,
     run_kubectl, run_flux, has_flux, has_flux_cli,
-    detect_kubeconfig, get_env
+    detect_kubeconfig, get_env, has_ingress_controller
 )
 
 # Create a console instance for Rich formatted output
@@ -52,7 +52,7 @@ class EnhancedClusterStatusChecker:
 
     def check_docker_services(self) -> None:
         """Check Docker services like registry container."""
-        logger.info("Docker Services")
+        has_services = False
 
         try:
             # Check for registry container (both naming patterns)
@@ -61,6 +61,10 @@ class EnhancedClusterStatusChecker:
                                   capture_output=True, text=True, check=False)
 
             if result.returncode == 0 and result.stdout.strip():
+                # Only show header if we have services
+                logger.info("Docker Services")
+                has_services = True
+
                 for line in result.stdout.strip().split('\n'):
                     parts = line.split('\t')
                     if len(parts) >= 2:
@@ -75,15 +79,16 @@ class EnhancedClusterStatusChecker:
                             print(f"   Network: Connected to Kind cluster")
                         else:
                             print(f"📦 Registry Container: {status}")
-            else:
-                print("   No Docker services running")
         except FileNotFoundError:
-            print("   Docker not available")
+            # Docker not available is not worth showing
+            pass
         except Exception as e:
             logger.debug(f"Error checking Docker services: {e}")
-            print("   Unable to check Docker services")
+            # Don't show error message unless we had services to show
 
-        print()
+        # Only print separator if we showed something
+        if has_services:
+            print()
 
     def check_cluster_services(self) -> None:
         """Check cluster services and add-ons."""
@@ -817,14 +822,18 @@ def show_manual_deployed_apps() -> None:
         for ingress in ingress_list:
             # Get all paths from the ingress
             paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
+
+            # Check if ingress controller is available
+            warning = "" if has_ingress_controller() else " ⚠️ (No Ingress Controller)"
+
             if paths and len(paths) == 1 and paths[0] == '/':
-                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/")
+                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/{warning}")
             elif paths:
                 # Show all available paths
                 url_list = [f"http://localhost:8080{path}" for path in paths]
-                print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)}")
+                print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)}{warning}")
             else:
-                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/")
+                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/{warning}")
 
         print()
 

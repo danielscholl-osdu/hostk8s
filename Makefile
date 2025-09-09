@@ -103,7 +103,7 @@ stop: ## Stop cluster
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down)
 
 up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
-	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample) || true
+	-@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 
 # Handle arguments as targets to avoid "No rule to make target" errors
@@ -127,20 +127,20 @@ extension/%:
 	@:
 
 down: ## Remove software stack (Usage: make down <stack-name>)
-	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) remove "$(word 2,$(MAKECMDGOALS))" || true
+	-@$(call SCRIPT_RUNNER_FUNC,manage-secrets) remove "$(word 2,$(MAKECMDGOALS))"
 	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) down "$(word 2,$(MAKECMDGOALS))"
 
 restart: ## Quick cluster reset for development iteration (Usage: make restart [stack-name])
 	@$(call SCRIPT_RUNNER_FUNC,cluster-restart) $(word 2,$(MAKECMDGOALS))
 
 clean: ## Complete cleanup (destroy cluster and data)
-	@$(call SCRIPT_RUNNER_FUNC,cluster-down) || true
-	@kind delete cluster --name hostk8s 2>$(NULL_DEVICE) || true
+	-@$(call SCRIPT_RUNNER_FUNC,cluster-down)
+	-@kind delete cluster --name hostk8s
 ifeq ($(OS),Windows_NT)
 	@pwsh -ExecutionPolicy Bypass -File infra/scripts/common.ps1 clean-data
 else
 	@echo "[$$(date '+%H:%M:%S')] [Clean] Cleaning data directory and persistent volumes..."
-	@rm -rf data/ 2>$(NULL_DEVICE) || true
+	-@rm -rf data/
 	@echo "[$$(date '+%H:%M:%S')] [Clean] Data cleanup completed"
 endif
 

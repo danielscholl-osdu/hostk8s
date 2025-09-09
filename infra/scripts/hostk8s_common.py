@@ -240,6 +240,17 @@ def has_flux_cli() -> bool:
         return False
 
 
+def has_ingress_controller() -> bool:
+    """Check if NGINX Ingress Controller is installed in the cluster."""
+    try:
+        result = run_kubectl(['get', 'deployment', '-n', 'hostk8s',
+                            '-l', 'app.kubernetes.io/name=ingress-nginx'],
+                           check=False, capture_output=True)
+        return result.returncode == 0 and result.stdout.strip() != ''
+    except (KubectlError, HostK8sError):
+        return False
+
+
 def load_env_file(env_file: str = '.env') -> Dict[str, str]:
     """
     Load environment variables from .env file (similar to shell script logic).

@@ -32,7 +32,8 @@ from typing import List, Optional
 from hostk8s_common import (
     logger, HostK8sError, KubectlError,
     run_kubectl, run_helm,
-    list_available_apps, validate_app_exists, get_app_deployment_type
+    list_available_apps, validate_app_exists, get_app_deployment_type,
+    has_ingress_controller
 )
 
 
@@ -41,6 +42,40 @@ class AppDeployer:
 
     def __init__(self):
         pass
+
+    def check_ingress_requirements(self, app_name: str) -> None:
+        """Check if app has ingress resources and warn if controller not available."""
+        app_dir = Path(f'software/apps/{app_name}')
+        has_ingress = False
+
+        # Check for ingress.yaml file
+        if (app_dir / 'ingress.yaml').exists():
+            has_ingress = True
+
+        # Check in kustomization.yaml resources list
+        kustomization_file = app_dir / 'kustomization.yaml'
+        if kustomization_file.exists() and not has_ingress:
+            try:
+                import yaml
+                with open(kustomization_file) as f:
+                    kustomization = yaml.safe_load(f)
+                    resources = kustomization.get('resources', [])
+                    if any('ingress' in str(r).lower() for r in resources):
+                        has_ingress = True
+            except Exception:
+                pass  # If we can't parse, we'll find out during deployment
+
+        # Check for Chart.yaml (Helm apps might have ingress in templates)
+        if (app_dir / 'Chart.yaml').exists() and not has_ingress:
+            templates_dir = app_dir / 'templates'
+            if templates_dir.exists():
+                for template_file in templates_dir.glob('*ingress*.yaml'):
+                    has_ingress = True
+                    break
+
+        # If app has ingress but no controller, warn the user
+        if has_ingress and not has_ingress_controller():
+            logger.warn("[App] This app includes Ingress resources but no Ingress controller detected!")
 
     def check_prerequisites(self) -> None:
         """Check that cluster is running."""
@@ -266,6 +301,9 @@ class AppDeployer:
             for app in list_available_apps():
                 logger.info(f"  {app}")
             sys.exit(1)
+
+        # Check ingress requirements and warn if needed
+        self.check_ingress_requirements(app_name)
 
         # Ensure namespace exists
         self.ensure_namespace(namespace)
