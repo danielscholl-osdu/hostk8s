@@ -57,12 +57,16 @@ endif
 ##@ Setup
 
 help: ## Show this help message
+ifeq ($(OS),Windows_NT)
+	@pwsh -Command "Write-Host 'HostK8s - Host-Mode Kubernetes Development Platform' -ForegroundColor White; Write-Host ''; Write-Host 'Usage:'; Write-Host '  make <target>'; Write-Host ''; Write-Host 'Available targets:' -ForegroundColor White; Get-Content Makefile | ForEach-Object { if ($$_ -match '^##@\s*(.*)') { $$section = $$Matches[1]; Write-Host \"`n$$section\" -ForegroundColor White } elseif ($$_ -match '^([a-zA-Z_-]+):.*?##\s*(.*)') { $$target = $$Matches[1]; $$desc = $$Matches[2]; Write-Host (\"  {0,-15} {1}\" -f $$target, $$desc) -ForegroundColor Cyan } }"
+else
 	@echo "HostK8s - Host-Mode Kubernetes Development Platform"
 	@echo ""
 	@echo "Usage:"
 	@echo "  make <target>"
 	@echo ""
 	@awk 'BEGIN {FS = ":.*##"; printf "\nAvailable targets:\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) }' $(MAKEFILE_LIST)
+endif
 
 install: ## Install dependencies and setup environment (Usage: make install [dev])
 ifeq ($(word 2,$(MAKECMDGOALS)),dev)
