@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -161,7 +161,7 @@ class VaultSetup:
                 ]
 
                 # Set environment variable for increased timeout
-                original_timeout = os.environ.get('HELM_HTTP_TIMEOUT')
+                original_timeout = get_env('HELM_HTTP_TIMEOUT')
                 os.environ['HELM_HTTP_TIMEOUT'] = '600'  # 10 minutes for chart download
 
                 try:
@@ -420,7 +420,7 @@ stringData:
         self.show_completion_message()
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     setup = VaultSetup()
 

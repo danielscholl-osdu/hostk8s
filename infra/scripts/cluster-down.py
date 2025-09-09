@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "rich>=13.0.0",
-#     "pyyaml>=6.0",
-#     "requests>=2.28.0",
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -74,7 +74,7 @@ def remove_registry_container(registry_name: str = "hostk8s-registry") -> None:
         pass
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     # Load environment
     load_environment()

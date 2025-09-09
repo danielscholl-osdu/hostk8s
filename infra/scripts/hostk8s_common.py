@@ -3,9 +3,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -14,15 +14,16 @@ HostK8s Python Common Module
 Replaces the functionality of common.sh and common.ps1 with unified Python implementation.
 """
 
-import os
-import sys
-import subprocess
 import json
+import os
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Union
-import yaml
+
 import requests
+import yaml
 from rich.console import Console
 from rich.text import Text
 

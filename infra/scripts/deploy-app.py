@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -62,12 +62,12 @@ class AppDeployer:
             run_kubectl(['get', 'namespace', namespace], check=False, capture_output=True)
             logger.debug(f"Namespace {namespace} already exists")
         except:
-            logger.info(f"Creating namespace: {namespace}")
+            logger.info(f"[App] Creating namespace: {namespace}")
             try:
                 run_kubectl(['create', 'namespace', namespace])
                 # Label the namespace so we know we created it
                 run_kubectl(['label', 'namespace', namespace, 'hostk8s.created=true'], check=False)
-                logger.success(f"Namespace {namespace} created")
+                logger.success(f"[App] Namespace {namespace} created")
             except KubectlError:
                 logger.error(f"Failed to create namespace: {namespace}")
                 sys.exit(1)
@@ -101,10 +101,10 @@ class AppDeployer:
             resource_count = len([line for line in result.stdout.split('\n') if line.strip()])
 
             if resource_count == 0:
-                logger.info(f"Removing empty namespace: {namespace}")
+                logger.info(f"[App] Removing empty namespace: {namespace}")
                 try:
                     run_kubectl(['delete', 'namespace', namespace])
-                    logger.success(f"Namespace {namespace} removed")
+                    logger.success(f"[App] Namespace {namespace} removed")
                 except KubectlError:
                     logger.warn(f"Failed to remove namespace: {namespace}")
             else:
@@ -140,8 +140,8 @@ class AppDeployer:
 
         try:
             run_helm(helm_args[1:])  # Skip 'helm' command as run_helm adds it
-            logger.success(f"{app_name} deployed successfully via Helm to {namespace}")
-            logger.info(f"See software/apps/{app_name}/README.md for access details")
+            logger.success(f"[App] {app_name} deployed successfully via Helm to {namespace}")
+            logger.info(f"[App] See software/apps/{app_name}/README.md for access details")
             logger.info(f"Use 'helm status {app_name} -n {namespace}' for deployment status")
         except HostK8sError:
             logger.error(f"Failed to deploy {app_name} via Helm to {namespace}")
@@ -161,7 +161,7 @@ class AppDeployer:
             result = run_helm(['list', '-q', '-n', namespace], check=False)
             if result.returncode == 0 and app_name in result.stdout.split():
                 run_helm(['uninstall', app_name, '-n', namespace])
-                logger.success(f"{app_name} removed successfully via Helm from {namespace}")
+                logger.success(f"[App] {app_name} removed successfully via Helm from {namespace}")
                 return
         except Exception:
             pass
@@ -177,7 +177,7 @@ class AppDeployer:
                             found_namespace = parts[1]
                             logger.info(f"Helm release {app_name} not found in {namespace}, but found in {found_namespace}")
                             run_helm(['uninstall', app_name, '-n', found_namespace])
-                            logger.success(f"{app_name} removed successfully via Helm from {found_namespace}")
+                            logger.success(f"[App] {app_name} removed successfully via Helm from {found_namespace}")
                             return
         except Exception:
             pass
@@ -215,7 +215,7 @@ class AppDeployer:
                 pass
 
         if resources_removed:
-            logger.success(f"{app_name} removed successfully (label-based)")
+            logger.success(f"[App] {app_name} removed successfully (label-based)")
         else:
             logger.warn(f"No resources found for app: {app_name} (may already be removed)")
 
@@ -223,8 +223,8 @@ class AppDeployer:
         """Deploy application using Kustomization."""
         try:
             run_kubectl(['apply', '-k', str(app_dir), '-n', namespace])
-            logger.success(f"{app_name} deployed successfully via Kustomization to {namespace}")
-            logger.info(f"See software/apps/{app_name}/README.md for access details")
+            logger.success(f"[App] {app_name} deployed successfully via Kustomization to {namespace}")
+            logger.info(f"[App] See software/apps/{app_name}/README.md for access details")
         except KubectlError:
             logger.error(f"Failed to deploy {app_name} via Kustomization to {namespace}")
             sys.exit(1)
@@ -233,7 +233,7 @@ class AppDeployer:
         """Remove application using Kustomization."""
         try:
             run_kubectl(['delete', '-k', str(app_dir), '-n', namespace], check=False)
-            logger.success(f"{app_name} removed successfully via Kustomization from {namespace}")
+            logger.success(f"[App] {app_name} removed successfully via Kustomization from {namespace}")
         except Exception:
             logger.warn(f"Error removing {app_name} via Kustomization (may not exist)")
 
@@ -242,8 +242,8 @@ class AppDeployer:
         app_file = app_dir / 'app.yaml'
         try:
             run_kubectl(['apply', '-f', str(app_file), '-n', namespace])
-            logger.success(f"{app_name} deployed successfully via app.yaml to {namespace}")
-            logger.info(f"See software/apps/{app_name}/README.md for access details")
+            logger.success(f"[App] {app_name} deployed successfully via app.yaml to {namespace}")
+            logger.info(f"[App] See software/apps/{app_name}/README.md for access details")
         except KubectlError:
             logger.error(f"Failed to deploy {app_name} via app.yaml to {namespace}")
             sys.exit(1)
@@ -253,7 +253,7 @@ class AppDeployer:
         app_file = app_dir / 'app.yaml'
         try:
             run_kubectl(['delete', '-f', str(app_file), '-n', namespace], check=False)
-            logger.success(f"{app_name} removed successfully via app.yaml from {namespace}")
+            logger.success(f"[App] {app_name} removed successfully via app.yaml from {namespace}")
         except Exception:
             logger.warn(f"Error removing {app_name} via app.yaml (may not exist)")
 
@@ -275,13 +275,13 @@ class AppDeployer:
         app_dir = Path(f'software/apps/{app_name}')
 
         if deployment_type == 'helm':
-            logger.info(f"Deploying {app_name} via Helm to namespace: {namespace}")
+            logger.info(f"[App] Deploying {app_name} via Helm to namespace: {namespace}")
             self.deploy_helm_app(app_name, app_dir, namespace)
         elif deployment_type == 'kustomization':
-            logger.info(f"Deploying {app_name} via Kustomization to namespace: {namespace}")
+            logger.info(f"[App] Deploying {app_name} via Kustomization to namespace: {namespace}")
             self.deploy_kustomization_app(app_name, app_dir, namespace)
         elif deployment_type == 'legacy':
-            logger.info(f"Deploying {app_name} via app.yaml to namespace: {namespace}")
+            logger.info(f"[App] Deploying {app_name} via app.yaml to namespace: {namespace}")
             self.deploy_legacy_app(app_name, app_dir, namespace)
         else:
             logger.error(f"Unknown deployment type for {app_name}")
@@ -302,13 +302,13 @@ class AppDeployer:
         app_dir = Path(f'software/apps/{app_name}')
 
         if deployment_type == 'helm':
-            logger.info(f"Removing {app_name} via Helm from namespace: {namespace}")
+            logger.info(f"[App] Removing {app_name} via Helm from namespace: {namespace}")
             self.remove_helm_app(app_name, namespace)
         elif deployment_type == 'kustomization':
-            logger.info(f"Removing {app_name} via Kustomization from namespace: {namespace}")
+            logger.info(f"[App] Removing {app_name} via Kustomization from namespace: {namespace}")
             self.remove_kustomization_app(app_name, app_dir, namespace)
         elif deployment_type == 'legacy':
-            logger.info(f"Removing {app_name} via app.yaml from namespace: {namespace}")
+            logger.info(f"[App] Removing {app_name} via app.yaml from namespace: {namespace}")
             self.remove_legacy_app(app_name, app_dir, namespace)
         else:
             logger.error(f"Unknown deployment type for {app_name}")
@@ -318,62 +318,57 @@ class AppDeployer:
         self.cleanup_namespace_if_empty(namespace)
 
 
-def show_usage() -> None:
-    """Show usage information."""
-    print("Usage: deploy-app.py [remove] [APP_NAME] [NAMESPACE]")
-    print("")
-    print("Deploy or remove an application to/from the cluster.")
-    print("")
-    print("Arguments:")
-    print("  remove      Remove mode - removes the application")
-    print("  APP_NAME    Application to deploy/remove (default: simple)")
-    print("  NAMESPACE   Target namespace (default: default)")
-    print("")
-
-    apps = list_available_apps()
-    if apps:
-        print("Available applications:")
-        for app in apps:
-            print(f"  {app}")
-    else:
-        print("Available applications:")
-        print("  No apps found")
-
-    print("")
-    print("Examples:")
-    print("  deploy-app.py                     # Deploy default app (simple)")
-    print("  deploy-app.py simple             # Deploy simple app to default namespace")
-    print("  deploy-app.py advanced test      # Deploy advanced app to test namespace")
-    print("  deploy-app.py remove simple      # Remove simple app from default namespace")
-    print("  deploy-app.py remove voting-app test  # Remove voting-app from test namespace")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
-    parser = argparse.ArgumentParser(description='Deploy/remove applications', add_help=False)
-    parser.add_argument('args', nargs='*', help='Arguments: [remove] [app_name] [namespace]')
-    parser.add_argument('-h', '--help', action='store_true', help='Show help')
+    apps = list_available_apps()
+    app_list = ', '.join(apps) if apps else 'No apps found'
+
+    parser = argparse.ArgumentParser(
+        description='Deploy or remove applications to/from the cluster',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=f"""Available applications: {app_list}
+
+Examples:
+  %(prog)s                          # Deploy simple app to default namespace
+  %(prog)s basic                    # Deploy basic app to default namespace
+  %(prog)s advanced production      # Deploy advanced app to production namespace
+  %(prog)s remove simple           # Remove simple app from default namespace
+  %(prog)s remove voting-app test  # Remove voting-app from test namespace"""
+    )
+
+    parser.add_argument('operation', nargs='?', default='deploy',
+                      help='Operation: deploy (default) or remove')
+    parser.add_argument('app_name', nargs='?', default='simple',
+                      help='Application name (default: simple)')
+    parser.add_argument('namespace', nargs='?', default='default',
+                      help='Target namespace (default: default)')
 
     args = parser.parse_args()
 
-    if args.help:
-        show_usage()
-        return
+    # Handle legacy positional argument pattern: [remove] [app_name] [namespace]
+    if args.operation == 'remove':
+        operation = 'remove'
+        app_name = args.app_name
+        namespace = args.namespace
+    elif args.operation in apps or args.operation == 'simple':
+        # First arg is app name
+        operation = 'deploy'
+        app_name = args.operation
+        namespace = args.app_name if args.app_name != 'simple' else args.namespace
+    else:
+        # Unknown operation, treat as deploy
+        operation = 'deploy'
+        app_name = args.operation
+        namespace = args.app_name if args.app_name != 'simple' else args.namespace
 
-    # Parse arguments similar to shell script
-    operation = 'deploy'
-    app_name = 'simple'
-    namespace = 'default'
-
-    if args.args:
-        if args.args[0] == 'remove':
-            operation = 'remove'
-            app_name = args.args[1] if len(args.args) > 1 else 'simple'
-            namespace = args.args[2] if len(args.args) > 2 else 'default'
-        else:
-            # Deploy mode
-            app_name = args.args[0]
-            namespace = args.args[1] if len(args.args) > 1 else 'default'
+    # Log script execution
+    script_name = Path(__file__).name
+    if operation == 'remove':
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [yellow]remove {app_name} {namespace}[/yellow]")
+    else:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]deploy {app_name} {namespace}[/green]")
 
     deployer = AppDeployer()
 

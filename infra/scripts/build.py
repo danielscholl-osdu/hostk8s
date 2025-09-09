@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -128,8 +128,8 @@ class ApplicationBuilder:
         os.environ["BUILD_DATE"] = build_date
         os.environ["BUILD_VERSION"] = self.build_version
 
-        logger.info(f"Build date: {build_date}")
-        logger.info(f"Version: {self.build_version}")
+        logger.info(f"[Build] Build date: {build_date}")
+        logger.info(f"[Build] Version: {self.build_version}")
 
     def run_docker_command(self, cmd: List[str], cwd: Path) -> None:
         """Run Docker command with proper error handling.
@@ -141,7 +141,7 @@ class ApplicationBuilder:
         Raises:
             HostK8sError: If Docker command fails
         """
-        logger.info(f"Running: {' '.join(cmd)}")
+        logger.info(f"[Build] Running: {' '.join(cmd)}")
 
         try:
             result = subprocess.run(
@@ -162,8 +162,8 @@ class ApplicationBuilder:
         Args:
             app_path: Path to application directory
         """
-        logger.info("Using docker-bake.hcl for build and push...")
-        logger.info("Building and pushing Docker images...")
+        logger.info("[Build] Using docker-bake.hcl for build and push...")
+        logger.info("[Build] Building and pushing Docker images...")
 
         self.run_docker_command(["docker", "buildx", "bake", "--push"], app_path)
 
@@ -173,14 +173,14 @@ class ApplicationBuilder:
         Args:
             app_path: Path to application directory
         """
-        logger.info("Using docker-compose.yml for build and push...")
+        logger.info("[Build] Using docker-compose.yml for build and push...")
 
         # Build the application
-        logger.info("Building Docker images...")
+        logger.info("[Build] Building Docker images...")
         self.run_docker_command(["docker", "compose", "build"], app_path)
 
         # Push to registry
-        logger.info("Pushing to registry...")
+        logger.info("[Build] Pushing to registry...")
         self.run_docker_command(["docker", "compose", "push"], app_path)
 
     def build_application(self, app_path: str) -> None:
@@ -192,7 +192,7 @@ class ApplicationBuilder:
         # Validate application path
         validated_path, build_type = self.validate_application_path(app_path)
 
-        logger.info(f"Building application: {validated_path}")
+        logger.info(f"[Build] Building application: {validated_path}")
 
         # Set build environment
         self.set_build_environment()
@@ -205,7 +205,7 @@ class ApplicationBuilder:
         else:
             raise HostK8sError(f"Unsupported build type: {build_type}")
 
-        logger.success("Build and push complete")
+        logger.success("[Build] Build and push complete")
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -241,7 +241,7 @@ Examples:
     return parser
 
 
-def main():
+def main() -> int:
     """Main entry point."""
     parser = create_argument_parser()
     args = parser.parse_args()
@@ -266,6 +266,10 @@ def main():
         except HostK8sError as e:
             logger.error(f"Cluster check failed: {e}")
             return 1
+
+        # Log script execution
+        script_name = Path(__file__).name
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]{args.app_path}[/green]")
 
         # Build the application
         builder.build_application(args.app_path)

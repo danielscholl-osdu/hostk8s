@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -25,6 +25,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
+
 from rich.console import Console
 
 # Import common utilities
@@ -44,12 +45,12 @@ class EnhancedClusterStatusChecker:
     def __init__(self):
         self.kubeconfig = detect_kubeconfig()
 
-    def show_kubeconfig_info(self):
+    def show_kubeconfig_info(self) -> None:
         """Show KUBECONFIG information."""
         logger.debug(f"export KUBECONFIG={os.getcwd()}/data/kubeconfig/config")
         print()
 
-    def check_docker_services(self):
+    def check_docker_services(self) -> None:
         """Check Docker services like registry container."""
         logger.info("Docker Services")
 
@@ -84,7 +85,7 @@ class EnhancedClusterStatusChecker:
 
         print()
 
-    def check_cluster_services(self):
+    def check_cluster_services(self) -> None:
         """Check cluster services and add-ons."""
         logger.info("Cluster Services")
 
@@ -97,10 +98,11 @@ class EnhancedClusterStatusChecker:
         self._check_ingress_controller()
         self._check_registry()
         self._check_vault()
+        self._check_flux()
 
         print()
 
-    def _check_control_plane(self):
+    def _check_control_plane(self) -> None:
         """Check control plane status."""
         try:
             # Get node info
@@ -126,7 +128,7 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking control plane: {e}")
 
-    def _check_metrics_server(self):
+    def _check_metrics_server(self) -> None:
         """Check Metrics Server status."""
         if get_env('METRICS_DISABLED', 'false') == 'true':
             return
@@ -148,7 +150,7 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking metrics server: {e}")
 
-    def _check_metallb(self):
+    def _check_metallb(self) -> None:
         """Check MetalLB status."""
         try:
             # Check if MetalLB is installed
@@ -177,7 +179,7 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking MetalLB: {e}")
 
-    def _check_ingress_controller(self):
+    def _check_ingress_controller(self) -> None:
         """Check NGINX Ingress Controller status."""
         try:
             # Check if ingress controller is installed
@@ -199,7 +201,7 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking ingress controller: {e}")
 
-    def _check_registry(self):
+    def _check_registry(self) -> None:
         """Check Registry status (both container and UI deployment)."""
         try:
             # First check if the Docker registry container is running
@@ -252,7 +254,7 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking registry: {e}")
 
-    def _check_vault(self):
+    def _check_vault(self) -> None:
         """Check Vault status."""
         try:
             # Check if Vault is installed
@@ -279,6 +281,61 @@ class EnhancedClusterStatusChecker:
                     print(f"   Status: Vault pod not yet running")
         except Exception as e:
             logger.debug(f"Error checking Vault: {e}")
+
+    def _check_flux(self) -> None:
+        """Check Flux (GitOps) status."""
+        try:
+            if has_flux():
+                # Check if Flux controllers are running
+                controllers_result = run_kubectl(['get', 'pods', '-n', 'flux-system',
+                                                '--no-headers'], check=False)
+
+                if controllers_result.returncode == 0 and controllers_result.stdout:
+                    # Count running vs total pods
+                    lines = controllers_result.stdout.strip().split('\n')
+                    running_count = 0
+                    total_count = len([line for line in lines if line.strip()])
+
+                    for line in lines:
+                        if 'Running' in line and '1/1' in line:
+                            running_count += 1
+
+                    if running_count == total_count and total_count > 0:
+                        print(f"🔄 Flux (GitOps): Ready")
+
+                        # Try to get Flux version
+                        if has_flux_cli():
+                            version_result = run_flux(['version', '--client'], check=False, capture_output=True)
+                            if version_result.returncode == 0 and version_result.stdout:
+                                # Extract version from output (format: "flux version 2.x.x")
+                                version_line = version_result.stdout.strip().split('\n')[0]
+                                if 'flux version' in version_line:
+                                    version = version_line.replace('flux version ', '')
+                                    print(f"   Status: GitOps automation available (v{version})")
+                                else:
+                                    print(f"   Status: GitOps automation available")
+                            else:
+                                print(f"   Status: GitOps automation available")
+                        else:
+                            print(f"   Status: GitOps automation available")
+
+                        # Check for suspended sources
+                        if has_flux_cli():
+                            suspended_result = run_flux(['get', 'sources', 'git', '--status-selector', 'suspended=True'], check=False, capture_output=True)
+                            if suspended_result.returncode == 0 and suspended_result.stdout:
+                                lines = suspended_result.stdout.strip().split('\n')
+                                # Count lines that aren't headers and aren't empty
+                                suspended_count = len([line for line in lines if line.strip() and not line.startswith('NAME')])
+                                if suspended_count > 0:
+                                    print(f"   Warning: {suspended_count} suspended source(s)")
+                    else:
+                        print(f"🔄 Flux (GitOps): Starting")
+                        print(f"   Status: Controllers {running_count}/{total_count} ready")
+                else:
+                    print(f"🔄 Flux (GitOps): Pending")
+                    print(f"   Status: No controller pods found")
+        except Exception as e:
+            logger.debug(f"Error checking Flux: {e}")
 
     def is_ingress_controller_ready(self) -> bool:
         """Check if ingress controller is ready."""
@@ -496,7 +553,7 @@ class EnhancedClusterStatusChecker:
         except Exception:
             return False
 
-    def check_health(self):
+    def check_health(self) -> None:
         """Perform health checks on deployed applications."""
         logger.info("Health Check")
 
@@ -555,7 +612,7 @@ class EnhancedClusterStatusChecker:
         print()
 
 
-def show_gitops_resources():
+def show_gitops_resources() -> None:
     """Show GitOps resources if Flux is installed."""
     if not has_flux():
         return
@@ -603,7 +660,7 @@ def show_gitops_resources():
         print()
 
 
-def show_gitops_applications():
+def show_gitops_applications() -> None:
     """Show GitOps-deployed applications."""
     checker = EnhancedClusterStatusChecker()
     gitops_apps, _ = checker.get_deployed_apps()
@@ -703,7 +760,7 @@ def show_gitops_applications():
         print()
 
 
-def show_manual_deployed_apps():
+def show_manual_deployed_apps() -> None:
     """Show manually deployed applications."""
     checker = EnhancedClusterStatusChecker()
     _, manual_apps = checker.get_deployed_apps()
@@ -758,7 +815,7 @@ def show_manual_deployed_apps():
         print()
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     logger.info("[Script 🐍] Running script: [cyan]cluster-status.py[/cyan]")
     try:

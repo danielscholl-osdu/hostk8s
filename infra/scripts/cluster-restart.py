@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "rich>=13.0.0",
-#     "pyyaml>=6.0",
-#     "requests>=2.28.0",
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -84,12 +84,12 @@ def validate_cluster_access() -> bool:
 
 def run_script(script_name: str) -> bool:
     """Run a script (Python or shell) from the scripts directory."""
-    script_dir = Path(__file__).parent.parent  # Go up from python/ to scripts/
+    script_dir = Path(__file__).parent  # Scripts directory
 
     # Try Python script first
-    python_script = script_dir / "python" / f"{script_name}.py"
+    python_script = script_dir / f"{script_name}.py"
     if python_script.exists():
-        logger.debug(f"Running Python script: {python_script}")
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}.py[/cyan]")
         result = run_command(['uv', 'run', str(python_script)], check=False)
         return result.returncode == 0
 
@@ -104,7 +104,7 @@ def run_script(script_name: str) -> bool:
     return False
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     # Load environment
     load_environment()

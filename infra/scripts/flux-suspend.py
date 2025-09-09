@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "rich>=13.0.0",
-#     "pyyaml>=6.0",
-#     "requests>=2.28.0",
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -23,9 +23,10 @@ Examples:
   flux-suspend.py resume      # Restore all GitOps reconciliation
 """
 
-import sys
 import argparse
 import subprocess
+import sys
+from pathlib import Path
 from typing import List, Tuple
 
 # Import common utilities
@@ -70,7 +71,7 @@ def suspend_repositories() -> Tuple[int, List[str]]:
     Suspend all GitRepository sources.
     Returns (success_count, failed_repos).
     """
-    logger.info("Suspending all GitRepository sources...")
+    logger.info("[Suspend] Suspending all GitRepository sources")
 
     git_repos = get_git_repositories()
 
@@ -82,7 +83,7 @@ def suspend_repositories() -> Tuple[int, List[str]]:
     suspended_count = 0
 
     for repo in git_repos:
-        logger.info(f"  → Suspending repository: {repo}")
+        logger.info(f"[Suspend]   → Suspending repository: {repo}")
         try:
             result = run_flux_command(['suspend', 'source', 'git', repo], check=False)
             if result.returncode == 0:
@@ -98,8 +99,8 @@ def suspend_repositories() -> Tuple[int, List[str]]:
         logger.error(f"Failed to suspend repositories: {', '.join(failed_repos)}")
         return (suspended_count, failed_repos)
 
-    logger.success(f"Successfully suspended {suspended_count} GitRepository sources")
-    logger.info("GitOps reconciliation is now paused. Use 'make resume' to restore.")
+    logger.success(f"[Suspend] Successfully suspended {suspended_count} GitRepository sources")
+    logger.info("[Suspend] GitOps reconciliation is now paused. Use 'make resume' to restore.")
     return (suspended_count, [])
 
 
@@ -108,7 +109,7 @@ def resume_repositories() -> Tuple[int, List[str]]:
     Resume all GitRepository sources.
     Returns (success_count, failed_repos).
     """
-    logger.info("Resuming all GitRepository sources...")
+    logger.info("[Resume] Resuming all GitRepository sources")
 
     git_repos = get_git_repositories()
 
@@ -120,7 +121,7 @@ def resume_repositories() -> Tuple[int, List[str]]:
     resumed_count = 0
 
     for repo in git_repos:
-        logger.info(f"  → Resuming repository: {repo}")
+        logger.info(f"[Resume]   → Resuming repository: {repo}")
         try:
             result = run_flux_command(['resume', 'source', 'git', repo], check=False)
             if result.returncode == 0:
@@ -136,12 +137,12 @@ def resume_repositories() -> Tuple[int, List[str]]:
         logger.error(f"Failed to resume repositories: {', '.join(failed_repos)}")
         return (resumed_count, failed_repos)
 
-    logger.success(f"Successfully resumed {resumed_count} GitRepository sources")
-    logger.info("GitOps reconciliation is now active. Use 'make sync' to force reconciliation.")
+    logger.success(f"[Resume] Successfully resumed {resumed_count} GitRepository sources")
+    logger.info("[Resume] GitOps reconciliation is now active. Use 'make sync' to force reconciliation.")
     return (resumed_count, [])
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(
         description='Suspend or resume Flux GitRepository sources',
@@ -183,7 +184,14 @@ Examples:
         logger.info("Install with: make install")
         sys.exit(1)
 
-    logger.info("Managing GitRepository sources...")
+    # Log script execution
+    script_name = Path(__file__).name
+    if args.action == 'suspend':
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [yellow]suspend[/yellow]")
+    else:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]resume[/green]")
+
+    logger.info("Managing GitRepository sources")
 
     # Execute action
     if args.action == 'suspend':
@@ -195,7 +203,7 @@ Examples:
         if failed_repos:
             sys.exit(1)
 
-    logger.success("Operation complete! Run 'make status' to check results.")
+    logger.success("[Suspend/Resume] Operation complete! Run 'make status' to check results.")
 
 
 if __name__ == '__main__':

@@ -3,9 +3,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "rich>=13.0.0",
-#     "pyyaml>=6.0",
-#     "requests>=2.28.0",
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -45,7 +45,7 @@ class DevelopmentSetup:
     def ensure_path_configured(self) -> None:
         """Ensure user's local bin is in PATH."""
         # Add to current session
-        current_path = os.environ.get('PATH', '')
+        current_path = get_env('PATH', '')
         local_bin_str = str(self.home_local_bin)
         if local_bin_str not in current_path:
             os.environ['PATH'] = f"{local_bin_str}:{current_path}"
@@ -81,7 +81,7 @@ class DevelopmentSetup:
         try:
             # Determine the appropriate pip command based on environment
             # This is environment-aware, not OS-aware
-            if 'uv' in sys.executable.lower() or 'UV_PROJECT_ROOT' in os.environ:
+            if 'uv' in sys.executable.lower() or get_env('UV_PROJECT_ROOT'):
                 pip_cmd = ['uv', 'pip']
                 logger.info("Installing pre-commit using uv pip...")
             else:
@@ -111,7 +111,7 @@ class DevelopmentSetup:
         """Install yamllint using pip (optional tool)."""
         try:
             # Determine the appropriate pip command based on environment
-            if 'uv' in sys.executable.lower() or 'UV_PROJECT_ROOT' in os.environ:
+            if 'uv' in sys.executable.lower() or get_env('UV_PROJECT_ROOT'):
                 pip_cmd = ['uv', 'pip']
                 logger.info("Installing yamllint using uv pip...")
             else:
@@ -220,7 +220,7 @@ class DevelopmentSetup:
         logger.info("Manual validation: 'pre-commit run --all-files'")
         logger.info("Run specific hook: 'pre-commit run <hook-id>'")
 
-        if not self.home_local_bin.exists() or str(self.home_local_bin) not in os.environ.get('PATH', ''):
+        if not self.home_local_bin.exists() or str(self.home_local_bin) not in get_env('PATH', ''):
             logger.info("")
             logger.info("Note: If commands aren't found, add to your shell profile:")
             logger.info(f'  echo \'export PATH="$HOME/.local/bin:$PATH"\' >> ~/.bashrc')
@@ -228,7 +228,7 @@ class DevelopmentSetup:
             logger.info(f'  echo \'export PATH="$HOME/.local/bin:$PATH"\' >> ~/.zshrc')
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import argparse
 

@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -330,7 +330,7 @@ class IngressSetup:
         logger.info("[Cluster] Ingress Controller addon ready ✅")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     setup = IngressSetup()
 

@@ -2,8 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "rich>=13.0.0",
-#     "pyyaml>=6.0",
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -19,14 +20,15 @@ Usage:
   worktree-setup.py 3         # Creates dev1, dev2, dev3 worktrees
 """
 
-import os
-import sys
-import subprocess
-import time
-import shutil
 import hashlib
+import os
+import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Optional, Tuple, List
+
 import yaml
 
 # Import common utilities
@@ -45,7 +47,7 @@ class WorktreeSetup:
     BASE_REGISTRY_PORT = 5001
 
     def __init__(self):
-        self.script_dir = Path(__file__).parent.parent  # Go up from python/ to scripts/
+        self.script_dir = Path(__file__).parent  # Scripts directory
         self.project_root = self.script_dir.parent.parent  # Go up to project root
         self.git_user = self.get_git_user()
         self.current_worktree_dir = None
@@ -368,7 +370,7 @@ class WorktreeSetup:
         logger.info("  make status")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import argparse
 

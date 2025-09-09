@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "rich>=13.0.0",
-#     "pyyaml>=6.0",
-#     "requests>=2.28.0",
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -15,12 +15,12 @@ Starts a new HostK8s Kind cluster with optional addons.
 Handles cluster creation, registry setup, and addon deployment.
 """
 
-import os
-import sys
 import json
-import subprocess
-import time
+import os
 import shutil
+import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 
@@ -507,7 +507,7 @@ http:
         logger.info(f"[Cluster] Kind cluster '{self.cluster_name}' is ready!")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import argparse
 

@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -254,7 +254,7 @@ def add_secrets(stack: str) -> None:
     external_secrets_file = Path(f"software/stacks/{stack}/manifests/external-secrets.yaml")
 
     if not contract_file.exists():
-        logger.info(f"No secret contract found for stack '{stack}'")
+        logger.info(f"[Secrets] No secret contract found for stack '{stack}'")
         return
 
     logger.info(f"Processing secrets for stack '{stack}' (Vault + ExternalSecrets)")
@@ -315,14 +315,14 @@ def remove_secrets(stack: str) -> None:
     if not sm.check_vault_connectivity():
         sys.exit(1)
 
-    logger.info(f"Removing secrets for stack '{stack}' from Vault...")
+    logger.info(f"[Secrets] Removing secrets for stack '{stack}' from Vault...")
 
     contract_file = Path(f"software/stacks/{stack}/hostk8s.secrets.yaml")
     external_secrets_file = Path(f"software/stacks/{stack}/manifests/external-secrets.yaml")
 
     if not contract_file.exists():
-        logger.warn(f"No secret contract found for stack '{stack}'")
-        logger.info("Attempting to remove any existing secrets anyway...")
+        logger.warn(f"[Secrets] No secret contract found for stack '{stack}'")
+        logger.info("[Secrets] Attempting to remove any existing secrets anyway...")
 
         # Try to remove by pattern: secret/metadata/STACK/*
         namespaces = sm.list_vault_secrets(stack)
@@ -342,7 +342,7 @@ def remove_secrets(stack: str) -> None:
                 namespace = secret['namespace']
                 vault_path = f"{stack}/{namespace}/{name}"
 
-                logger.info(f"Removing secret '{name}' from Vault path: secret/{vault_path}")
+                logger.info(f"[Secrets] Removing secret '{name}' from Vault path: secret/{vault_path}")
                 sm.remove_vault_secret(vault_path)
 
         except Exception as e:
@@ -350,10 +350,10 @@ def remove_secrets(stack: str) -> None:
 
     # Remove external-secrets.yaml file
     if external_secrets_file.exists():
-        logger.info(f"Removing ExternalSecret manifests: {external_secrets_file}")
+        logger.info(f"[Secrets] Removing ExternalSecret manifests: {external_secrets_file}")
         external_secrets_file.unlink()
 
-    logger.success(f"Secret removal completed for stack '{stack}'")
+    logger.success(f"[Secrets] Secret removal completed for stack '{stack}'")
 
 
 def list_secrets(stack: Optional[str] = None) -> None:
@@ -401,7 +401,7 @@ def show_usage() -> None:
     print("  manage-secrets.py list sample-app      # List secrets for specific stack")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(description='HostK8s Secret Management', add_help=False)
     parser.add_argument('command', nargs='?', help='Command: add, remove, list')
@@ -427,6 +427,15 @@ def main():
     if command == 'list' and not stack:
         list_secrets()
         return
+
+    # Log script execution
+    script_name = Path(__file__).name
+    if command == 'add':
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]add {stack}[/green]")
+    elif command == 'remove':
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [yellow]remove {stack}[/yellow]")
+    else:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [blue]{command} {stack or ''}[/blue]")
 
     # Execute command
     try:

@@ -1,7 +1,10 @@
 # ADR-009: Cross-Platform Implementation Strategy
 
 ## Status
-**Accepted** - 2025-01-15
+**Superseded** - 2025-01-15
+**Superseded by:** Unified Python Script Architecture (implemented 2025-09)
+
+> **Note**: This ADR documents the historical dual shell script (.sh/.ps1) approach that was successfully implemented but later replaced by a unified Python architecture that eliminates the dual maintenance burden identified in the "Negative Consequences" section below.
 
 ## Context
 HostK8s was originally designed for Unix/Linux/Mac environments using bash scripts. With growing Windows developer adoption and Docker Desktop's native Windows support, there was demand for native Windows PowerShell support while maintaining the existing three-layer abstraction architecture and user experience consistency.
@@ -161,8 +164,15 @@ winget install Kubernetes.kind Kubernetes.kubectl Helm.Helm
 - Three-layer abstraction architecture preserved and enhanced
 - Dual maintenance overhead remains manageable through proper tooling and processes
 
-## Future Considerations
-- **CI/CD Enhancement**: Automated functional parity testing across platforms
-- **Script Generation**: Consider tooling to automatically generate script pairs from common specifications
-- **Documentation Automation**: Automated cross-platform documentation generation
-- **Community Contributions**: Clear guidelines for maintaining functional parity in community contributions
+## Historical Context
+
+This dual shell script architecture was successfully implemented and served the project well, providing native platform integration and consistent user experience. However, the **dual maintenance burden** identified in the negative consequences proved to be a significant ongoing cost.
+
+The approach was later superseded by a **unified Python script architecture** that:
+- Eliminates dual maintenance entirely (single implementation per operation)
+- Maintains cross-platform functionality through Python's native portability
+- Provides enhanced user experience with rich terminal output
+- Uses PEP 723 headers for self-contained dependency management
+- Preserves the Make interface layer for consistent command patterns
+
+The lessons learned from this dual script approach directly informed the design of the superior Python-based solution.

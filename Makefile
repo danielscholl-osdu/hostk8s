@@ -2,7 +2,7 @@
 # Standard Make targets following common conventions
 
 .DEFAULT_GOAL := help
-.PHONY: help install start stop up down restart clean status deploy remove sync suspend resume logs build
+.PHONY: help install start stop up down restart clean status deploy remove sync suspend resume build
 
 # Load .env file if it exists
 -include .env
@@ -118,9 +118,11 @@ clean: ## Complete cleanup (destroy cluster and data)
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down) || true
 	@kind delete cluster --name hostk8s 2>$(NULL_DEVICE) || true
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>$(NULL_DEVICE) || true
+	@if exist data (echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] Removing data directory and persistent volumes..." & powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>$(NULL_DEVICE) & echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] Data cleanup completed") else (echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] No data directory found - already clean")
 else
+	@echo "[$$(date '+%H:%M:%S')] [Clean] Cleaning data directory and persistent volumes..."
 	@rm -rf data/ 2>$(NULL_DEVICE) || true
+	@echo "[$$(date '+%H:%M:%S')] [Clean] Data cleanup completed"
 endif
 
 status: ## Show cluster health and running services
@@ -162,10 +164,6 @@ src/%:
 
 ##@ Development Tools
 
-logs: ## View recent cluster events and logs (Use kubectl directly or make status for comprehensive info)
-	@echo "Use 'make status' for comprehensive cluster information, or kubectl directly:"
-	@echo "  kubectl get events --sort-by=.metadata.creationTimestamp"
-	@echo "  kubectl logs -f deployment/my-app"
 
 build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
 	@$(call SCRIPT_RUNNER_FUNC,build) "$(word 2,$(MAKECMDGOALS))"

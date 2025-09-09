@@ -2,9 +2,9 @@
 # /// script
 # requires-python = ">=3.8"
 # dependencies = [
-#     "pyyaml>=6.0",
-#     "rich>=13.0.0",
-#     "requests>=2.28.0"
+#     "pyyaml>=6.0.2",
+#     "rich>=14.1.0",
+#     "requests>=2.32.5"
 # ]
 # ///
 
@@ -23,6 +23,7 @@ better error handling, and more maintainable code structure.
 
 import argparse
 import sys
+from pathlib import Path
 from typing import List, Optional
 
 # Import common utilities
@@ -61,19 +62,19 @@ class FluxSyncer:
 
     def sync_repository(self, repo_name: str) -> bool:
         """Sync a specific GitRepository."""
-        logger.info(f"Syncing GitRepository: {repo_name}")
+        logger.info(f"[Sync] Syncing GitRepository: {repo_name}")
 
         try:
             run_flux(['reconcile', 'source', 'git', repo_name])
-            logger.success(f"Successfully synced {repo_name}")
+            logger.success(f"[Sync] Successfully synced {repo_name}")
             return True
         except FluxError:
-            logger.error(f"Failed to sync {repo_name}")
+            logger.error(f"[Sync] Failed to sync {repo_name}")
             return False
 
     def sync_kustomization(self, kust_name: str, with_source: bool = False) -> bool:
         """Sync a specific Kustomization."""
-        logger.info(f"Syncing Kustomization: {kust_name}")
+        logger.info(f"[Sync] Syncing Kustomization: {kust_name}")
 
         try:
             cmd = ['reconcile', 'kustomization', kust_name]
@@ -81,18 +82,18 @@ class FluxSyncer:
                 cmd.append('--with-source')
 
             run_flux(cmd)
-            logger.success(f"Successfully synced {kust_name}")
+            logger.success(f"[Sync] Successfully synced {kust_name}")
             return True
         except FluxError:
-            logger.error(f"Failed to sync {kust_name}")
+            logger.error(f"[Sync] Failed to sync {kust_name}")
             return False
 
     def sync_stack(self, stack_name: str) -> bool:
         """Sync a specific stack (flux-system source + bootstrap kustomization)."""
-        logger.info(f"Syncing stack: {stack_name}")
+        logger.info(f"[Sync] Syncing stack: {stack_name}")
 
         # First sync the git source
-        logger.info("  → Syncing flux-system repository")
+        logger.info("[Sync]   → Syncing flux-system repository")
         try:
             run_flux(['reconcile', 'source', 'git', 'flux-system'])
         except FluxError:
@@ -101,13 +102,13 @@ class FluxSyncer:
 
         # Then sync the bootstrap stack kustomization with source
         bootstrap_kust = "bootstrap-stack"
-        logger.info(f"  → Syncing {bootstrap_kust} kustomization")
+        logger.info(f"[Sync]   → Syncing {bootstrap_kust} kustomization")
         try:
             run_flux(['reconcile', 'kustomization', bootstrap_kust, '--with-source'])
-            logger.success(f"Successfully synced stack: {stack_name}")
+            logger.success(f"[Sync] Successfully synced stack: {stack_name}")
             return True
         except FluxError:
-            logger.error(f"Failed to sync stack: {stack_name}")
+            logger.error(f"[Sync] Failed to sync stack: {stack_name}")
             return False
 
     def get_git_repositories(self) -> List[str]:
@@ -146,7 +147,7 @@ class FluxSyncer:
 
     def sync_all_repositories(self) -> bool:
         """Sync all GitRepositories and stack kustomizations."""
-        logger.info("Syncing all GitRepositories and stack kustomizations...")
+        logger.info("[Sync] Syncing all GitRepositories and stack kustomizations...")
 
         # Get all repositories
         git_repos = self.get_git_repositories()
@@ -157,7 +158,7 @@ class FluxSyncer:
         # Sync all repositories
         failed_repos = []
         for repo in git_repos:
-            print(f"  → Syncing repository: {repo}")
+            print(f"[Sync]   → Syncing repository: {repo}")
             try:
                 run_flux(['reconcile', 'source', 'git', repo])
             except FluxError:
@@ -183,7 +184,7 @@ class FluxSyncer:
                 logger.error(f"Failed to sync kustomizations: {', '.join(failed_kustomizations)}")
             return False
 
-        logger.success("All repositories and stack kustomizations synced successfully")
+        logger.success("[Sync] All repositories and stack kustomizations synced successfully")
         return True
 
 
@@ -206,7 +207,7 @@ def show_usage() -> None:
     print("  flux-sync.py --kustomization my-kust     # Sync specific kustomization")
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     parser = argparse.ArgumentParser(description='Force Flux reconciliation', add_help=False)
     parser.add_argument('--stack', help='Sync specific stack (source + kustomization)')
@@ -220,13 +221,24 @@ def main():
         show_usage()
         return
 
+    # Log script execution
+    script_name = Path(__file__).name
+    if args.stack:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]--stack {args.stack}[/green]")
+    elif args.repo:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [blue]--repo {args.repo}[/blue]")
+    elif args.kustomization:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [blue]--kustomization {args.kustomization}[/blue]")
+    else:
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]sync all[/green]")
+
     syncer = FluxSyncer()
 
     try:
         # Check prerequisites
         syncer.check_prerequisites()
 
-        logger.info("Forcing Flux reconciliation...")
+        logger.info("[Sync] Forcing Flux reconciliation...")
 
         # Sync based on arguments
         success = False
@@ -240,9 +252,9 @@ def main():
             success = syncer.sync_all_repositories()
 
         if success:
-            logger.success("Sync complete! Run 'make status' to check results.")
+            logger.success("[Sync] Sync complete! Run 'make status' to check results.")
         else:
-            logger.error("Sync completed with errors")
+            logger.error("[Sync] Sync completed with errors")
             sys.exit(1)
 
     except KeyboardInterrupt:
