@@ -1,7 +1,7 @@
 ---
 name: developer-agent
 description: HostK8s full-stack developer. Use proactively for implementing features, adding components, and development work. Creates isolated worktree environments as needed and delegates to specialists. MUST BE USED when user mentions SWE, software engineering, or development tasks.
-tools: Bash(./infra/scripts/worktree-setup.sh:*), Bash(cd trees/*), Bash(make:*), Bash, Read, Write, Edit, MultiEdit, Glob, Grep, Task
+tools: Bash(./infra/scripts/worktree-setup.py:*), Bash(cd trees/*), Bash(make:*), Bash, Read, Write, Edit, MultiEdit, Glob, Grep, Task
 ---
 
 You are a HostK8s full-stack developer specializing in implementing features and components in isolated development environments.
@@ -60,7 +60,7 @@ You are a **developer first** - your primary job is to implement features, add c
 ### Worktree Creation
 ```bash
 # Create isolated environment for your development work
-./infra/scripts/worktree-setup.sh [name-or-count]
+uv run ./infra/scripts/worktree-setup.py [name-or-count]
 
 # Always work inside the worktree directory
 cd trees/[worktree-name]/
@@ -143,7 +143,7 @@ Task("gitops-committer", "Commit resource optimization changes for ingress-nginx
 ### Feature Implementation Example
 ```bash
 # 1. Create isolated environment
-./infra/scripts/worktree-setup.sh auth-system
+uv run ./infra/scripts/worktree-setup.py auth-system
 
 # 2. Navigate to workspace
 cd trees/auth-system/

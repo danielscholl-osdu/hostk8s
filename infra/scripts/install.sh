@@ -1,6 +1,42 @@
 #!/bin/bash
 # infra/scripts/install.sh - Install required dependencies
-source "$(dirname "$0")/common.sh"
+set -euo pipefail
+
+# Colors and formatting
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+NC='\033[0m' # No Color
+
+# Logging functions with log levels
+# LOG_LEVEL can be: debug (default) or info
+# debug: shows all messages
+# info: shows only info, warn, error (hides debug messages)
+
+log_debug() {
+    # Only show debug messages if LOG_LEVEL is not set to info
+    if [ "${LOG_LEVEL:-debug}" != "info" ]; then
+        echo -e "${GREEN}[$(date +'%H:%M:%S')]${NC} $*"
+    fi
+}
+
+log_info() {
+    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $*"
+}
+
+log_success() {
+    echo -e "${BLUE}[$(date +'%H:%M:%S')]${NC} $*"
+}
+
+log_error() {
+    if [ "${QUIET:-false}" = "true" ]; then
+        echo -e "${RED}[$(date +'%H:%M:%S')] ERROR:${NC} $*" >&2
+    else
+        echo -e "${RED}[$(date +'%H:%M:%S')] ❌${NC} $*" >&2
+    fi
+}
 
 show_usage() {
     echo "Usage: $0 [OPTIONS]"
@@ -10,7 +46,7 @@ show_usage() {
     echo "Options:"
     echo "  -h, --help    Show this help"
     echo ""
-    echo "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, yq, docker"
+    echo "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, uv, docker"
     echo ""
     echo "Supported package managers:"
     echo "  - Homebrew (brew) - macOS/Linux"
@@ -39,17 +75,16 @@ check_tool() {
                 ;;
             "flux-operator-mcp")
                 version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
-            "yq")
-                version=$(yq --version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
+                ;;
+            "uv")
+                version=$(uv --version 2>/dev/null | grep -o 'uv [0-9]\+\.[0-9]\+\.[0-9]\+' | cut -d' ' -f2 || echo "")
                 ;;
         esac
 
-        if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-            if [ -n "$version" ]; then
-                log_debug "  $tool: ${CYAN}$version${NC}"
-            else
-                log_debug "  $tool: ${CYAN}installed${NC}"
-            fi
+        if [ -n "$version" ]; then
+            log_info "  $tool: ${CYAN}$version${NC}"
+        else
+            log_info "  $tool: ${CYAN}installed${NC}"
         fi
         return 0
     fi
@@ -74,17 +109,16 @@ check_tool() {
                 ;;
             "flux-operator-mcp")
                 version=$(flux-operator-mcp --version 2>/dev/null | head -1 | cut -d' ' -f3 2>/dev/null || echo "")
-            "yq")
-                version=$(yq --version 2>/dev/null | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' || echo "")
+                ;;
+            "uv")
+                version=$(uv --version 2>/dev/null | grep -o 'uv [0-9]\+\.[0-9]\+\.[0-9]\+' | cut -d' ' -f2 || echo "")
                 ;;
         esac
 
-        if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
-            if [ -n "$version" ]; then
-                log_debug "  $tool: ${CYAN}$version${NC}"
-            else
-                log_debug "  $tool: ${CYAN}installed${NC}"
-            fi
+        if [ -n "$version" ]; then
+            log_info "  $tool: ${CYAN}$version${NC}"
+        else
+            log_info "  $tool: ${CYAN}installed${NC}"
         fi
     else
         log_error "$tool not found"
@@ -101,7 +135,7 @@ install_with_homebrew() {
         "helm:brew install helm"
         "flux:brew install fluxcd/tap/flux"
         "flux-operator-mcp:brew install controlplaneio-fluxcd/tap/flux-operator-mcp"
-        "yq:brew install yq"
+        "uv:brew install uv"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -123,7 +157,7 @@ install_with_apt() {
         "helm:curl https://baltocdn.com/helm/signing.asc | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null && echo 'deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main' | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list && sudo apt update && sudo apt install -y helm"
         "flux:curl -s https://fluxcd.io/install.sh | sudo bash"
         "flux-operator-mcp:curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/"
-        "yq:sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
+        "uv:curl -LsSf https://astral.sh/uv/install.sh | sh"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -142,7 +176,7 @@ install_with_apk() {
         "helm:sudo apk add --no-cache helm"
         "flux:curl -s https://fluxcd.io/install.sh | sudo sh"
         "flux-operator-mcp:curl -sL https://github.com/controlplaneio-fluxcd/flux-operator-mcp/releases/latest/download/flux-operator-mcp-linux-amd64.tar.gz | tar xz && sudo mv flux-operator-mcp /usr/local/bin/"
-        "yq:sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 && sudo chmod +x /usr/local/bin/yq"
+        "uv:curl -LsSf https://astral.sh/uv/install.sh | sh"
     )
 
     for tool_spec in "${tools[@]}"; do
@@ -156,7 +190,7 @@ validate_ci_environment() {
     local env_name="$1"
     log_debug "$env_name environment detected - dependencies should be pre-installed"
 
-    local tools=("kind" "kubectl" "helm" "flux" "flux-operator-mcp" "yq")
+    local tools=("kind" "kubectl" "helm" "flux" "flux-operator-mcp" "uv")
     local missing_tools=()
 
     for tool in "${tools[@]}"; do
@@ -174,21 +208,22 @@ validate_ci_environment() {
 }
 
 install_dependencies() {
-    log_info "Checking dependencies..."
+    log_info "[Script 💻] Running script: install.sh"
+    log_info "[Install] Checking dependencies..."
     log_info "------------------------"
     log_info "Dependency Configuration"
 
     # Select package manager based on PACKAGE_MANAGER setting
-    if [ -z "$PACKAGE_MANAGER" ]; then
+    if [ -z "${PACKAGE_MANAGER:-}" ]; then
         # Auto-detect: prefer brew, then native
         if command -v brew >/dev/null 2>&1; then
-            log_info "  Package Manager: Homebrew (auto-detected)"
-            log_info "  Platform: $(uname -s)"
+            log_info "  Package Manager: ${CYAN}Homebrew (auto-detected)${NC}"
+            log_info "  Platform: ${CYAN}$(uname -s)${NC}"
             log_info "------------------------"
             install_with_homebrew
         elif command -v apt >/dev/null 2>&1; then
-            log_info "  Package Manager: APT (auto-detected)"
-            log_info "  Platform: $(uname -s)"
+            log_info "  Package Manager: ${CYAN}APT (auto-detected)${NC}"
+            log_info "  Platform: ${CYAN}$(uname -s)${NC}"
             log_info "------------------------"
             install_with_apt
         elif command -v apk >/dev/null 2>&1; then
@@ -203,7 +238,7 @@ install_dependencies() {
                 log_debug "------------------------"
             fi
             log_error "No supported package manager found (brew, apt, or apk)."
-            log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, yq, docker"
+            log_info "Required tools: kind, kubectl, helm, flux, flux-operator-mcp, docker"
             log_info "Installation guides:"
             log_info "  - kind: https://kind.sigs.k8s.io/docs/user/quick-start/#installation"
             log_info "  - kubectl: https://kubernetes.io/docs/tasks/tools/"
@@ -212,7 +247,7 @@ install_dependencies() {
             log_info "  - flux-operator-mcp: https://fluxcd.control-plane.io/mcp/install/"
             return 1
         fi
-    elif [ "$PACKAGE_MANAGER" = "brew" ]; then
+    elif [ "${PACKAGE_MANAGER:-}" = "brew" ]; then
         # Force Homebrew
         if command -v brew >/dev/null 2>&1; then
             if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -226,7 +261,7 @@ install_dependencies() {
             log_info "Install Homebrew: https://brew.sh/"
             return 1
         fi
-    elif [ "$PACKAGE_MANAGER" = "native" ]; then
+    elif [ "${PACKAGE_MANAGER:-}" = "native" ]; then
         # Force native package manager
         if command -v apt >/dev/null 2>&1; then
             if [ "${LOG_LEVEL:-debug}" = "debug" ]; then
@@ -247,7 +282,7 @@ install_dependencies() {
             return 1
         fi
     else
-        log_error "Invalid PACKAGE_MANAGER value: '$PACKAGE_MANAGER'"
+        log_error "Invalid PACKAGE_MANAGER value: '${PACKAGE_MANAGER:-}'"
         log_info "Valid options: brew, native"
         return 1
     fi
@@ -260,7 +295,7 @@ install_dependencies() {
     fi
 
     log_info "------------------------"
-    log_info "All dependencies verified"
+    log_info "[Install] All dependencies verified ✅"
 }
 
 # Main function
