@@ -58,7 +58,7 @@ endif
 
 help: ## Show this help message
 ifeq ($(OS),Windows_NT)
-	@pwsh -Command "Write-Host 'HostK8s - Host-Mode Kubernetes Development Platform' -ForegroundColor White; Write-Host ''; Write-Host 'Usage:'; Write-Host '  make <target>'; Write-Host ''; Write-Host 'Available targets:' -ForegroundColor White; Get-Content Makefile | ForEach-Object { if ($$_ -match '^##@\s*(.*)') { $$section = $$Matches[1]; Write-Host \"`n$$section\" -ForegroundColor White } elseif ($$_ -match '^([a-zA-Z_-]+):.*?##\s*(.*)') { $$target = $$Matches[1]; $$desc = $$Matches[2]; Write-Host (\"  {0,-15} {1}\" -f $$target, $$desc) -ForegroundColor Cyan } }"
+	@pwsh -ExecutionPolicy Bypass -File infra/scripts/common.ps1 help
 else
 	@echo "HostK8s - Host-Mode Kubernetes Development Platform"
 	@echo ""
@@ -83,17 +83,21 @@ dev:
 
 start: ## Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)
 	@$(call SCRIPT_RUNNER_FUNC,cluster-up) $(word 2,$(MAKECMDGOALS))
-	@if [ -n "$(SOFTWARE_STACK)" ]; then \
-		STACK_NAME=$$(echo "$(SOFTWARE_STACK)" | xargs); \
-		echo "[Cluster] SOFTWARE_STACK detected: $$STACK_NAME"; \
-		BUILD_TARGET=$$(echo "$${SOFTWARE_BUILD:-$$STACK_NAME}" | xargs); \
-		if [ -n "$$BUILD_TARGET" ] && [ -d "src/$$BUILD_TARGET" ]; then \
-			echo "[Cluster] Auto-building: src/$$BUILD_TARGET"; \
-			$(MAKE) build "src/$$BUILD_TARGET"; \
-		fi; \
-		echo "[Cluster] Auto-deploying stack..."; \
-		$(MAKE) up "$$STACK_NAME"; \
-	fi
+ifdef SOFTWARE_STACK
+ifeq ($(OS),Windows_NT)
+	@pwsh -ExecutionPolicy Bypass -File infra/scripts/common.ps1 auto-deploy "$(SOFTWARE_STACK)" "$(SOFTWARE_BUILD)"
+else
+	@STACK_NAME=$$(echo "$(SOFTWARE_STACK)" | xargs); \
+	echo "[Cluster] SOFTWARE_STACK detected: $$STACK_NAME"; \
+	BUILD_TARGET=$$(echo "$${SOFTWARE_BUILD:-$$STACK_NAME}" | xargs); \
+	if [ -n "$$BUILD_TARGET" ] && [ -d "src/$$BUILD_TARGET" ]; then \
+		echo "[Cluster] Auto-building: src/$$BUILD_TARGET"; \
+		$(MAKE) build "src/$$BUILD_TARGET"; \
+	fi; \
+	echo "[Cluster] Auto-deploying stack..."; \
+	$(MAKE) up "$$STACK_NAME"
+endif
+endif
 
 stop: ## Stop cluster
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down)
@@ -133,7 +137,7 @@ clean: ## Complete cleanup (destroy cluster and data)
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down) || true
 	@kind delete cluster --name hostk8s 2>$(NULL_DEVICE) || true
 ifeq ($(OS),Windows_NT)
-	@if exist data (echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] Removing data directory and persistent volumes..." & powershell -Command "Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue" 2>$(NULL_DEVICE) & echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] Data cleanup completed") else (echo "[$(shell powershell -Command "Get-Date -Format 'HH:mm:ss'")] [Clean] No data directory found - already clean")
+	@pwsh -ExecutionPolicy Bypass -File infra/scripts/common.ps1 clean-data
 else
 	@echo "[$$(date '+%H:%M:%S')] [Clean] Cleaning data directory and persistent volumes..."
 	@rm -rf data/ 2>$(NULL_DEVICE) || true

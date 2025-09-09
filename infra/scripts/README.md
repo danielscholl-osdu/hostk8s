@@ -4,11 +4,20 @@ Modern Python-based scripts for HostK8s cross-platform operations using `uv` for
 
 ## Architecture Overview
 
-All HostK8s scripts are now **Python-based** with cross-platform execution via `uv run`:
+HostK8s uses a **hybrid scripting approach** optimized for cross-platform operations:
+
+### Primary Layer: Python Scripts (via `uv`)
 - **Single Implementation**: One Python script per operation (eliminates `.sh`/`.ps1` duplication)
 - **Universal Execution**: `uv run ./infra/scripts/script-name.py` works on all platforms
 - **Rich Terminal Output**: Enhanced CLI experience with colors, emojis, and progress indicators
 - **Integrated Dependencies**: Each script defines its own requirements via PEP 723
+
+### Support Layer: Platform Helpers
+- **`common.ps1`**: Windows-specific Make target helpers (help display, file operations)
+- **`install.sh`/`install.ps1`**: Platform-specific installation scripts (only for initial setup)
+
+### Key Design Decision
+Complex operations are in Python for true cross-platform behavior, while simple platform-specific helpers handle cases where native shell features are beneficial (e.g., colored output in Make targets).
 
 ## Core Principles
 
@@ -268,6 +277,35 @@ uv run ./infra/scripts/$(1).py
 endef
 ```
 
+### Windows-Specific Operations (`common.ps1`)
+For Windows-specific Make target helpers that cannot be handled cross-platform, we use a centralized PowerShell script:
+
+**Location:** `infra/scripts/common.ps1`
+
+**Purpose:** Handles Windows-specific operations that require native PowerShell features (colored output, file operations, etc.) when called from the Makefile on Windows systems.
+
+**Usage Pattern in Makefile:**
+```makefile
+help: ## Show this help message
+ifeq ($(OS),Windows_NT)
+	@pwsh -ExecutionPolicy Bypass -File infra/scripts/common.ps1 help
+else
+	@echo "HostK8s - Host-Mode Kubernetes Development Platform"
+	# ... Unix/Linux/Mac implementation
+endif
+```
+
+**Available Commands:**
+- `help` - Display colored help output with target descriptions
+- `clean-data` - Remove data directory with Windows-appropriate messaging
+- `auto-deploy` - Handle SOFTWARE_STACK auto-deployment on cluster start
+
+**Design Rationale:**
+- Keeps Makefile simple and cross-platform compatible (passes pre-commit hooks)
+- Centralizes all Windows-specific shell operations in one maintainable script
+- Mirrors the Python `hostk8s_common.py` pattern for consistency
+- Avoids complex escaping issues with embedded PowerShell in Makefiles
+
 ### Example Usage
 ```bash
 make status           # uv run ./infra/scripts/cluster-status.py
@@ -317,6 +355,33 @@ if __name__ == '__main__':
 ```
 
 ## Cross-Platform Design Principles
+
+### Makefile Cross-Platform Strategy
+The HostK8s Makefile maintains cross-platform compatibility through a layered approach:
+
+1. **Python Scripts (Primary)**: All complex operations use Python scripts via `uv run`
+   - Works identically on all platforms
+   - No OS-specific behavior needed
+
+2. **Simple Shell Commands**: Basic operations that work across platforms
+   - Use `echo` for simple output (accepts quotes on all platforms)
+   - Avoid shell-specific syntax (`[`, `test`, etc.)
+
+3. **Platform Conditionals**: When native shell features are required
+   ```makefile
+   ifeq ($(OS),Windows_NT)
+       # Call PowerShell script for Windows-specific features
+       @pwsh -ExecutionPolicy Bypass -File infra/scripts/common.ps1 <command>
+   else
+       # Unix/Linux/Mac shell commands
+       @echo "message" && command
+   endif
+   ```
+
+4. **Common PowerShell Script**: Windows-specific operations centralized in `common.ps1`
+   - Handles colored output, path operations, and Windows-specific logic
+   - Keeps Makefile simple and maintainable
+   - Avoids complex escaping issues
 
 ### OS Agnosticism Goals
 All HostK8s Python scripts are designed to be **completely OS-agnostic**, running identically on Windows, Mac, and Linux without platform-specific behavior.
