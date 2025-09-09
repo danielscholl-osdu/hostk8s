@@ -539,7 +539,17 @@ class EnhancedClusterStatusChecker:
             result = run_kubectl(['get', 'ingress', name, '-n', namespace,
                                 '-o', 'jsonpath={.spec.rules[0].http.paths[*].path}'], check=False)
             if result.returncode == 0 and result.stdout:
-                return result.stdout.strip().split()
+                raw_paths = result.stdout.strip().split()
+                # Clean up regex patterns to user-friendly paths
+                clean_paths = []
+                for path in raw_paths:
+                    # Convert regex patterns like /path(/|$)(.*) to /path
+                    if path.startswith('/'):
+                        clean_path = path.split('(')[0]  # Take everything before first (
+                        clean_paths.append(clean_path)
+                    else:
+                        clean_paths.append(path)
+                return clean_paths if clean_paths else ['/']
             return ['/']
         except Exception:
             return ['/']
@@ -805,10 +815,14 @@ def show_manual_deployed_apps() -> None:
         # Show ingress
         ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.app')
         for ingress in ingress_list:
-            # Get the actual path from the ingress
+            # Get all paths from the ingress
             paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
-            if paths and paths[0] != '/':
-                print(f"   Ingress: {ingress['name']} -> http://localhost:8080{paths[0]}")
+            if paths and len(paths) == 1 and paths[0] == '/':
+                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/")
+            elif paths:
+                # Show all available paths
+                url_list = [f"http://localhost:8080{path}" for path in paths]
+                print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)}")
             else:
                 print(f"   Ingress: {ingress['name']} -> http://localhost:8080/")
 

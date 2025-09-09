@@ -72,7 +72,7 @@ class SecretManager:
     def store_vault_secret(self, path: str, secret_data: Dict[str, str]) -> bool:
         """Store secret in Vault KV v2."""
         try:
-            logger.debug(f"Storing secret in Vault: secret/{path}")
+            logger.debug(f"[Secrets] Storing secret in Vault: secret/{path}")
 
             response = vault_api_call('POST', f'secret/data/{path}',
                                     data={'data': secret_data},
@@ -155,9 +155,9 @@ class SecretManager:
 
         # Check if secret already exists in Vault (idempotency)
         if self.vault_secret_exists(vault_path):
-            logger.info(f"Secret '{secret_name}' already exists in Vault, skipping Vault population")
+            logger.info(f"[Secrets] Secret '{secret_name}' already exists in Vault, skipping Vault population")
         else:
-            logger.info(f"Populating Vault with secret '{secret_name}' for namespace '{namespace}'")
+            logger.info(f"[Secrets] Populating Vault with secret '{secret_name}' for namespace '{namespace}'")
 
             # Build secret data for Vault
             vault_data = {}
@@ -184,7 +184,7 @@ class SecretManager:
                 return False
 
         # Always generate ExternalSecret manifest
-        logger.debug(f"Generating ExternalSecret manifest for '{secret_name}'")
+        logger.debug(f"[Secrets] Generating ExternalSecret manifest for '{secret_name}'")
         self.generate_external_secret_manifest(secret_name, namespace, data_list, stack, external_secrets_file)
         return True
 
@@ -257,7 +257,7 @@ def add_secrets(stack: str) -> None:
         logger.info(f"[Secrets] No secret contract found for stack '{stack}'")
         return
 
-    logger.info(f"Processing secrets for stack '{stack}' (Vault + ExternalSecrets)")
+    logger.info(f"[Secrets] Processing secrets for stack '{stack}' (Vault + ExternalSecrets)")
 
     try:
         # Load secret contract
@@ -290,10 +290,10 @@ def add_secrets(stack: str) -> None:
                 logger.error(f"Failed to process secret '{name}'")
 
         if success_count == len(secrets):
-            logger.success(f"Secrets processed successfully for stack '{stack}'")
-            logger.info("✅ Vault populated with secret values")
-            logger.info(f"✅ ExternalSecret manifests generated: {external_secrets_file}")
-            logger.info("✅ Ready for GitOps deployment via Flux")
+            logger.success(f"[Secrets] Secrets processed successfully for stack '{stack}'")
+            logger.info("[Secrets] ✅ Vault populated with secret values")
+            logger.info(f"[Secrets] ✅ ExternalSecret manifests generated: {external_secrets_file}")
+            logger.info("[Secrets] ✅ Ready for GitOps deployment via Flux")
         else:
             logger.error(f"Only {success_count}/{len(secrets)} secrets processed successfully")
             sys.exit(1)

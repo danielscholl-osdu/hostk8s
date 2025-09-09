@@ -79,6 +79,17 @@ dev:
 
 start: ## Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)
 	@$(call SCRIPT_RUNNER_FUNC,cluster-up) $(word 2,$(MAKECMDGOALS))
+	@if [ -n "$(SOFTWARE_STACK)" ]; then \
+		STACK_NAME=$$(echo "$(SOFTWARE_STACK)" | xargs); \
+		echo "[Cluster] SOFTWARE_STACK detected: $$STACK_NAME"; \
+		BUILD_TARGET=$$(echo "$${SOFTWARE_BUILD:-$$STACK_NAME}" | xargs); \
+		if [ -n "$$BUILD_TARGET" ] && [ -d "src/$$BUILD_TARGET" ]; then \
+			echo "[Cluster] Auto-building: src/$$BUILD_TARGET"; \
+			$(MAKE) build "src/$$BUILD_TARGET"; \
+		fi; \
+		echo "[Cluster] Auto-deploying stack..."; \
+		$(MAKE) up "$$STACK_NAME"; \
+	fi
 
 stop: ## Stop cluster
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down)

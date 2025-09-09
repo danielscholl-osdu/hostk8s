@@ -87,18 +87,16 @@ class FluxSetup:
             sys.exit(1)
 
     def show_flux_configuration(self) -> None:
-        """Show Flux configuration (debug mode only)."""
-        logger.debug("─" * 60)
-        logger.debug("Flux GitOps Configuration")
-        logger.debug(f"  Repository: [cyan]{self.gitops_repo}[/cyan]")
-        logger.debug(f"  Branch: [cyan]{self.gitops_branch}[/cyan]")
+        """Show Flux configuration."""
+        logger.info("─" * 60)
+        logger.info("Flux GitOps Configuration")
+        logger.info(f"  Repository: [cyan]{self.gitops_repo}[/cyan]")
+        logger.info(f"  Branch: [cyan]{self.gitops_branch}[/cyan]")
         if self.software_stack:
-            logger.debug(f"  Stack: [cyan]{self.software_stack}[/cyan]")
-        else:
-            logger.debug("  Stack: [cyan]Not configured (Flux only)[/cyan]")
+            logger.info(f"  Stack: [cyan]{self.software_stack}[/cyan]")
         if hasattr(self, 'flux_version') and self.flux_version:
-            logger.debug(f"  Version: [cyan]{self.flux_version}[/cyan]")
-        logger.debug("─" * 60)
+            logger.info(f"  Version: [cyan]{self.flux_version}[/cyan]")
+        logger.info("─" * 60)
 
     def is_flux_already_installed(self) -> bool:
         """Check if Flux is already installed and running."""
@@ -275,26 +273,7 @@ spec:
             self.log_info("No stack specified - Flux installed without GitOps configuration")
             return
 
-        # Extract repository name from URL
-        repo_name = Path(self.gitops_repo.rstrip('.git')).name
-
-        # Export variables for template substitution (set in environment)
-        os.environ.update({
-            'REPO_NAME': repo_name,
-            'GITOPS_REPO': self.gitops_repo,
-            'GITOPS_BRANCH': self.gitops_branch,
-            'SOFTWARE_STACK': self.software_stack
-        })
-
-        # Apply stack GitRepository first
-        repository_file = f"software/stacks/{self.software_stack}/repository.yaml"
-        self.apply_stamp_yaml(repository_file, f"Configuring GitOps repository for stack: {self.software_stack}")
-
-        # Apply bootstrap kustomization - different for extension vs local stacks
-        if self.software_stack.startswith('extension/'):
-            self.create_extension_bootstrap()
-        else:
-            self.apply_stamp_yaml("software/stacks/bootstrap.yaml", "Setting up GitOps bootstrap configuration")
+        self.log_info("Stack configuration will be handled by make up command")
 
     def show_flux_status(self) -> None:
         """Show Flux installation status."""
@@ -312,13 +291,6 @@ spec:
     def show_completion_summary(self) -> None:
         """Show completion summary with configuration details."""
         logger.info("[Cluster] Flux addon ready ✅")
-
-        if self.software_stack:
-            logger.debug("Active Configuration:")
-            logger.debug(f"  Repository: {self.gitops_repo}")
-            logger.debug(f"  Branch: {self.gitops_branch}")
-            logger.debug(f"  Stack: {self.software_stack}")
-            logger.debug(f"  Path: ./software/stacks/{self.software_stack}")
 
     def setup_flux(self) -> None:
         """Main setup process for Flux GitOps."""
