@@ -7,7 +7,7 @@ variable "BUILD_VERSION" {
 }
 
 variable "REGISTRY" {
-  default = "127.0.0.1:5002"
+  default = "host.docker.internal:5002"
 }
 
 group "default" {
@@ -39,6 +39,7 @@ target "result" {
     "${REGISTRY}/hostk8s-result:${BUILD_VERSION}"
   ]
   platforms = ["linux/amd64", "linux/arm64"]
+  output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
     "org.opencontainers.image.version" = "${BUILD_VERSION}"
@@ -54,6 +55,7 @@ target "worker" {
     "${REGISTRY}/hostk8s-worker:${BUILD_VERSION}"
   ]
   platforms = ["linux/amd64", "linux/arm64"]
+  output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
     "org.opencontainers.image.version" = "${BUILD_VERSION}"
