@@ -14,9 +14,9 @@ HostK8s storage architecture consists of four key components:
 ## How It Works
 
 ```
-You write              HostK8s creates       Your app creates
+     You write            HostK8s creates         You create
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Storage Contract│───▶│ Storage Class +  │───▶│ PVC (references │
+│ Storage Contract│───▶│ Storage Class +  │───▶│ PVC (reference  │
 │ (what you need) │    │ PV automatically │    │ storage class)  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                       │                       │
@@ -52,15 +52,11 @@ metadata:
   namespace: my-stack
 spec:
   directories:
-    - name: database-data
-      path: /mnt/pv/database-data
-      size: 10Gi
+    - name: app-data
+      path: /mnt/pv/app-data
+      size: 5Gi
       accessModes: [ReadWriteOnce]
-      storageClass: my-stack-database
-      owner: "999:999"
-      permissions: "755"
-      component: database
-      description: "Primary database storage"
+      storageClass: my-stack-storage
 ```
 
 ### 2. StorageClass (Auto-Generated)
@@ -77,7 +73,7 @@ spec:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: my-stack-database  # From storageClass in contract
+  name: my-stack-storage  # From storageClass in contract
 provisioner: kubernetes.io/no-provisioner
 reclaimPolicy: Retain
 volumeBindingMode: WaitForFirstConsumer
@@ -98,16 +94,16 @@ allowVolumeExpansion: false
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: hostk8s-my-stack-database-data
+  name: hostk8s-my-stack-app-data-pv
 spec:
   capacity:
-    storage: 10Gi
+    storage: 5Gi
   accessModes:
     - ReadWriteOnce
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: my-stack-database
+  storageClassName: my-stack-storage
   hostPath:
-    path: /mnt/pv/database-data
+    path: /mnt/pv/app-data
     type: DirectoryOrCreate
 ```
 
@@ -125,15 +121,15 @@ spec:
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: database-storage
+  name: app-storage
   namespace: my-stack
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: my-stack-database
+  storageClassName: my-stack-storage
   resources:
     requests:
-      storage: 10Gi
+      storage: 5Gi
 ```
 
 
@@ -144,7 +140,7 @@ When you run `make up my-stack`, the system automatically creates:
 **1. Directory in Docker volume:**
 ```
 hostk8s-pv-data/
-└── postgres-data/          # Owner: 999:999, Permissions: 777
+└── app-data/               # Owner: 1000:1000, Permissions: 755
 ```
 
 **2. PersistentVolume:**
@@ -152,14 +148,14 @@ hostk8s-pv-data/
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: hostk8s-my-stack-database-data  # hostk8s-{stack}-{directory-name}
+  name: hostk8s-my-stack-app-data-pv  # hostk8s-{stack}-{directory-name}-pv
 spec:
   capacity:
-    storage: 10Gi
+    storage: 5Gi
   accessModes: [ReadWriteOnce]
-  storageClassName: my-stack-database
+  storageClassName: my-stack-storage
   hostPath:
-    path: /mnt/pv/database-data
+    path: /mnt/pv/app-data
 ```
 
 **3. StorageClass:**
@@ -167,7 +163,7 @@ spec:
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: my-stack-database  # From storageClass in contract
+  name: my-stack-storage  # From storageClass in contract
 provisioner: kubernetes.io/no-provisioner
 reclaimPolicy: Retain
 volumeBindingMode: WaitForFirstConsumer
@@ -187,10 +183,8 @@ Each directory in a storage contract has these properties:
 | `size` | Yes | Storage capacity | Sets PV size limit |
 | `accessModes` | Yes | Kubernetes access modes | Defines how PVs can be mounted |
 | `storageClass` | Yes | Storage class name | Links PVCs to PVs |
-| `owner` | Yes | UID:GID ownership | Sets directory ownership in volume |
-| `permissions` | Yes | Directory permissions | Controls access (755, 777, etc.) |
-| `component` | Yes | Component identifier | Used in storage class naming |
-| `description` | Yes | Human-readable description | Documentation |
+| `owner` | No | UID:GID ownership | Sets directory ownership in volume (default: `1000:1000`) |
+| `permissions` | No | Directory permissions | Controls access (default: `755`) |
 
 ## Usage
 

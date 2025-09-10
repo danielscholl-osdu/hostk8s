@@ -126,12 +126,18 @@ class StorageManager:
 
     def validate_directory(self, directory: Dict[str, Any], index: int, existing_names: set) -> bool:
         """Validate a single directory specification."""
-        required_fields = ['name', 'path', 'size', 'accessModes', 'storageClass', 'owner', 'permissions', 'component']
+        required_fields = ['name', 'path', 'size', 'accessModes', 'storageClass']
 
         for field in required_fields:
             if field not in directory:
                 logger.error(f"Directory {index}: missing required field '{field}'")
                 return False
+
+        # Set defaults for optional fields
+        if 'owner' not in directory:
+            directory['owner'] = '1000:1000'
+        if 'permissions' not in directory:
+            directory['permissions'] = '755'
 
         # Check for duplicate names
         if directory['name'] in existing_names:
@@ -249,7 +255,7 @@ class StorageManager:
         storage_class = directory['storageClass']
 
         # Generate PV name
-        pv_name = f"hostk8s-{stack}-{name}"
+        pv_name = f"hostk8s-{stack}-{name}-pv"
 
         # Check if PV already exists
         result = subprocess.run(['kubectl', 'get', 'pv', pv_name],
@@ -267,8 +273,7 @@ class StorageManager:
                 'name': pv_name,
                 'labels': {
                     'hostk8s.stack': stack,
-                    'hostk8s.storage.name': name,
-                    'hostk8s.component': directory['component']
+                    'hostk8s.storage.name': name
                 }
             },
             'spec': {
@@ -418,17 +423,16 @@ class StorageManager:
 
             for directory in directories:
                 name = directory['name']
-                component = directory['component']
                 size = directory['size']
                 path = directory['path']
 
                 # Check if PV exists
-                pv_name = f"hostk8s-{stack}-{name}"
+                pv_name = f"hostk8s-{stack}-{name}-pv"
                 result = subprocess.run(['kubectl', 'get', 'pv', pv_name],
                                       capture_output=True, check=False)
                 status = "✅ Ready" if result.returncode == 0 else "❌ Missing"
 
-                logger.info(f"  {name} ({component}): {size} at {path} - {status}")
+                logger.info(f"  {name}: {size} at {path} - {status}")
 
         except Exception as e:
             logger.error(f"Error listing storage for stack '{stack}': {e}")
