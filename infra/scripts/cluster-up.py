@@ -277,19 +277,6 @@ class ClusterSetup:
             logger.debug(f"[Cluster] Storage setup warning: {e}")
             # Don't fail cluster startup if storage setup has issues
 
-    def apply_storage_class(self, env: dict) -> None:
-        """Apply the HostK8s storage class."""
-        try:
-            storage_class_manifest = self.project_root / 'infra' / 'manifests' / 'storage-class.yaml'
-            if storage_class_manifest.exists():
-                subprocess.run(['kubectl', 'apply', '-f', str(storage_class_manifest)],
-                             check=True, capture_output=True, env=env)
-                logger.debug("[Cluster] HostK8s storage class applied")
-            else:
-                logger.debug("[Cluster] Storage class manifest not found, skipping")
-        except subprocess.CalledProcessError as e:
-            logger.debug(f"[Cluster] Storage class application warning: {e}")
-            # Don't fail cluster startup if storage class has issues
 
     def create_registry_config(self) -> Path:
         """Create registry configuration file with CORS settings."""
@@ -464,8 +451,6 @@ http:
 
             logger.info("[Cluster] HostK8s namespace ready")
 
-            # Apply HostK8s storage class
-            self.apply_storage_class(env)
 
         except FileNotFoundError:
             logger.warn("kubectl not found in PATH. Namespace will be created by addon scripts.")

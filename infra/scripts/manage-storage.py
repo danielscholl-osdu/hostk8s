@@ -64,6 +64,11 @@ class StorageManager:
             # Process directories in the contract
             directories = contract.get('spec', {}).get('directories', [])
 
+            # Create StorageClasses first
+            if not self.create_storage_classes(directories):
+                logger.error("Failed to create StorageClasses")
+                sys.exit(1)
+
             success_count = 0
             for directory in directories:
                 if self.process_directory(directory, stack):
@@ -159,6 +164,59 @@ class StorageManager:
             logger.error(f"Directory {index}: permissions must be 3-digit octal, got '{permissions}'")
             return False
 
+        return True
+
+    def create_storage_classes(self, directories: list) -> bool:
+        """Create StorageClasses for unique storageClass names in the contract."""
+        # Extract unique storage class names
+        storage_classes = set()
+        for directory in directories:
+            storage_classes.add(directory['storageClass'])
+
+        success_count = 0
+        for storage_class_name in storage_classes:
+            if self.create_storage_class(storage_class_name):
+                success_count += 1
+            else:
+                logger.error(f"Failed to create StorageClass '{storage_class_name}'")
+
+        logger.info(f"[Storage] ✅ {success_count} StorageClasses created")
+        return success_count == len(storage_classes)
+
+    def create_storage_class(self, storage_class_name: str) -> bool:
+        """Create a single StorageClass."""
+        # Check if StorageClass already exists
+        result = subprocess.run(['kubectl', 'get', 'storageclass', storage_class_name],
+                              capture_output=True, check=False)
+
+        if result.returncode == 0:
+            logger.debug(f"[Storage] StorageClass '{storage_class_name}' already exists")
+            return True
+
+        # Create StorageClass manifest
+        sc_manifest = {
+            'apiVersion': 'storage.k8s.io/v1',
+            'kind': 'StorageClass',
+            'metadata': {
+                'name': storage_class_name
+            },
+            'provisioner': 'kubernetes.io/no-provisioner',
+            'reclaimPolicy': 'Retain',
+            'volumeBindingMode': 'WaitForFirstConsumer',
+            'allowVolumeExpansion': False
+        }
+
+        # Apply StorageClass
+        import yaml
+        process = subprocess.run(['kubectl', 'apply', '-f', '-'],
+                               input=yaml.dump(sc_manifest), text=True,
+                               capture_output=True, check=False)
+
+        if process.returncode != 0:
+            logger.error(f"Failed to create StorageClass '{storage_class_name}': {process.stderr}")
+            return False
+
+        logger.debug(f"[Storage] Created StorageClass '{storage_class_name}'")
         return True
 
     def process_directory(self, directory: Dict[str, Any], stack: str) -> bool:
