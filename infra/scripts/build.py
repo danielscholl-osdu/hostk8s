@@ -119,6 +119,73 @@ class ApplicationBuilder:
             "You can override with: REGISTRY_URL=your-registry-url make build"
         )
 
+    def ensure_buildx_registry_config(self, registry_url: str) -> None:
+        """Ensure buildx is configured for insecure HTTP registry access.
+
+        Args:
+            registry_url: Registry URL to configure
+        """
+        try:
+            # Create buildx builder with insecure registry support if needed
+            builder_name = "hostk8s-builder"
+
+            # Check if builder exists
+            result = subprocess.run(
+                ["docker", "buildx", "inspect", builder_name],
+                capture_output=True, text=True
+            )
+
+            if result.returncode != 0:
+                logger.info(f"[Build] Creating buildx builder: {builder_name}")
+
+                # Create builder with buildkit config for insecure registries
+                buildkitd_config = f"""
+[registry."{registry_url}"]
+  http = true
+  insecure = true
+
+[registry."localhost:5002"]
+  http = true
+  insecure = true
+
+[registry."127.0.0.1:5002"]
+  http = true
+  insecure = true
+
+[registry."host.docker.internal:5002"]
+  http = true
+  insecure = true
+""".strip()
+
+                # Write temporary buildkitd config
+                config_path = Path("buildkitd.toml")
+                config_path.write_text(buildkitd_config)
+
+                try:
+                    # Create builder with config
+                    subprocess.run([
+                        "docker", "buildx", "create",
+                        "--name", builder_name,
+                        "--config", str(config_path),
+                        "--use"
+                    ], check=True, capture_output=True)
+
+                    logger.info(f"[Build] Created and configured buildx builder: {builder_name}")
+                finally:
+                    # Clean up temporary config
+                    if config_path.exists():
+                        config_path.unlink()
+            else:
+                # Use existing builder
+                subprocess.run([
+                    "docker", "buildx", "use", builder_name
+                ], check=True, capture_output=True)
+                logger.debug(f"[Build] Using existing buildx builder: {builder_name}")
+
+        except subprocess.CalledProcessError as e:
+            logger.warn(f"[Build] Could not configure buildx builder: {e}")
+            logger.info("[Build] Continuing with default builder...")
+
     def list_available_applications(self) -> None:
         """Display available applications that can be built."""
         applications = self.find_applications()
@@ -173,6 +240,9 @@ class ApplicationBuilder:
         # Detect working registry URL if not already set
         if not self.registry_url:
             self.registry_url = self.detect_registry_url()
+
+        # Ensure buildx is configured for HTTP registry access
+        self.ensure_buildx_registry_config(self.registry_url)
 
         os.environ["BUILD_DATE"] = build_date
         os.environ["BUILD_VERSION"] = self.build_version
