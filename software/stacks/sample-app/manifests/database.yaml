@@ -48,10 +48,11 @@ spec:
       memory: 256Mi
       cpu: 200m
 
-  # Storage configuration using hostPath PV
+  # Storage configuration - use standard storage for Windows compatibility
+  # Note: This sacrifices host-visible data but ensures cross-platform operation
   storage:
     size: 1Gi
-    storageClass: sample-app-postgres
+    storageClass: standard
     pvcTemplate:
       accessModes:
         - ReadWriteOnce
