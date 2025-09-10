@@ -25,6 +25,7 @@ This replaces the dual shell/PowerShell scripts with a single, maintainable impl
 
 import argparse
 import os
+import platform
 import subprocess
 import sys
 import urllib.request
@@ -45,6 +46,7 @@ class ApplicationBuilder:
     def __init__(self):
         self.build_version = "1.0.0"
         self.registry_url = None
+        self.build_platforms = None
 
     def find_applications(self) -> List[Tuple[Path, str]]:
         """Find all buildable applications in src/ directory.
@@ -118,6 +120,42 @@ class ApplicationBuilder:
             f"Tested endpoints: {', '.join(test_urls)}\n"
             "You can override with: REGISTRY_URL=your-registry-url make build"
         )
+
+    def detect_build_platforms(self) -> str:
+        """Detect appropriate build platforms based on operating system.
+
+        Returns:
+            Comma-separated list of platforms to build for
+        """
+        # Allow override via environment variable
+        platform_override = get_env('BUILD_PLATFORMS', '')
+        if platform_override:
+            logger.info(f"[Build] Using BUILD_PLATFORMS override: {platform_override}")
+            return platform_override
+
+        # Detect platform-specific defaults
+        current_os = platform.system().lower()
+        current_arch = platform.machine().lower()
+
+        if current_os == "windows":
+            # Check if this is Windows ARM and user opts in for ARM64 builds
+            if current_arch in ["arm64", "aarch64", "arm"] and get_env('ENABLE_ARM64_BUILDS', '').lower() == 'true':
+                platforms = "linux/amd64,linux/arm64"
+                logger.info(f"[Build] Windows ARM64 detected - using multi-platform build (opt-in): {platforms}")
+                logger.info("[Build] To disable: unset ENABLE_ARM64_BUILDS")
+            else:
+                # Windows x86 or Windows ARM without opt-in: Use single-platform for compatibility
+                platforms = "linux/amd64"
+                arch_info = f" ({current_arch})" if current_arch in ["arm64", "aarch64", "arm"] else ""
+                logger.info(f"[Build] Windows{arch_info} detected - using single-platform build: {platforms}")
+                if current_arch in ["arm64", "aarch64", "arm"]:
+                    logger.info("[Build] For ARM64 builds on Windows ARM: ENABLE_ARM64_BUILDS=true make build")
+        else:
+            # Mac/Linux: Use multi-platform builds
+            platforms = "linux/amd64,linux/arm64"
+            logger.info(f"[Build] {current_os.title()} detected - using multi-platform build: {platforms}")
+
+        return platforms
 
     def ensure_buildx_registry_config(self, registry_url: str) -> None:
         """Ensure buildx is configured for insecure HTTP registry access.
@@ -241,16 +279,22 @@ class ApplicationBuilder:
         if not self.registry_url:
             self.registry_url = self.detect_registry_url()
 
+        # Detect appropriate build platforms if not already set
+        if not self.build_platforms:
+            self.build_platforms = self.detect_build_platforms()
+
         # Ensure buildx is configured for HTTP registry access
         self.ensure_buildx_registry_config(self.registry_url)
 
         os.environ["BUILD_DATE"] = build_date
         os.environ["BUILD_VERSION"] = self.build_version
         os.environ["REGISTRY"] = self.registry_url
+        os.environ["BUILD_PLATFORMS"] = self.build_platforms
 
         logger.info(f"[Build] Build date: {build_date}")
         logger.info(f"[Build] Version: {self.build_version}")
         logger.info(f"[Build] Registry: {self.registry_url}")
+        logger.info(f"[Build] Platforms: {self.build_platforms}")
 
     def run_docker_command(self, cmd: List[str], cwd: Path) -> None:
         """Run Docker command with proper error handling.

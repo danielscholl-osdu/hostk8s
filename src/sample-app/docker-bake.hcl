@@ -10,6 +10,10 @@ variable "REGISTRY" {
   default = "localhost:5002"
 }
 
+variable "BUILD_PLATFORMS" {
+  default = "linux/amd64,linux/arm64"
+}
+
 group "default" {
   targets = ["vote", "result", "worker"]
 }
@@ -22,7 +26,7 @@ target "vote" {
     "${REGISTRY}/hostk8s-vote:${BUILD_VERSION}"
   ]
   target = "final"
-  platforms = ["linux/amd64"]
+  platforms = split(",", BUILD_PLATFORMS)
   output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
@@ -38,7 +42,7 @@ target "result" {
     "${REGISTRY}/hostk8s-result:latest",
     "${REGISTRY}/hostk8s-result:${BUILD_VERSION}"
   ]
-  platforms = ["linux/amd64"]
+  platforms = split(",", BUILD_PLATFORMS)
   output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
@@ -54,7 +58,7 @@ target "worker" {
     "${REGISTRY}/hostk8s-worker:latest",
     "${REGISTRY}/hostk8s-worker:${BUILD_VERSION}"
   ]
-  platforms = ["linux/amd64"]
+  platforms = split(",", BUILD_PLATFORMS)
   output = ["type=image,push=true"]
   labels = {
     "org.opencontainers.image.created" = "${BUILD_DATE}"
