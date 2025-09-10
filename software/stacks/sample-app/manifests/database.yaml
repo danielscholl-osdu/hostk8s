@@ -48,11 +48,10 @@ spec:
       memory: 256Mi
       cpu: 200m
 
-  # Storage configuration - use standard storage for Windows compatibility
-  # Note: This sacrifices host-visible data but ensures cross-platform operation
+  # Storage configuration using Docker volume for cross-platform persistence
   storage:
     size: 1Gi
-    storageClass: standard
+    storageClass: sample-app-postgres
     pvcTemplate:
       accessModes:
         - ReadWriteOnce

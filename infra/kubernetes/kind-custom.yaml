@@ -55,7 +55,7 @@ nodes:
       - hostPath: ./data/pv
         containerPath: /mnt/pv
         readOnly: false
-      - hostPath: ./data/postgres
+      - hostPath: /var/lib/docker/volumes/hostk8s-postgres-data/_data
         containerPath: /mnt/postgres
         readOnly: false
 
