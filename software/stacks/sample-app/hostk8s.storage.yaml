@@ -14,5 +14,3 @@ spec:
       storageClass: sample-app-database
       owner: "999:999"          # PostgreSQL UID:GID in container
       permissions: "777"         # Allow PostgreSQL to create pgdata subdirectory
-      component: postgres
-      description: "Voting application PostgreSQL database storage"

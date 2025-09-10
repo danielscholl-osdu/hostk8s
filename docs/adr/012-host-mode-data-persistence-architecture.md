@@ -25,6 +25,7 @@ Adopt **organized host-mode data persistence architecture** using dedicated dire
 - **Stack-Aware Organization**: Stack-specific persistent volumes under `data/pv/<stack-name>/`
 - **Kind Integration**: extraMounts configuration mapping host directories to container mount points
 - **Application Contracts**: Standardized mount point patterns for consistent application integration
+- **Storage Contracts**: Declarative YAML interface for managing persistent storage requirements
 
 ## Rationale
 
@@ -45,6 +46,12 @@ Adopt **organized host-mode data persistence architecture** using dedicated dire
 2. **Contract-Based Design** - Applications use predictable mount points regardless of underlying host structure
 3. **Stack Isolation** - `/mnt/pv/<stack-name>/` pattern enables multi-stack environments
 4. **Service Discovery** - Service-specific mount points (`/mnt/postgres/`, `/mnt/registry/`) provide predictable integration
+
+### Storage Contract Integration
+1. **Declarative Interface** - YAML-based storage contracts eliminate manual resource creation
+2. **Automatic Resource Generation** - StorageClasses and PersistentVolumes created automatically
+3. **Infrastructure Abstraction** - Developers declare storage needs without Kubernetes complexity
+4. **Consistency** - Follows established contract patterns for secrets and other platform resources
 
 ## Alternatives Considered
 
@@ -70,44 +77,86 @@ Adopt **organized host-mode data persistence architecture** using dedicated dire
 
 ## Architecture Benefits
 
-### Directory Organization Structure
+### Storage Architecture Evolution
+
+**Current Architecture (Docker Volume)**:
+```
+hostk8s-pv-data/              # Universal Docker volume
+├── app-data/                 # Storage contract directories
+├── postgres-data/            # Database storage
+└── <contract-directory>/     # Additional contract storage
+
+data/                         # Host-accessible directories
+├── kubeconfig/              # Cluster connection configuration
+│   └── config              # kubectl configuration file
+└── registry/               # Container registry storage
+    └── docker/             # Registry data and metadata
+```
+
+**Legacy Structure (Deprecated)**:
 ```
 data/
-├── kubeconfig/         # Cluster connection configuration
-│   └── config         # kubectl configuration file
-├── registry/          # Container registry storage
-│   └── docker/        # Registry data and metadata
-├── postgres/          # PostgreSQL database storage
-├── pv/               # Stack-specific persistent volumes
-│   ├── sample/       # Sample stack persistent data
-│   └── <stack>/      # Additional stack storage
-└── storage/          # General application storage
+├── postgres/               # Direct PostgreSQL storage (deprecated)
+├── pv/                    # Manual PV directories (deprecated)
+│   ├── sample/           # Manual stack data (deprecated)
+│   └── <stack>/          # Manual storage (deprecated)
+└── storage/              # General storage (deprecated)
 ```
 
 ### Kind extraMounts Integration
+
+**Current Implementation (Docker Volume)**:
 ```yaml
 # infra/kubernetes/kind-custom.yaml
 extraMounts:
-  - hostPath: ./data/storage    # General storage
+  - hostPath: /var/lib/docker/volumes/hostk8s-pv-data/_data
+    containerPath: /mnt/pv      # Universal storage mount point
+```
+
+**Legacy Implementation (Deprecated)**:
+```yaml
+# Manual directory mounting (superseded by Docker volume)
+extraMounts:
+  - hostPath: ./data/storage    # General storage (deprecated)
     containerPath: /mnt/storage
-  - hostPath: ./data/pv         # Stack persistent volumes
+  - hostPath: ./data/pv         # Stack persistent volumes (deprecated)
     containerPath: /mnt/pv
-  - hostPath: ./data/postgres   # Database storage
+  - hostPath: ./data/postgres   # Database storage (deprecated)
     containerPath: /mnt/postgres
 ```
 
 ### Application Integration Pattern
+
+**Modern Approach (Storage Contracts)**:
 ```yaml
-# Example: Stack-specific persistent volume
+# software/stacks/sample/hostk8s.storage.yaml
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: sample
+  namespace: sample
+spec:
+  directories:
+    - name: api-data
+      path: /mnt/pv/api-data
+      size: 1Gi
+      accessModes: [ReadWriteOnce]
+      storageClass: sample-storage
+# Automatically generates PV, StorageClass, and directories
+```
+
+**Generated Resources (Automatic)**:
+```yaml
+# Auto-generated PersistentVolume
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: sample-api-storage-pv
+  name: hostk8s-sample-api-data-pv
 spec:
   capacity:
     storage: 1Gi
   hostPath:
-    path: /mnt/pv/sample        # Maps to data/pv/sample/
+    path: /mnt/pv/api-data      # Maps to data/pv/api-data/
     type: DirectoryOrCreate
 ```
 
@@ -118,6 +167,10 @@ PostgreSQL:     /mnt/postgres/  → data/postgres/
 Registry:       /mnt/storage/   → data/storage/ (legacy)
 Stack PVs:      /mnt/pv/        → data/pv/
 Applications:   /mnt/pv/<name>/ → data/pv/<stack-name>/
+
+# Storage Contract Integration
+Contract:       hostk8s.storage.yaml → StorageClass + PV + directories
+Docker Volume:  hostk8s-pv-data      → /mnt/pv/ (universal backend)
 ```
 
 ## Consequences
@@ -148,9 +201,21 @@ mkdir -p data/postgres
 mkdir -p data/registry
 ```
 
-### Stack-Specific Volume Creation
+### Storage Contract Processing
 ```bash
-# Stack deployment creates dedicated directories
+# Modern approach: Storage contracts automatically manage resources
+make up sample-app
+├── manage-storage.py setup sample-app    # Process storage contract
+├── manage-secrets.py add sample-app      # Process secret contract
+└── deploy-stack.py sample-app            # Deploy stack via Flux
+
+# Contract-based directory creation with permissions
+# Based on hostk8s.storage.yaml declarations
+```
+
+### Stack-Specific Volume Creation (Legacy)
+```bash
+# Manual approach (superseded by storage contracts)
 # Example: deploying 'sample' stack creates data/pv/sample/
 mkdir -p "data/pv/${STACK_NAME}"
 ```
@@ -184,6 +249,8 @@ chmod 755 data/pv data/storage data/postgres
 - [ADR-001: Host-Mode Architecture](001-host-mode-architecture.md) - Establishes host-mode foundation for data persistence
 - [ADR-007: Kind Configuration Fallback System](007-kind-configuration-fallback-system.md) - Kind configuration includes extraMounts setup
 - [ADR-011: Hybrid Container Registry Architecture](011-hybrid-container-registry-architecture.md) - Registry service uses data persistence patterns
+- [ADR-013: Secret Contract Architecture](013-secret-contract-architecture.md) - Establishes contract-based pattern for platform resources
+- [ADR-014: Vault Secret Management](014-vault-secret-management.md) - Related contract-based resource management approach
 
 ## References
 - Kind extraMounts Documentation: https://kind.sigs.k8s.io/docs/user/configuration/#extra-mounts

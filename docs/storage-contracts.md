@@ -2,6 +2,8 @@
 
 Storage Contracts solve the complexity of managing persistent storage in Kubernetes by letting you declare what storage your stack needs in a simple YAML file. HostK8s handles creating all the Kubernetes resources automatically.
 
+Storage Contracts provide the modern declarative interface to the [host-mode data persistence architecture](adr/012-host-mode-data-persistence-architecture.md) established in HostK8s.
+
 ## Architecture Components
 
 HostK8s storage architecture consists of four key components:
