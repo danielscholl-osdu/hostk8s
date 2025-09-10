@@ -89,7 +89,6 @@ def run_script(script_name: str) -> bool:
     # Try Python script first
     python_script = script_dir / f"{script_name}.py"
     if python_script.exists():
-        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}.py[/cyan]")
         result = run_command(['uv', 'run', str(python_script)], check=False)
         return result.returncode == 0
 

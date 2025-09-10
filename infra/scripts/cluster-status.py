@@ -234,7 +234,12 @@ class EnhancedClusterStatusChecker:
                                                         '--no-headers'], check=False)
 
                             if ingress_result.returncode == 0:
-                                console.print(f"   Web UI: Available at [cyan]http://localhost:8080/registry/[/cyan]")
+                                # Check if ingress controller is actually ready
+                                warning = "" if has_ingress_controller() else " ⚠️ (No Ingress Controller)"
+                                if has_ingress_controller():
+                                    console.print(f"   Web UI: Available at [cyan]http://localhost:8080/registry/[/cyan]")
+                                else:
+                                    print(f"   Web UI: http://localhost:8080/registry/{warning}")
                             else:
                                 print(f"   Web UI: Deployed but no ingress configured")
                         else:
@@ -279,8 +284,18 @@ class EnhancedClusterStatusChecker:
                                                 '--no-headers'], check=False)
 
                     print(f"   Status: Secret management available (dev mode)")
+
+                    # Always show UI path, but with appropriate status
                     if ingress_result.returncode == 0:
-                        console.print(f"   Web UI: Available at [cyan]http://localhost:8080/ui/vault/auth[/cyan]")
+                        # Ingress exists - check if controller is ready
+                        if has_ingress_controller():
+                            console.print(f"   Web UI: Available at [cyan]http://localhost:8080/ui/[/cyan]")
+                        else:
+                            print(f"   Web UI: http://localhost:8080/ui/ ⚠️ (No Ingress Controller)")
+                    else:
+                        # No ingress configured - show what would be available
+                        warning = " ⚠️ (No Ingress Controller)" if not has_ingress_controller() else ""
+                        print(f"   Web UI: http://localhost:8080/ui/{warning}")
                 else:
                     print(f"🔐 Vault: Starting")
                     print(f"   Status: Vault pod not yet running")
