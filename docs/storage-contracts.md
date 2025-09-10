@@ -14,10 +14,10 @@ HostK8s storage architecture consists of four key components:
 ## How It Works
 
 ```
-You write              HostK8s creates       Your app uses
+You write              HostK8s creates       Your app creates
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
-│ Storage Contract│───▶│ Storage Class +  │───▶│ PVC gets        │
-│ (what you need) │    │ PV automatically │    │ storage         │
+│ Storage Contract│───▶│ Storage Class +  │───▶│ PVC (references │
+│ (what you need) │    │ PV automatically │    │ storage class)  │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
          │                       │                       │
          ▼                       ▼                       ▼
@@ -84,7 +84,7 @@ volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: false
 ```
 
-### 3. PersistentVolume (PV)
+### 3. PersistentVolume (Auto-Generated)
 
 **Purpose**: Represents the actual storage available in the cluster
 
