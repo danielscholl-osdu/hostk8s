@@ -27,6 +27,7 @@ import argparse
 import os
 import subprocess
 import sys
+import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Tuple, Optional
@@ -43,6 +44,7 @@ class ApplicationBuilder:
 
     def __init__(self):
         self.build_version = "1.0.0"
+        self.registry_url = None
 
     def find_applications(self) -> List[Tuple[Path, str]]:
         """Find all buildable applications in src/ directory.
@@ -73,6 +75,49 @@ class ApplicationBuilder:
                 applications.append((app_dir, "docker-compose.yml"))
 
         return sorted(applications, key=lambda x: str(x[0]))
+
+    def detect_registry_url(self) -> str:
+        """Detect working registry URL by testing multiple endpoints.
+
+        Returns:
+            Working registry URL
+
+        Raises:
+            HostK8sError: If no registry endpoints are accessible
+        """
+        # Allow override via environment variable
+        registry_override = get_env('REGISTRY_URL', '')
+        if registry_override:
+            logger.info(f"[Build] Using REGISTRY_URL override: {registry_override}")
+            return registry_override
+
+        # Test registry endpoints in priority order
+        test_urls = [
+            "localhost:5002",
+            "127.0.0.1:5002",
+            "host.docker.internal:5002"
+        ]
+
+        for url in test_urls:
+            try:
+                # Test if registry is accessible
+                catalog_url = f"http://{url}/v2/_catalog"
+                logger.debug(f"[Build] Testing registry endpoint: {url}")
+
+                with urllib.request.urlopen(catalog_url, timeout=5) as response:
+                    if response.status == 200:
+                        logger.info(f"[Build] Using registry: {url}")
+                        return url
+
+            except Exception as e:
+                logger.debug(f"[Build] Registry {url} not accessible: {e}")
+                continue
+
+        raise HostK8sError(
+            "No accessible registry found. Ensure the cluster is running with registry enabled.\n"
+            f"Tested endpoints: {', '.join(test_urls)}\n"
+            "You can override with: REGISTRY_URL=your-registry-url make build"
+        )
 
     def list_available_applications(self) -> None:
         """Display available applications that can be built."""
@@ -125,11 +170,17 @@ class ApplicationBuilder:
         """Set build metadata environment variables."""
         build_date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
+        # Detect working registry URL if not already set
+        if not self.registry_url:
+            self.registry_url = self.detect_registry_url()
+
         os.environ["BUILD_DATE"] = build_date
         os.environ["BUILD_VERSION"] = self.build_version
+        os.environ["REGISTRY"] = self.registry_url
 
         logger.info(f"[Build] Build date: {build_date}")
         logger.info(f"[Build] Version: {self.build_version}")
+        logger.info(f"[Build] Registry: {self.registry_url}")
 
     def run_docker_command(self, cmd: List[str], cwd: Path) -> None:
         """Run Docker command with proper error handling.

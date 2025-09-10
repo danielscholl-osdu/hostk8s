@@ -7,7 +7,7 @@ variable "BUILD_VERSION" {
 }
 
 variable "REGISTRY" {
-  default = "host.docker.internal:5002"
+  default = "localhost:5002"
 }
 
 group "default" {
