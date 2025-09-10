@@ -103,7 +103,7 @@ stop: ## Stop cluster
 	@$(call SCRIPT_RUNNER_FUNC,cluster-down)
 
 up: ## Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
-	-@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
+	@$(call SCRIPT_RUNNER_FUNC,manage-secrets) add $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 	@$(call SCRIPT_RUNNER_FUNC,deploy-stack) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),sample)
 
 # Handle arguments as targets to avoid "No rule to make target" errors

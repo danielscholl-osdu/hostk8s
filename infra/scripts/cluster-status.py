@@ -584,9 +584,22 @@ class EnhancedClusterStatusChecker:
             return False
 
     def check_health(self) -> None:
-        """Perform health checks on deployed applications."""
+        """Perform GitOps-aware health checks."""
         logger.info("Health Check")
 
+        # First check if GitOps stack deployment is in progress
+        if has_flux():
+            kustomizations = self.get_flux_kustomizations()
+            if kustomizations:
+                ready_count = sum(1 for k in kustomizations if k['ready'] == 'True')
+                total_count = len(kustomizations)
+
+                if ready_count < total_count:
+                    print(f"⏳ Stack deployment in progress ({ready_count} of {total_count} components ready)")
+                    print()
+                    return
+
+        # If GitOps is complete or not used, check individual app health
         unhealthy_apps = []
 
         # Check manual deployed apps
@@ -700,13 +713,11 @@ def show_gitops_applications() -> None:
 
     logger.info("GitOps Applications")
 
-    # Show ingress controller status first
+    # Show ingress controller status only when it's ready
     if checker.is_ingress_controller_ready():
         print("🌐 Ingress Controller: ingress-nginx (Ready ✅)")
         print("   Access: http://localhost:8080, https://localhost:8443")
-    else:
-        print("🌐 Ingress Controller: ingress-nginx (not ready !)")
-    print()
+        print()
 
     for app in gitops_apps:
         # Display name with namespace qualification if not default
@@ -768,8 +779,13 @@ def show_gitops_applications() -> None:
                                         url_list.append(f"https://localhost:8443{path}")
                                 print(f"   Access: {', '.join(url_list)} ({ingress['name']} ingress)")
                         else:
-                            print(f"   Ingress: {ingress['name']} (configured but controller not ready)")
-                            print("   Enable with: export INGRESS_ENABLED=true && make restart")
+                            # Show URL with warning to match UX pattern
+                            paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
+                            if len(paths) == 1 and paths[0] == '/':
+                                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/ ⚠️ (No Ingress Controller)")
+                            else:
+                                url_list = [f"http://localhost:8080{path}" for path in paths]
+                                print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)} ⚠️ (No Ingress Controller)")
                     else:
                         # Non-localhost hosts
                         if checker.is_ingress_controller_ready():
@@ -783,7 +799,7 @@ def show_gitops_applications() -> None:
                             else:
                                 print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']})")
                         else:
-                            print(f"   Ingress: {ingress['name']} (configured but controller not ready)")
+                            print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']}) ⚠️ (No Ingress Controller)")
         except Exception:
             pass
 

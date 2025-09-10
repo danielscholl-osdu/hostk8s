@@ -49,10 +49,8 @@ class SecretManager:
                                     vault_addr=self.vault_addr,
                                     vault_token=self.vault_token)
             return response.status_code in [200, 429]  # 429 is also valid (sealed)
-        except Exception as e:
-            logger.error(f"Cannot connect to Vault at {self.vault_addr}")
-            logger.error(f"Make sure Vault is running and VAULT_ADDR/VAULT_TOKEN are set correctly")
-            logger.error(f"Connection error: {e}")
+        except Exception:
+            # Don't log errors here - let the caller handle error messaging with proper context
             return False
 
     def vault_secret_exists(self, path: str) -> bool:
@@ -244,19 +242,21 @@ def add_secrets(stack: str) -> None:
         logger.error("Stack name required. Usage: manage-secrets.py add <stack-name>")
         sys.exit(1)
 
-    sm = SecretManager()
-
-    # Check Vault connectivity
-    if not sm.check_vault_connectivity():
-        sys.exit(1)
-
+    # Check if stack actually needs secrets BEFORE trying to connect to Vault
     contract_file = Path(f"software/stacks/{stack}/hostk8s.secrets.yaml")
-    external_secrets_file = Path(f"software/stacks/{stack}/manifests/external-secrets.yaml")
 
     if not contract_file.exists():
-        logger.info(f"[Secrets] No secret contract found for stack '{stack}'")
+        logger.debug(f"[Secrets] No secret contract found for stack '{stack}' - skipping secret management")
         return
 
+    # Stack has secrets, so we need Vault - check connectivity
+    sm = SecretManager()
+    if not sm.check_vault_connectivity():
+        logger.error(f"Stack '{stack}' requires secret management, but Vault is not available")
+        logger.info("To enable Vault: export VAULT_ENABLED=true && make restart")
+        sys.exit(1)
+
+    external_secrets_file = Path(f"software/stacks/{stack}/manifests/external-secrets.yaml")
     logger.info(f"[Secrets] Processing secrets for stack '{stack}' (Vault + ExternalSecrets)")
 
     try:
