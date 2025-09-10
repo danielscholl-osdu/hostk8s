@@ -461,7 +461,7 @@ http:
 
         # Check if cluster already exists
         if self.cluster_exists():
-            logger.warn(f"Cluster '{self.cluster_name}' already exists. Use 'make restart' to recreate it.")
+            logger.warn(f"[Cluster] Cluster '{self.cluster_name}' already exists. Use 'make restart' to recreate it.")
             sys.exit(1)
 
         # Determine Kind configuration

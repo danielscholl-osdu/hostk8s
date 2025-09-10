@@ -16,19 +16,6 @@ HostK8s provides GitOps-based Kubernetes development environments using host-mod
 4. **Data persistence** - `data/` directory survives cluster operations
 5. **Commit Messages** - Never make commit statments referencing `🤖 Generated with Claude Code` or `Co-Authored-By: Claude`
 
-## SubAgent Delegation
-
-**Decision Rule**: Delegate based on problem domain, not file location.
-
-| Agent | Use For |
-|-------|---------|
-| `cluster-agent` | Infrastructure issues (Kind, networking, resources, RBAC) |
-| `software-agent` | GitOps/Flux issues (reconciliation, repository structure) |
-| `gitops-committer` | ANY changes requiring Git commits (software/ modifications) |
-| `developer-agent` | Delegating SWE activities to a worktree autonomous flow |
-
-**Key Pattern**: If changes need Git commits to take effect → use `gitops-committer` immediately
-
 ## Essential Commands
 
 ```bash
@@ -93,3 +80,7 @@ hostk8s/
 **Filesystem**: Place in `software/apps/` (with .gitignore isolation) or `infra/kubernetes/extension/`
 **Git-Based**: Set `GITOPS_REPO` environment variable
 **Custom Kind**: Use `KIND_CONFIG=extension/<name>`
+
+## Kubernetes Context
+
+IMPORTANT: Always ensure context is properly set before executing kubectl commands. `{os.getcwd()}/data/kubeconfig/config`

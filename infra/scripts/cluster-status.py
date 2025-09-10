@@ -47,7 +47,15 @@ class EnhancedClusterStatusChecker:
 
     def show_kubeconfig_info(self) -> None:
         """Show KUBECONFIG information."""
-        logger.debug(f"export KUBECONFIG={os.getcwd()}/data/kubeconfig/config")
+        kubeconfig_path = f"{os.getcwd()}/data/kubeconfig/config"
+
+        # Detect OS and provide appropriate command format
+        if os.name == 'nt':  # Windows
+            # PowerShell format
+            logger.debug(f"$env:KUBECONFIG = \"{kubeconfig_path}\"")
+        else:  # Unix/Linux/Mac
+            # Bash/shell format
+            logger.debug(f"export KUBECONFIG={kubeconfig_path}")
         print()
 
     def check_docker_services(self) -> None:

@@ -110,8 +110,9 @@ ingress:
   className: "nginx"
 
   # Additional annotations for ingress behavior
-  # Example: nginx.ingress.kubernetes.io/ssl-redirect: "false"
-  annotations: {}
+  # Disable SSL redirect to prevent HSTS issues on localhost
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
 
   # Host and path configuration
   hosts:
