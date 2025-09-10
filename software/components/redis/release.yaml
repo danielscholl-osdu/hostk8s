@@ -7,6 +7,7 @@ metadata:
     hostk8s.component: redis
 spec:
   interval: 5m
+  timeout: 10m
   chartRef:
     kind: OCIRepository
     name: redis-bitnami
@@ -83,6 +84,7 @@ metadata:
     hostk8s.component: redis
 spec:
   interval: 5m
+  timeout: 10m
   dependsOn:
     - name: redis
       namespace: redis
