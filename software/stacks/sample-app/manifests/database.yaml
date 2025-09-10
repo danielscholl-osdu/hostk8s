@@ -25,6 +25,10 @@ spec:
       encoding: UTF8
       localeCollate: en_US.utf8
       localeCType: en_US.utf8
+      # Fix Windows permissions by setting PostgreSQL to run as postgres user
+      options:
+        - "--auth-local=trust"
+        - "--auth-host=trust"
 
       # Initialize with voting app schema
       postInitSQL:
@@ -75,5 +79,12 @@ spec:
 
   # Disable superuser access - not needed for local development with trust auth
   enableSuperuserAccess: false
+
+  # Security context for Windows compatibility
+  podSecurityContext:
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+    fsGroupChangePolicy: "Always"
 
   # Monitoring disabled for local dev (omit monitoring section to disable)
