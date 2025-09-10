@@ -445,6 +445,28 @@ def list_available_apps() -> List[str]:
     return sorted(list(apps))
 
 
+def list_deployed_apps() -> List[str]:
+    """List currently deployed applications (manual deployments only)."""
+    deployed_apps = set()
+
+    try:
+        # Get deployments with hostk8s.app label (manual deployments)
+        result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
+                             '--all-namespaces', '-o', 'jsonpath={range .items[*]}{.metadata.labels.hostk8s\\.app}{"\\n"}{end}'],
+                           check=False, capture_output=True)
+
+        if result.returncode == 0 and result.stdout:
+            for line in result.stdout.strip().split('\n'):
+                if line.strip():
+                    deployed_apps.add(line.strip())
+
+    except Exception:
+        # If kubectl fails, return empty list
+        pass
+
+    return sorted(list(deployed_apps))
+
+
 def validate_app_exists(app_name: str) -> bool:
     """Validate that an application exists."""
     app_dir = Path(f'software/apps/{app_name}')

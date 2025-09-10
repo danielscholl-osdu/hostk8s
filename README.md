@@ -191,4 +191,5 @@ Duplicate `.env.example` to `.env` and customize as needed.
 | `COMPONENTS_REPO` | Git repository URL for infrastructure components | *(none)*  |
 | `COMPONENTS_BRANCH` | Git branch for components repository         | `components` |
 | `SOFTWARE_STACK`  | Software stack to deploy                      | `sample`  |
-| `SOFTWARE_BUILD`  | Source code to build                          | *(none)*  |
+| `SOFTWARE_BUILD`  | Default source application to build           | `sample-app` |
+| `SOFTWARE_APP`    | Default application for deploy/remove         | `simple`  |

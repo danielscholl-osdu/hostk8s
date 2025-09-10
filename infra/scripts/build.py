@@ -34,7 +34,7 @@ from typing import List, Tuple, Optional
 # Import common utilities
 from hostk8s_common import (
     logger, HostK8sError,
-    check_cluster_running, get_env
+    check_cluster_running, get_env, load_environment
 )
 
 
@@ -208,13 +208,14 @@ class ApplicationBuilder:
         logger.success("[Build] Build and push complete")
 
 
-def create_argument_parser() -> argparse.ArgumentParser:
+def create_argument_parser(default_app: str) -> argparse.ArgumentParser:
     """Create argument parser for build command."""
     parser = argparse.ArgumentParser(
         description="Build and push application from src/ directory",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
+        epilog=f"""
 Examples:
+  %(prog)s                     # Build {default_app} (default)
   %(prog)s src/registry-demo    # Build registry demo app
   %(prog)s --list               # List available applications
         """
@@ -223,7 +224,8 @@ Examples:
     parser.add_argument(
         "app_path",
         nargs="?",
-        help="Path to application directory (e.g., src/registry-demo)"
+        default=default_app,
+        help=f"Path to application directory (default: {default_app})"
     )
 
     parser.add_argument(
@@ -243,7 +245,14 @@ Examples:
 
 def main() -> int:
     """Main entry point."""
-    parser = create_argument_parser()
+    # Load environment variables from .env file
+    load_environment()
+
+    # Get default app from environment
+    default_build = get_env('SOFTWARE_BUILD', 'sample-app')
+    default_app_path = f"src/{default_build}"
+
+    parser = create_argument_parser(default_app_path)
     args = parser.parse_args()
 
     builder = ApplicationBuilder()
@@ -254,7 +263,7 @@ def main() -> int:
             builder.list_available_applications()
             return 0
 
-        # Require app_path if not listing
+        # app_path is always provided now (either from args or default)
         if not args.app_path:
             parser.print_help()
             logger.error("Application path is required")

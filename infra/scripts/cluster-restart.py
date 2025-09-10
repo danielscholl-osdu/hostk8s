@@ -114,7 +114,7 @@ def main() -> None:
     software_stack = get_env('SOFTWARE_STACK', '')
     flux_enabled = get_env('FLUX_ENABLED', 'auto')
 
-    logger.info("Starting HostK8s cluster restart...")
+    logger.info("Starting HostK8s cluster restart")
 
     # Show configuration for debugging
     logger.debug("Cluster configuration:")
@@ -126,7 +126,7 @@ def main() -> None:
         logger.debug("  Software Stack: none")
 
     # Stop existing cluster with error handling
-    logger.info("Stopping existing cluster...")
+    logger.info("Stopping existing cluster")
     if not run_script("cluster-down"):
         logger.error("Failed to stop cluster")
         sys.exit(1)
@@ -137,7 +137,7 @@ def main() -> None:
         sys.exit(1)
 
     # Start fresh cluster with error handling
-    logger.info("Starting fresh cluster...")
+    logger.info("Starting fresh cluster")
     if not run_script("cluster-up"):
         logger.error("Failed to start cluster")
         cleanup_on_failure(cluster_name)

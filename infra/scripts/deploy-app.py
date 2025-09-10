@@ -32,8 +32,8 @@ from typing import List, Optional
 from hostk8s_common import (
     logger, HostK8sError, KubectlError,
     run_kubectl, run_helm,
-    list_available_apps, validate_app_exists, get_app_deployment_type,
-    has_ingress_controller
+    list_available_apps, list_deployed_apps, validate_app_exists, get_app_deployment_type,
+    has_ingress_controller, get_env, load_environment
 )
 
 
@@ -174,7 +174,7 @@ class AppDeployer:
             logger.info(f"Using development values: {env_values}")
 
         try:
-            run_helm(helm_args[1:])  # Skip 'helm' command as run_helm adds it
+            run_helm(helm_args)  # Pass full helm args as run_helm adds 'helm' command
             logger.success(f"[App] {app_name} deployed successfully via Helm to {namespace}")
             logger.info(f"[App] See software/apps/{app_name}/README.md for access details")
             logger.info(f"Use 'helm status {app_name} -n {namespace}' for deployment status")
@@ -355,13 +355,41 @@ class AppDeployer:
         # Clean up namespace if it's empty and we created it
         self.cleanup_namespace_if_empty(namespace)
 
+    def handle_remove_no_target(self) -> None:
+        """Handle remove command without a target - show smart options."""
+        deployed_apps = list_deployed_apps()
+
+        if len(deployed_apps) == 0:
+            logger.info("No apps currently deployed.")
+            return
+
+        if len(deployed_apps) == 1:
+            # Single app deployed - ask for confirmation and auto-remove
+            app_name = deployed_apps[0]
+            logger.info(f"Removing the deployed app: {app_name}")
+            self.remove_application(app_name, 'default')  # Most apps deploy to default
+            return
+
+        # Multiple apps deployed - show them
+        logger.error("Multiple apps deployed. Specify which app to remove:")
+        logger.info("Currently deployed apps:")
+        for app in deployed_apps:
+            logger.info(f"  {app}")
+        sys.exit(1)
+
 
 
 
 def main() -> None:
     """Main entry point."""
+    # Load environment variables from .env file
+    load_environment()
+
     apps = list_available_apps()
     app_list = ', '.join(apps) if apps else 'No apps found'
+
+    # Get default app from environment
+    default_app = get_env('SOFTWARE_APP', 'simple')
 
     parser = argparse.ArgumentParser(
         description='Deploy or remove applications to/from the cluster',
@@ -369,17 +397,17 @@ def main() -> None:
         epilog=f"""Available applications: {app_list}
 
 Examples:
-  %(prog)s                          # Deploy simple app to default namespace
+  %(prog)s                          # Deploy {default_app} app to default namespace
   %(prog)s basic                    # Deploy basic app to default namespace
   %(prog)s advanced production      # Deploy advanced app to production namespace
-  %(prog)s remove simple           # Remove simple app from default namespace
+  %(prog)s remove {default_app}     # Remove {default_app} app from default namespace
   %(prog)s remove voting-app test  # Remove voting-app from test namespace"""
     )
 
     parser.add_argument('operation', nargs='?', default='deploy',
                       help='Operation: deploy (default) or remove')
-    parser.add_argument('app_name', nargs='?', default='simple',
-                      help='Application name (default: simple)')
+    parser.add_argument('app_name', nargs='?', default=default_app,
+                      help=f'Application name (default: {default_app})')
     parser.add_argument('namespace', nargs='?', default='default',
                       help='Target namespace (default: default)')
 
@@ -390,21 +418,29 @@ Examples:
         operation = 'remove'
         app_name = args.app_name
         namespace = args.namespace
-    elif args.operation in apps or args.operation == 'simple':
+
+        # Handle special case: remove without target should be smart
+        if app_name == '' or not app_name:  # Empty string when no app specified
+            app_name = None  # Signal that no app was specified
+
+    elif args.operation in apps or args.operation == default_app:
         # First arg is app name
         operation = 'deploy'
         app_name = args.operation
-        namespace = args.app_name if args.app_name != 'simple' else args.namespace
+        namespace = args.app_name if args.app_name != default_app else args.namespace
     else:
         # Unknown operation, treat as deploy
         operation = 'deploy'
         app_name = args.operation
-        namespace = args.app_name if args.app_name != 'simple' else args.namespace
+        namespace = args.app_name if args.app_name != default_app else args.namespace
 
     # Log script execution
     script_name = Path(__file__).name
     if operation == 'remove':
-        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [yellow]remove {app_name} {namespace}[/yellow]")
+        if app_name is None:
+            logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [yellow]remove[/yellow]")
+        else:
+            logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [yellow]remove {app_name} {namespace}[/yellow]")
     else:
         logger.info(f"[Script 🐍] Running script: [cyan]{script_name}[/cyan] [green]deploy {app_name} {namespace}[/green]")
 
@@ -416,7 +452,11 @@ Examples:
 
         # Execute operation
         if operation == 'remove':
-            deployer.remove_application(app_name, namespace)
+            if app_name is None:
+                # Smart remove - no app specified
+                deployer.handle_remove_no_target()
+            else:
+                deployer.remove_application(app_name, namespace)
         else:
             deployer.deploy_application(app_name, namespace)
 

@@ -166,8 +166,8 @@ resume: ## Resume GitOps reconciliation (restore all GitRepository sources)
 
 ##@ Applications
 
-deploy: ## Deploy application (Usage: make deploy [app-name] [namespace] - defaults to 'simple')
-	@$(call SCRIPT_RUNNER_FUNC,deploy-app) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),simple) $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),default)
+deploy: ## Deploy application (Usage: make deploy [app-name] [namespace] - defaults to SOFTWARE_APP or 'simple')
+	@$(call SCRIPT_RUNNER_FUNC,deploy-app) $(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),$(if $(SOFTWARE_APP),$(SOFTWARE_APP),simple)) $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),default)
 
 remove: ## Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)
 	@$(call SCRIPT_RUNNER_FUNC,deploy-app) remove "$(word 2,$(MAKECMDGOALS))" $(if $(word 3,$(MAKECMDGOALS)),$(word 3,$(MAKECMDGOALS)),$(if $(NAMESPACE),$(NAMESPACE),default))
@@ -184,5 +184,5 @@ src/%:
 ##@ Development Tools
 
 
-build: ## Build and push application from src/ (Usage: make build src/APP_NAME)
-	@$(call SCRIPT_RUNNER_FUNC,build) "$(word 2,$(MAKECMDGOALS))"
+build: ## Build and push application from src/ (Usage: make build [src/APP_NAME] - defaults to SOFTWARE_BUILD or 'src/sample-app')
+	@$(call SCRIPT_RUNNER_FUNC,build) "$(if $(word 2,$(MAKECMDGOALS)),$(word 2,$(MAKECMDGOALS)),$(if $(SOFTWARE_BUILD),src/$(SOFTWARE_BUILD),src/sample-app))"
