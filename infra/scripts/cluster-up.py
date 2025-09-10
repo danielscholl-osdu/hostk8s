@@ -220,6 +220,77 @@ class ClusterSetup:
             logger.error(f"Failed to create Kind cluster: {e}")
             sys.exit(1)
 
+    def create_persistent_volume(self) -> None:
+        """Create Docker volume for universal persistent storage."""
+        volume_name = "hostk8s-pv-data"
+
+        try:
+            # Check if volume already exists
+            result = subprocess.run(['docker', 'volume', 'inspect', volume_name],
+                                  capture_output=True, check=False)
+
+            if result.returncode == 0:
+                logger.debug(f"[Cluster] Docker volume '{volume_name}' already exists")
+            else:
+                # Create the volume
+                subprocess.run(['docker', 'volume', 'create', volume_name],
+                             check=True, capture_output=True)
+                logger.info(f"[Cluster] Created Docker volume '{volume_name}'")
+
+            # Set up component directories with proper permissions
+            self.setup_component_directories()
+
+        except subprocess.CalledProcessError as e:
+            logger.error(f"[Cluster] Failed to create Docker volume: {e}")
+            raise RuntimeError(f"Failed to create Docker volume '{volume_name}'")
+
+    def setup_component_directories(self) -> None:
+        """Set up universal storage mount point in the Kind cluster."""
+        try:
+            # Wait for Kind cluster to be ready before setting up directories
+            if not hasattr(self, 'cluster_name'):
+                return
+
+            cluster_container = f"{self.cluster_name}-control-plane"
+
+            # Check if the Kind cluster container is running
+            result = subprocess.run(['docker', 'inspect', cluster_container],
+                                  capture_output=True, check=False)
+            if result.returncode != 0:
+                logger.debug("[Cluster] Kind cluster not ready yet, skipping directory setup")
+                return
+
+            # Set up universal storage mount point
+            # Storage contracts will handle component-specific directories
+            storage_setup = [
+                'mkdir -p /mnt/pv',
+                'chmod 755 /mnt/pv'  # Standard permissions, components manage their own subdirs
+            ]
+
+            for cmd in storage_setup:
+                subprocess.run(['docker', 'exec', cluster_container, 'sh', '-c', cmd],
+                             capture_output=True, check=False)
+
+            logger.debug("[Cluster] Universal storage mount point configured")
+
+        except Exception as e:
+            logger.debug(f"[Cluster] Storage setup warning: {e}")
+            # Don't fail cluster startup if storage setup has issues
+
+    def apply_storage_class(self, env: dict) -> None:
+        """Apply the HostK8s storage class."""
+        try:
+            storage_class_manifest = self.project_root / 'infra' / 'manifests' / 'storage-class.yaml'
+            if storage_class_manifest.exists():
+                subprocess.run(['kubectl', 'apply', '-f', str(storage_class_manifest)],
+                             check=True, capture_output=True, env=env)
+                logger.debug("[Cluster] HostK8s storage class applied")
+            else:
+                logger.debug("[Cluster] Storage class manifest not found, skipping")
+        except subprocess.CalledProcessError as e:
+            logger.debug(f"[Cluster] Storage class application warning: {e}")
+            # Don't fail cluster startup if storage class has issues
+
     def create_registry_config(self) -> Path:
         """Create registry configuration file with CORS settings."""
         config_file = self.project_root / 'data' / 'registry-config.yml'
@@ -259,15 +330,8 @@ http:
         registry_data_dir = self.project_root / 'data' / 'registry' / 'docker'
         registry_data_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create data directory for postgres storage (Windows compatibility)
-        postgres_data_dir = self.project_root / 'data' / 'postgres'
-        postgres_data_dir.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Created postgres data directory: {postgres_data_dir}")
-
-        # Create pv directory for stack persistent volumes
-        pv_data_dir = self.project_root / 'data' / 'pv'
-        pv_data_dir.mkdir(parents=True, exist_ok=True)
-        logger.debug(f"Created PV data directory: {pv_data_dir}")
+        # Create Docker volume for universal persistent storage
+        self.create_persistent_volume()
 
         # Create registry config file
         config_file = self.create_registry_config()
@@ -399,6 +463,9 @@ http:
                 ], capture_output=True, check=True, env=env)
 
             logger.info("[Cluster] HostK8s namespace ready")
+
+            # Apply HostK8s storage class
+            self.apply_storage_class(env)
 
         except FileNotFoundError:
             logger.warn("kubectl not found in PATH. Namespace will be created by addon scripts.")

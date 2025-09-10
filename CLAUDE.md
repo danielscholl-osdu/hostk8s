@@ -4,8 +4,8 @@
 
 HostK8s provides GitOps-based Kubernetes development environments using host-mode Kind clusters, eliminating Docker-in-Docker complexity while supporting pluggable extensions.
 
-**Technology Stack**: Docker (host-mode), Kind, Flux v2, MetalLB, NGINX
-**Languages**: Bash, YAML
+**Technology Stack**: Docker (host-mode), Kind, Flux v2,  NGINX
+**Languages**: Bash, Powershell, Python, YAML
 **Platforms**: Cross-platform support for Mac, Linux, and Windows (PowerShell)
 
 ## Critical Constraints
@@ -15,32 +15,33 @@ HostK8s provides GitOps-based Kubernetes development environments using host-mod
 3. **Check `.env` state** - Configuration affects available operations
 4. **Data persistence** - `data/` directory survives cluster operations
 5. **Commit Messages** - Never make commit statments referencing `🤖 Generated with Claude Code` or `Co-Authored-By: Claude`
+6. **Set Context** -- kubectl, helm, flux commands always require proper kubernetes context to be set.
 
 ## Essential Commands
 
 ```bash
-# Setup
-make install       # Install dependencies
-make install dev   # Setup dev environment
+Setup
+  help             Show this help message
+  install          Install dependencies and setup environment (Usage: make install [dev])
 
-# Infrastructure
-make start         # Start cluster
-make stop          # Stop cluster
-make up <stack>    # Deploy software stack
-make down <stack>  # Remove software stack
-make clean         # Complete cleanup
+Infrastructure
+  start            Start cluster (Usage: make start [config-name] - auto-discovers kind-*.yaml files)
+  stop             Stop cluster
+  up               Deploy software stack (Usage: make up [stack-name] - defaults to 'sample')
+  down             Remove software stack (Usage: make down <stack-name>)
+  restart          Quick cluster reset for development iteration (Usage: make restart [stack-name])
+  clean            Complete cleanup (destroy cluster and data)
+  status           Show cluster health and running services
+  sync             Force Flux reconciliation (Usage: make sync [stack-name] or REPO=name/KUSTOMIZATION=name make sync)
+  suspend          Suspend GitOps reconciliation (pause all GitRepository sources)
+  resume           Resume GitOps reconciliation (restore all GitRepository sources)
 
-# Applications
-make deploy <app>  # Deploy application
-make remove <app>  # Remove application
+Applications
+  deploy           Deploy application (Usage: make deploy [app-name] [namespace] - defaults to SOFTWARE_APP or 'simple')
+  remove           Remove application (Usage: make remove <app-name> [namespace] or NAMESPACE=ns make remove <app-name>)
 
-# Operations
-make status        # Check health
-make sync          # Force GitOps sync
-
-# Extensions
-make deploy <name>               # Deploy app
-make up extension/<stack>        # Deploy extension stack
+Development Tools
+  build            Build and push application from src/ (Usage: make build [src/APP_NAME] - defaults to SOFTWARE_BUILD or 'src/sample-app')
 ```
 
 ## Architecture Overview
@@ -48,17 +49,16 @@ make up extension/<stack>        # Deploy extension stack
 ```
 hostk8s/
 ├── Makefile           # Primary interface
-├── scripts/           # Implementation (via common.sh/.ps1)
+├── infra/             # Cluster Manifests and Scripts
 ├── software/          # GitOps content
 │   ├── stack/         # Complete stacks
+│   ├── components/    # Software components
 │   └── apps/          # Individual applications
 └── data/              # Persistent storage
 ```
 
 **Key Files**:
 - `.env` - Runtime configuration
-- `scripts/common.sh/.ps1` - Cross-platform shared utilities
-- `software/stacks/*/kustomization.yaml` - Stack definitions
 
 ## Working Principles
 
@@ -68,19 +68,6 @@ hostk8s/
 4. **Validation**: Use `yamllint` and `shellcheck` (CI enforced)
 5. **Labels**: Apply `hostk8s.app: <name>` to all resources
 
-## Error Recovery
-
-1. **Diagnose**: `make status` → identify domain (infrastructure vs software)
-2. **Delegate**: Infrastructure → `cluster-agent`, GitOps → `software-agent`
-3. **Force Sync**: `make sync` for reconciliation issues
-4. **MCP Tools**: Use for detailed analysis when Make commands insufficient
-
-## Extension Patterns
-
-**Filesystem**: Place in `software/apps/` (with .gitignore isolation) or `infra/kubernetes/extension/`
-**Git-Based**: Set `GITOPS_REPO` environment variable
-**Custom Kind**: Use `KIND_CONFIG=extension/<name>`
-
-## Kubernetes Context
+---
 
 IMPORTANT: Always ensure context is properly set before executing kubectl commands. `{os.getcwd()}/data/kubeconfig/config`

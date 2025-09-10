@@ -1,0 +1,14 @@
+---
+# Sample App Database Storage Class
+# Specific storage class for sample-app PostgreSQL database
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: sample-app-database
+  labels:
+    hostk8s.app: sample-app
+    hostk8s.component: postgres
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+allowVolumeExpansion: false

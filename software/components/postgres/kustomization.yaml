@@ -4,7 +4,6 @@ kind: Kustomization
 resources:
   - source.yaml
   - release.yaml
-  - storage.yaml
   - external-secret.yaml
   - pgadmin-deployment.yaml
   - pgadmin-service.yaml

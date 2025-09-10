@@ -1,0 +1,18 @@
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: sample-app
+  namespace: sample-app
+spec:
+  directories:
+    # PostgreSQL database storage for voting application
+    - name: sample-app
+      path: /mnt/pv/sample-app
+      size: 5Gi
+      accessModes:
+        - ReadWriteOnce
+      storageClass: sample-app-database
+      owner: "999:999"          # PostgreSQL UID:GID in container
+      permissions: "777"         # Allow PostgreSQL to create pgdata subdirectory
+      component: postgres
+      description: "Voting application PostgreSQL database storage"

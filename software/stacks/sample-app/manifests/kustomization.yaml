@@ -8,6 +8,7 @@ metadata:
 
 resources:
   - namespace.yaml
+  - storage-class.yaml
   - external-secrets-app.yaml
   - database.yaml
   - vote-deployment.yaml

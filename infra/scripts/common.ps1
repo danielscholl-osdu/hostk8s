@@ -39,10 +39,16 @@ function Clean-Data {
         Write-Host "[$time] [Clean] Removing data directory and persistent volumes..."
         Remove-Item -Recurse -Force data -ErrorAction SilentlyContinue
         $time2 = Get-Date -Format 'HH:mm:ss'
-        Write-Host "[$time2] [Clean] Data cleanup completed"
+        Write-Host "[$time2] [Clean] Removing Docker volumes..."
+        docker volume rm hostk8s-pv-data >$null 2>&1
+        $time3 = Get-Date -Format 'HH:mm:ss'
+        Write-Host "[$time3] [Clean] Data cleanup completed"
     } else {
         $time = Get-Date -Format 'HH:mm:ss'
-        Write-Host "[$time] [Clean] No data directory found - already clean"
+        Write-Host "[$time] [Clean] No data directory found, removing Docker volumes..."
+        docker volume rm hostk8s-pv-data >$null 2>&1
+        $time2 = Get-Date -Format 'HH:mm:ss'
+        Write-Host "[$time2] [Clean] Data cleanup completed"
     }
 }
 

@@ -48,16 +48,16 @@ spec:
       memory: 256Mi
       cpu: 200m
 
-  # Storage configuration - use component-defined storage
+  # Storage configuration - use storage contract
   storage:
-    size: 1Gi
-    storageClass: postgres-component
+    size: 5Gi
+    storageClass: sample-app-database
     pvcTemplate:
       accessModes:
         - ReadWriteOnce
       resources:
         requests:
-          storage: 1Gi
+          storage: 5Gi
       volumeMode: Filesystem
 
   # PostgreSQL configuration
