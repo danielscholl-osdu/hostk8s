@@ -259,6 +259,16 @@ http:
         registry_data_dir = self.project_root / 'data' / 'registry' / 'docker'
         registry_data_dir.mkdir(parents=True, exist_ok=True)
 
+        # Create data directory for postgres storage (Windows compatibility)
+        postgres_data_dir = self.project_root / 'data' / 'postgres'
+        postgres_data_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Created postgres data directory: {postgres_data_dir}")
+
+        # Create pv directory for stack persistent volumes
+        pv_data_dir = self.project_root / 'data' / 'pv'
+        pv_data_dir.mkdir(parents=True, exist_ok=True)
+        logger.debug(f"Created PV data directory: {pv_data_dir}")
+
         # Create registry config file
         config_file = self.create_registry_config()
 
