@@ -1,0 +1,32 @@
+---
+# PostgreSQL Component Storage Configuration
+# This component owns its storage needs and defines them declaratively
+
+# PersistentVolume for PostgreSQL component
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-component-pv
+  labels:
+    hostk8s.component: postgres
+spec:
+  capacity:
+    storage: 5Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: postgres-component
+  hostPath:
+    path: /mnt/pv/postgres
+    type: DirectoryOrCreate
+
+---
+# StorageClass for PostgreSQL component
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: postgres-component
+provisioner: kubernetes.io/no-provisioner
+volumeBindingMode: WaitForFirstConsumer
+reclaimPolicy: Retain
+allowVolumeExpansion: false

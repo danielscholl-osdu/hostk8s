@@ -48,10 +48,10 @@ spec:
       memory: 256Mi
       cpu: 200m
 
-  # Storage configuration using Docker volume for cross-platform persistence
+  # Storage configuration - use component-defined storage
   storage:
     size: 1Gi
-    storageClass: sample-app-postgres
+    storageClass: postgres-component
     pvcTemplate:
       accessModes:
         - ReadWriteOnce
