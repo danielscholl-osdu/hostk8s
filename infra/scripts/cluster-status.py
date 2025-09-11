@@ -792,7 +792,7 @@ def show_gitops_applications() -> None:
                             if len(paths) == 1 and paths[0] == '/':
                                 print(f"   Ingress: {ingress['name']} -> http://localhost:8080/ ⚠️ (No Ingress Controller)")
                             else:
-                                url_list = [f"http://localhost:8080{path}" for path in paths]
+                                url_list = [f"http://localhost:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
                                 print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)} ⚠️ (No Ingress Controller)")
                     else:
                         # Non-localhost hosts
@@ -802,7 +802,7 @@ def show_gitops_applications() -> None:
                                 if len(paths) == 1 and paths[0] == '/':
                                     print(f"   Access: http://{ingress['hosts']}:8080/ ({ingress['name']} ingress)")
                                 else:
-                                    url_list = [f"http://{ingress['hosts']}:8080{path}" for path in paths]
+                                    url_list = [f"http://{ingress['hosts']}:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
                                     print(f"   Access: {', '.join(url_list)} ({ingress['name']} ingress)")
                             else:
                                 print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']})")
@@ -869,7 +869,7 @@ def show_manual_deployed_apps() -> None:
                 print(f"   Ingress: {ingress['name']} -> http://localhost:8080/{warning}")
             elif paths:
                 # Show all available paths
-                url_list = [f"http://localhost:8080{path}" for path in paths]
+                url_list = [f"http://localhost:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
                 print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)}{warning}")
             else:
                 print(f"   Ingress: {ingress['name']} -> http://localhost:8080/{warning}")

@@ -78,7 +78,7 @@ class StorageManager:
 
             if success_count == len(directories):
                 logger.success(f"[Storage] Storage setup completed for stack '{stack}'")
-                logger.info(f"[Storage] ✅ {success_count} storage directories configured")
+                logger.info("[Storage] ✅ Storage resources configured")
                 logger.info("[Storage] ✅ Ready for component deployment")
             else:
                 logger.error(f"Only {success_count}/{len(directories)} directories processed successfully")
@@ -186,7 +186,7 @@ class StorageManager:
             else:
                 logger.error(f"Failed to create StorageClass '{storage_class_name}'")
 
-        logger.info(f"[Storage] ✅ {success_count} StorageClasses created")
+        logger.debug(f"[Storage] Created {success_count} StorageClasses")
         return success_count == len(storage_classes)
 
     def create_storage_class(self, storage_class_name: str) -> bool:
@@ -239,7 +239,7 @@ class StorageManager:
             if not self.setup_directory_in_cluster(directory):
                 return False
 
-            logger.info(f"[Storage] ✅ Directory '{name}' configured at '{path}'")
+            logger.debug(f"[Storage] Directory '{name}' configured at '{path}'")
             return True
 
         except Exception as e:
