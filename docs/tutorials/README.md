@@ -32,10 +32,20 @@ Learn how software stacks solve the multi-service reality through GitOps automat
 
 ---
 
-### Development Workflows
+### Components
 
-*Complete source-to-deployment development cycle with production-like environments*
+*Learn how components eliminate software duplication and provide reusable capabilities*
 
-Build, deploy, and iterate code using software stacks. Experience hot-reload development with real services and learn to debug applications running in Kubernetes infrastructure.
+Understand the expertise burden of complex software setup and discover how components package infrastructure knowledge into declarative building blocks that multiple stacks can share.
+
+👉 **[Start Tutorial](components.md)**
+
+---
+
+### Platform Development
+
+*Complete inner-loop cycle within a local platform environment*
+
+Build and deploy applications within complete Kubernetes infrastructure. Experience hybrid development workflows that bridge local iteration with platform integration through secret and storage contracts.
 
 👉 **[Start Tutorial](development.md)**
