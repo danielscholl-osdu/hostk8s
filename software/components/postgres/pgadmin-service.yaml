@@ -13,7 +13,7 @@ spec:
     component: management-ui
   ports:
   - port: 80
-    targetPort: 80
+    targetPort: 5050
     protocol: TCP
     name: http
   type: ClusterIP
