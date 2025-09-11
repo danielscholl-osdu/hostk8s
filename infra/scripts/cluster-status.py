@@ -537,26 +537,47 @@ class EnhancedClusterStatusChecker:
             logger.debug(f"Error getting services for {app_name}: {e}")
         return services
 
-    def get_app_ingress(self, app_name: str, label_key: str) -> List[Dict[str, Any]]:
+    def get_app_ingress(self, app_name: str, label_key: str, namespace: str = None) -> List[Dict[str, Any]]:
         """Get ingress resources for an application."""
         ingress_list = []
         try:
-            result = run_kubectl(['get', 'ingress', '-l', f'{label_key}={app_name}',
-                                '--all-namespaces', '--no-headers'], check=False)
+            if namespace:
+                # Get ingress for specific namespace
+                result = run_kubectl(['get', 'ingress', '-l', f'{label_key}={app_name}',
+                                    '-n', namespace, '--no-headers'], check=False)
+            else:
+                # Get ingress across all namespaces (original behavior)
+                result = run_kubectl(['get', 'ingress', '-l', f'{label_key}={app_name}',
+                                    '--all-namespaces', '--no-headers'], check=False)
+
             if result.returncode == 0 and result.stdout:
                 for line in result.stdout.strip().split('\n'):
                     if line.strip():
                         parts = line.split()
-                        if len(parts) >= 4:
-                            ingress_list.append({
-                                'namespace': parts[0],
-                                'name': parts[1],
-                                'class': parts[2] if len(parts) > 2 else '',
-                                'hosts': parts[3] if len(parts) > 3 else '',
-                                'address': parts[4] if len(parts) > 4 else '',
-                                'ports': parts[5] if len(parts) > 5 else '',
-                                'age': parts[6] if len(parts) > 6 else ''
-                            })
+                        if namespace:
+                            # For single namespace query, insert namespace at beginning
+                            if len(parts) >= 3:
+                                ingress_list.append({
+                                    'namespace': namespace,
+                                    'name': parts[0],
+                                    'class': parts[1] if len(parts) > 1 else '',
+                                    'hosts': parts[2] if len(parts) > 2 else '',
+                                    'address': parts[3] if len(parts) > 3 else '',
+                                    'ports': parts[4] if len(parts) > 4 else '',
+                                    'age': parts[5] if len(parts) > 5 else ''
+                                })
+                        else:
+                            # For all-namespaces query, namespace is first column
+                            if len(parts) >= 4:
+                                ingress_list.append({
+                                    'namespace': parts[0],
+                                    'name': parts[1],
+                                    'class': parts[2] if len(parts) > 2 else '',
+                                    'hosts': parts[3] if len(parts) > 3 else '',
+                                    'address': parts[4] if len(parts) > 4 else '',
+                                    'ports': parts[5] if len(parts) > 5 else '',
+                                    'age': parts[6] if len(parts) > 6 else ''
+                                })
         except Exception as e:
             logger.debug(f"Error getting ingress for {app_name}: {e}")
         return ingress_list
@@ -581,6 +602,39 @@ class EnhancedClusterStatusChecker:
             return ['/']
         except Exception:
             return ['/']
+
+    def get_ingress_urls(self, name: str, namespace: str) -> List[str]:
+        """Get complete ingress URLs for an ingress resource, considering both host and paths."""
+        try:
+            # Get host for the ingress
+            host_result = run_kubectl(['get', 'ingress', name, '-n', namespace,
+                                     '-o', 'jsonpath={.spec.rules[0].host}'], check=False)
+
+            # Get paths for the ingress
+            paths = self.get_ingress_paths(name, namespace)
+
+            # Determine the host to use
+            if host_result.returncode == 0 and host_result.stdout.strip():
+                host = host_result.stdout.strip()
+                # Use the specific host
+                base_url = f"http://{host}:8080"
+            else:
+                # No host specified, use localhost
+                base_url = "http://localhost:8080"
+
+            # Build complete URLs
+            urls = []
+            for path in paths:
+                if path == '/':
+                    urls.append(f"{base_url}/")
+                else:
+                    # Ensure path starts with / and format properly
+                    clean_path = path if path.startswith('/') else f'/{path}'
+                    urls.append(f"{base_url}{clean_path}")
+
+            return urls
+        except Exception:
+            return ["http://localhost:8080/"]
 
     def has_ingress_tls(self, name: str, namespace: str) -> bool:
         """Check if ingress has TLS configuration."""
@@ -824,7 +878,7 @@ def show_manual_deployed_apps() -> None:
 
     logger.info("Manual Deployed Apps")
 
-    # Group apps by label to avoid duplicates
+    # Group apps by label and namespace to avoid duplicates
     app_groups = {}
     for app in manual_apps:
         try:
@@ -839,8 +893,9 @@ def show_manual_deployed_apps() -> None:
                     key = f"{app['namespace']}.{app_label}"
 
                 if key not in app_groups:
-                    app_groups[key] = {'apps': [], 'label': app_label}
+                    app_groups[key] = {'apps': [], 'label': app_label, 'namespaces': set()}
                 app_groups[key]['apps'].append(app)
+                app_groups[key]['namespaces'].add(app['namespace'])
         except Exception:
             continue
 
@@ -856,23 +911,26 @@ def show_manual_deployed_apps() -> None:
         for service in services:
             print(f"   Service: {service['name']} ({service['type']})")
 
-        # Show ingress
-        ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.app')
-        for ingress in ingress_list:
-            # Get all paths from the ingress
-            paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
+        # Show ingress - check each namespace individually to avoid duplicates
+        shown_ingress = set()
+        for namespace in group['namespaces']:
+            ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.app', namespace)
+            for ingress in ingress_list:
+                # Use namespace+name as unique key to avoid showing duplicates
+                ingress_key = f"{ingress['namespace']}.{ingress['name']}"
+                if ingress_key not in shown_ingress:
+                    shown_ingress.add(ingress_key)
 
-            # Check if ingress controller is available
-            warning = "" if has_ingress_controller() else " ⚠️ (No Ingress Controller)"
+                    # Get complete URLs from the ingress
+                    urls = checker.get_ingress_urls(ingress['name'], ingress['namespace'])
 
-            if paths and len(paths) == 1 and paths[0] == '/':
-                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/{warning}")
-            elif paths:
-                # Show all available paths
-                url_list = [f"http://localhost:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
-                print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)}{warning}")
-            else:
-                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/{warning}")
+                    # Check if ingress controller is available
+                    warning = "" if has_ingress_controller() else " ⚠️ (No Ingress Controller)"
+
+                    if len(urls) == 1:
+                        print(f"   Ingress: {ingress['name']} -> {urls[0]}{warning}")
+                    else:
+                        print(f"   Ingress: {ingress['name']} -> {', '.join(urls)}{warning}")
 
         print()
 
