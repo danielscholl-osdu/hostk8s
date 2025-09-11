@@ -1,36 +1,31 @@
-# Development Workflows
+# Platform Development
 
-*Complete source-to-deployment development cycle with production-like environments*
+*Complete inner-loop cycle within a local platform environment*
 
-## The Development Iteration Challenge
+## The Challenge
 
-You've configured clusters, deployed applications, and built shared components. Now comes the real test: **actually building software**. You have a web service that needs to connect to a database and cache layer, but during development you need to iterate quickly on your code while testing against these production-like services.
+You've configured clusters, deployed applications, orchestrated software stacks, and understood how components work. Now comes the real test: **developing within a platform environment**.
 
-The traditional development workflow forces an uncomfortable choice: develop in isolation with mocked services for speed, or deploy to a full environment for realism but sacrifice iteration velocity. Neither approach adequately bridges the gap between rapid code changes and production-like testing.
+Development starts simple. A single web app works great locally with docker-compose providing databases and basic services. But modern applications don't run in isolation. They integrate with platform infrastructure that can't be easily replicated.
 
-**The Development Velocity Dilemma:**
+Consider the integration challenges that emerge: Your application needs to authenticate through an Istio service mesh that requires real mesh behavior. You're debugging Elasticsearch queries that need a properly configured cluster with real indexing patterns. Your code integrates with Airflow workflows that require actual DAG orchestration and worker scaling. You need to test database performance under real connection pooling and transaction loads.
 
-*Local vs Production-Like:*
-- **Pure local development** - Fast iteration but can't test service interactions, networking, or resource constraints
-- **Full stack deployment** - Realistic testing but slow build-deploy-test cycles kill development momentum
+These platform capabilities can't be mocked or simplified without losing the behaviors you need to develop against. But setting up and maintaining this infrastructure becomes a major distraction from your actual development task.
 
-*Build Process Complexity:*
-- **Manual containerization** - Developers spend time writing Dockerfiles instead of application code
-- **Environment inconsistency** - Code works locally but fails when containerized due to different runtime environments
-- **Debugging barriers** - Container layers make debugging significantly more complex than local development
+| Development Approach | Advantages | Limitations |
+|---------------------|------------|-------------|
+| **Isolated Development** | Fast iteration with live refresh<br>Simple setup with docker-compose<br>Full debugging capabilities | Can't replicate platform behaviors<br>Missing service mesh, orchestration, scaling patterns |
+| **Cloud Platform Development** | Real platform infrastructure<br>Authentic service interactions<br>Complete integration testing | Security barriers to infrastructure access<br>Complex setup and teardown processes<br>Cost and resource constraints |
+| **Manual Platform Setup** | Control over infrastructure<br>Custom configurations possible | Requires infrastructure expertise<br>Time-consuming setup and maintenance<br>Inconsistent environments |
 
-*Service Dependencies:*
-- **Mock services** - Fast development but poor fidelity for integration testing
-- **External dependencies** - Real services but network latency and availability issues during development
+**The Core Problem:**
+You need rapid iteration on code that integrates with complex platform infrastructure, including the ability to change code, deploy it to the platform, and immediately test the integration behavior. Traditional approaches force you to choose between development velocity and platform fidelity. You either develop in isolation and miss critical platform behaviors, or get trapped in slow outer-loop processes: submitting merge requests, waiting for CI/CD pipelines, and getting feedback hours later instead of seconds. HostK8s enables a faster inner-loop process where you spend time building applications rather than managing infrastructure or waiting for validation cycles.
 
-**The Development Context Problem:**
-You need rapid iteration on source code combined with the service complexity you've built through the previous tutorials. But traditional approaches create friction: either you develop in isolation and miss integration issues, or you accept slow containerized development cycles that destroy productivity.
+## The Solution
 
-## How HostK8s Solves Development Iteration
+HostK8s solves this through **hybrid development workflows** that bridge local iteration with platform integration. You develop locally when you need speed, then deploy to Kubernetes when you need to test integration with platform components.
 
-HostK8s bridges local development velocity with production-like service complexity through **hybrid development workflows**. Rather than forcing you to choose between speed and realism, the platform provides patterns that let you develop with both.
-
-The key insight: **your source code development environment should integrate seamlessly with the infrastructure patterns you've already mastered**. The cluster configurations, application contracts, and shared components from previous tutorials become the foundation for rapid development iteration.
+The key insight: your development workflow should seamlessly transition between local iteration and platform integration without losing momentum. The cluster configurations, application contracts, and shared components from previous tutorials enable this fluid transition.
 
 ### The HostK8s Development Philosophy
 
@@ -38,62 +33,30 @@ Development workflows build directly on the patterns you've learned:
 - **Cluster configurations** provide the infrastructure foundation for development
 - **Application contracts** enable consistent deployment regardless of source code changes
 - **Shared components** eliminate the overhead of managing development dependencies
-- **Source-to-deployment automation** bridges the gap between code changes and running services
+- **Source-to-deployment** bridges the gap between code changes and running services
 
-Instead of parallel development and deployment processes, HostK8s creates a unified workflow where development iteration happens within the context of your target infrastructure.
+Instead of developing in isolation and then deploying to real infrastructure, HostK8s creates a unified workflow where development iteration happens within the context of your target infrastructure.
 
-## Understanding the Complete Development Stack
+## The Platform
 
-Let's start by understanding what you're building toward. The sample application demonstrates a complete microservices architecture that you'll develop and deploy:
+Let's start by understanding what you're building toward. The sample application demonstrates a complete microservices architecture that you'll develop and deploy.
 
-```bash
-# Explore the source code structure
-ls src/sample-app/
-```
-
-You'll see:
+You can explore the source code structure in [`src/sample-app/`](../../src/sample-app/):
 ```
 sample-app/
-├── docker-compose.yml      # Local development environment
-├── docker-bake.hcl         # Multi-service build configuration
 ├── vote/                   # Python voting frontend
 ├── result/                 # Node.js results dashboard
 ├── worker/                 # .NET background processor
-└── seed-data/              # Database initialization
+├── seed-data/              # Database initialization
+├── docker-compose.yml      # Local development environment
+├── docker-bake.hcl         # Multi-service build configuration
+├── README.md               # Development setup instructions
+└── .gitignore              # Version control exclusions
 ```
 
-This represents the reality of modern application development: multiple services in different languages that must work together. Traditional development approaches force you to choose between developing these services in isolation or accepting slow full-stack deployment cycles.
+This represents the reality of modern application development: multiple services in different languages that must work together.
 
-### The Development Stack Architecture
-
-The sample application illustrates the full spectrum of development complexity:
-
-**Frontend Services** - User-facing web applications that need rapid UI iteration
-**Backend Services** - API services that require database connectivity for realistic testing
-**Background Workers** - Processing services that need message queue integration
-**Database Dependencies** - Persistent storage that must maintain state across development sessions
-
-Each service type presents different development challenges. Frontend services need fast refresh cycles for UI changes. Backend services need database connectivity for realistic API testing. Background workers need message queue integration to process jobs correctly. Traditional development approaches handle each poorly, forcing compromises between speed and realism.
-
-## Local Development Foundation
-
-Before building the complete stack, let's understand how individual service development works within the HostK8s patterns:
-
-```bash
-# Navigate to the source application
-cd src/sample-app
-
-# Start the local development environment
-docker compose up
-```
-
-**What's happening:**
-- All services start with their dependencies (PostgreSQL, Redis)
-- Services are configured for local development with hot reload capabilities
-- Database connections, service discovery, and networking work exactly as they would in production
-- Each service can be developed individually while maintaining integration context
-
-### Local Development Architecture
+### Sample Application Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -107,65 +70,64 @@ docker compose up
 │         │                │                │                  │
 │         └────────────────┼────────────────┘                  │
 │                          │                                   │
-│         ┌────────────────┼────────────────┐                  │
-│         │                │                │                  │
-│    ┌────▼─────┐    ┌─────▼─────┐    ┌─────▼──────┐           │
-│    │  Redis   │    │PostgreSQL │    │ Network    │           │
-│    │ (Cache)  │    │(Database) │    │  (Docker)  │           │
-│    └──────────┘    └───────────┘    └────────────┘           │
+│              ┌───────────┼───────────┐                       │
+│              │                       │                       │
+│         ┌────▼─────┐           ┌─────▼─────┐                 │
+│         │  Redis   │           │PostgreSQL │                 │
+│         │ (Cache)  │           │(Database) │                 │
+│         └──────────┘           └───────────┘                 │
 └──────────────────────────────────────────────────────────────┘
 ```
 
-**The key insight**: Local development maintains the same service architecture you'll deploy to Kubernetes, but with development-optimized configuration (hot reload, debug ports, volume mounts for code changes).
+### Isolated Development
 
-### Development Iteration Workflow
+Before understanding how HostK8s enhances development workflows, let's see how development teams typically work in isolation. The sample application demonstrates a complete microservices architecture that a development team might build in their own repository.
 
-With the local environment running, let's see rapid iteration in action:
-
-```bash
-# In a separate terminal, make a change to the voting interface
-# Edit src/sample-app/vote/templates/index.html
-# Change the voting options from "Cats vs Dogs" to "Coffee vs Tea"
-
-# The change appears immediately - no rebuild required
-# Open http://localhost:5000 to see the updated interface
-```
-
-**Development velocity**: Changes to Python templates, static files, and most source code appear immediately without container rebuilds. The development environment provides the speed of local development with the service complexity of your target deployment.
-
-Stop the local environment and clean up:
+In normal team development, you'd clone the application repository and work entirely within that codebase. In the `src/sample-app` directory:
 
 ```bash
-# Stop local development
+# Start the local development environment
+docker compose up -d
+
+# Stop the local development environment when finished
 docker compose down
-
-# Return to project root
-cd ../..
 ```
 
-## From Local to Production-Like Deployment
+Once all services are running, you can interact with the application:
+- **Vote interface**: http://localhost:8081/vote/
+- **Results dashboard**: http://localhost:8081/result/
 
-Local development provides rapid iteration, but you also need to test how your application behaves in the Kubernetes environment you've configured. This is where HostK8s bridges local development and production-like deployment.
+This is the standard development workflow that teams use regardless of HostK8s. Developers make code changes, and thanks to live refresh configuration, the UI automatically updates as files are saved. The development team has their own repository, their own docker-compose setup, and their own development practices.
 
-### The Build and Deploy Workflow
+## The Build Problem
 
-HostK8s provides `make build` to containerize your source code and integrate it with the cluster registry:
+Isolated development works great for rapid iteration, but we need to build images of our code so that we can deploy them in the platform. This lets us test how our application behaves within the platform environment.
 
-```bash
-# Ensure your cluster is running
-make status
+### HostK8s Integration
 
-# Build the sample application and push to cluster registry
-make build src/sample-app
-```
+HostK8s provides a **convention-based architecture** that can integrate with any source code, regardless of where it lives. The `src/sample-app` is included in the HostK8s repository for convenience, but demonstrates how any team's existing code can be integrated.
 
-**What's happening:**
-- Docker Compose builds all services in the application
-- Built images are tagged for the local cluster registry
-- Images are pushed to the cluster registry automatically
-- The cluster can now deploy your locally-built code
+A developer can clone their application code into the `src/` directory and immediately get:
+- All the benefits of their normal isolated development workflow
+- Plus the ability to test integration with complete Kubernetes infrastructure
+- Without changing their existing development practices
 
-### Build Process Architecture
+### The Build Contract
+
+The convention-based architecture works through specific contracts that applications must provide. The key contract is a **bake file** that defines how the source code should be built into container images.
+
+When you run `make build <directory>`, HostK8s expects to find a `docker-bake.hcl` file that knows how to:
+- Build all services in the application
+- Tag images appropriately for the cluster registry
+- Handle multi-service builds efficiently
+
+This contract allows HostK8s to work with any application structure while maintaining consistent build and deployment workflows.
+
+### Setting Up the Platform
+
+To build and deploy applications to Kubernetes, we need a platform environment with a local container registry where built images can be stored.
+
+**Build Process Architecture:**
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌──────────────────┐
@@ -177,171 +139,113 @@ make build src/sample-app
 │  │   worker   │ │    │ │   Images    │ │    │ │              │ │
 │  └────────────┘ │    │ └─────────────┘ │    │ └──────────────┘ │
 └─────────────────┘    └─────────────────┘    └──────────────────┘
-                                 │                       │
-                           ┌─────▼─────┐           ┌─────▼─────┐
-                           │   Tag     │           │  Deploy   │
-                           │ & Push    │           │   Stack   │
-                           └───────────┘           └───────────┘
+                                 │
+                           ┌─────▼─────┐
+                           │   Tag     │
+                           │ & Push    │
+                           └───────────┘
 ```
 
-The build process transforms your source code into container images that can be deployed using the same application contracts and shared components you've already mastered.
-
-## Deploying to Production-Like Infrastructure
-
-Now deploy your locally-built application to the Kubernetes environment using the software stack pattern:
+Start a HostK8s cluster with the registry and ingress addons needed for platform development:
 
 ```bash
-# Deploy the complete software stack
+export ENABLE_REGISTRY=true    # Windows --> $env:ENABLE_REGISTRY="true"
+export ENABLE_INGRESS=true     # Windows --> $env:ENABLE_INGRESS="true"
+
+make start
+make build src/sample-app
+make status
+```
+
+HostK8s starts with registry and ingress capabilities, then uses the docker-bake.hcl contract to build all services. Built images are tagged and pushed to the local cluster registry automatically, making them available for deployment using the same application contracts and shared components you've already mastered.
+
+You can explore the registry UI at http://localhost:8080/registry/ to see your built images. Browse the repository to view the vote, result, and worker images that were just pushed to your local registry.
+
+## The Secrets Problem
+
+You've built your application images and pushed them to the registry. But applications need more than just images to run in Kubernetes. They need database credentials, API keys, and other sensitive data.
+
+### Adding Secret Management
+
+We need a place to securely store and manage secrets. Let's add Vault to our platform but do this without losing the images we've already built. Storage in hostk8s can be persistant and survive a stop or restart of the cluster which essentially destroys the cluster but not the persistant data available to it.
+
+```bash
+export ENABLE_VAULT=true         # Windows --> $env:ENABLE_VAULT="true"
+
+make restart
+make status
+```
+
+You can explore the empty Vault UI at http://localhost:8080/ui/ (no secrets yet).
+
+### Secret Contracts
+
+We need to be able to declare what secrets our applications require in code, but allow certain secret values to be generated rather than hardcoded. Flux has no capabilities for this and assumes that secrets exist as Kubernetes objects prior to starting any software components. This creates a fundamental timing problem: our declarative code needs to specify secret requirements, but the actual secret values must be generated and available before deployment begins.
+
+HostK8s solves the secrets problem through **secret contracts** - declarative specifications that tell the platform what credentials your application needs without hardcoding actual values. See the [Secret Contracts](../concepts/secret-contracts.md) documentation for complete details.
+
+Here's a simplified example:
+
+```yaml
+# hostk8s.secrets.yaml
+apiVersion: hostk8s.io/v1
+kind: SecretContract
+metadata:
+  name: sample-app
+spec:
+  secrets:
+    - name: redis-commander-credentials
+      namespace: redis
+      data:
+        - key: username
+          value: admin
+        - key: password
+          generate: password
+          length: 12
+```
+
+You can explore the complete secret contract in [`software/stacks/sample-app/hostk8s.secrets.yaml`](../../software/stacks/sample-app/hostk8s.secrets.yaml) to see how secrets for a full stack are declared.
+
+## The Storage Problem
+
+We just demonstrated that the platform preserves images across restarts. But shouldn't database data persist as well? Applications need persistent storage that survives removal and stoppage of the entire Kubernetes cluster.
+
+### Storage Contracts
+
+HostK8s uses **storage contracts** to declare persistent storage requirements. Applications specify what storage they need without worrying about the underlying implementation details. See the [Storage Contracts](../concepts/storage-contracts.md) documentation for complete details.
+
+Here's a simplified example:
+
+```yaml
+# hostk8s.storage.yaml
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: sample-app
+spec:
+  volumes:
+    - name: postgres-data
+      size: 1Gi
+      path: /var/lib/postgresql/data
+```
+
+You can explore the complete storage contract in [`software/stacks/sample-app/hostk8s.storage.yaml`](../../software/stacks/sample-app/hostk8s.storage.yaml) to see how PostgreSQL database storage is declared.
+
+
+## Bringing up the stack
+
+Now run your locally-built application on the platform. HostK8s will process the dependency contracts first, then bring up your stack with all requirements satisfied:
+
+```bash
+# Bring up the complete software stack
 make up sample-app
 make status
 ```
 
-You'll see your application running within the full Kubernetes infrastructure:
-- Your source code running as containerized services
-- Shared components providing database and caching services
-- Ingress routing providing external access
-- The same service architecture as local development, but with production-like infrastructure
+You'll see the sample-app running in the platform integrated with the necessary components.
 
-### Production-Like Development Architecture
+## HostK8s Platform Summary
 
-```
-┌───────────────────────────────────────────────────────────────┐
-│              Kubernetes Cluster (Production-Like)             │
-│                                                               │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│  │    Vote     │  │   Result    │  │   Worker    │            │
-│  │  (Your Code)│  │ (Your Code) │  │ (Your Code) │            │
-│  │   Pod       │  │    Pod      │  │    Pod      │            │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘            │
-│         │                │                │                   │
-│         └────────────────┼────────────────┘                   │
-│                          │                                    │
-│  ┌──────────────────────────────────────────────────────────┐ │
-│  │               Shared Components                          │ │
-│  │  ┌─────────────┐    ┌─────────────┐                      │ │
-│  │  │   Redis     │    │ PostgreSQL  │                      │ │
-│  │  │ Component   │    │  Component  │                      │ │
-│  │  └─────────────┘    └─────────────┘                      │ │
-│  └──────────────────────────────────────────────────────────┘ │
-│                          │                                    │
-│  ┌──────────────────────────────────────────────────────────┐ │
-│  │              Infrastructure                              │ │
-│  │  ┌─────────────┐    ┌─────────────┐                      │ │
-│  │  │   Ingress   │    │    DNS      │                      │ │
-│  │  │ Controller  │    │  Service    │                      │ │
-│  │  └─────────────┘    └─────────────┘                      │ │
-│  └──────────────────────────────────────────────────────────┘ │
-└───────────────────────────────────────────────────────────────┘
-```
+You've seen how HostK8s **cluster configurations** can be customized and extended to support different infrastructure needs. Individual **applications** are easy to **deploy** with consistent contracts, while reusable **components** can be composed into complete **software stacks**. The solution comes together as a full development **platform** through **secret contracts** and **storage contracts**, all managed through a unified **make** command interface. This eliminates the traditional choice between development speed and platform integration. You get both fast local development and complete Kubernetes capabilities for testing how your applications behave in the platform environment.
 
-**The development advantage**: Your code is now running in the same infrastructure environment you'll deploy to production, but built from your local source code. You can test service discovery, resource limits, ingress routing, and component integration with your actual application code.
-
-## The Complete Development Iteration Cycle
-
-HostK8s enables a hybrid approach where you can develop locally for speed and deploy to production-like infrastructure for integration testing:
-
-### Fast Local Iteration
-
-```bash
-cd src/sample-app
-
-# Start local development for rapid iteration
-docker compose up -d
-
-# Make code changes, see immediate results
-# Test individual services in isolation
-# Debug with local development tools
-```
-
-### Production-Like Integration Testing
-
-```bash
-# Return to project root and build changes
-cd ../..
-
-# Containerize updated code
-make build src/sample-app
-
-# Deploy to Kubernetes infrastructure
-make up sample-app
-
-# Test with full service mesh, ingress, and shared components
-```
-
-### The Hybrid Development Advantage
-
-**Local Development Phase:**
-- Rapid iteration on individual services
-- Immediate feedback on code changes
-- Full debugging capabilities with local tools
-- Isolated testing of business logic
-
-**Integration Testing Phase:**
-- Production-like infrastructure testing
-- Service discovery and networking validation
-- Resource constraint testing
-- Component integration verification
-
-This eliminates the traditional trade-off between development speed and production fidelity. You can iterate rapidly when building features and validate thoroughly when testing integration.
-
-## Advanced Development Patterns
-
-### Service-Specific Development
-
-You can develop individual services while keeping others stable:
-
-```bash
-# Build and deploy just the voting service
-make build src/sample-app --service vote
-make up sample-app
-
-# The result and worker services continue running while vote service updates
-```
-
-### Component-Aware Development
-
-Your application automatically integrates with the shared components you've built:
-
-```bash
-# Deploy shared Redis component first
-kubectl apply -k software/components/redis-infrastructure/
-
-# Your application automatically discovers and uses the shared Redis
-make up sample-app
-```
-
-The service discovery, configuration, and integration patterns you learned in previous tutorials become the foundation for production-like development.
-
-### Development Environment Management
-
-Different development contexts require different infrastructure:
-
-```bash
-# Minimal development cluster
-make start minimal
-
-# Full-featured development with all components
-export INGRESS_ENABLED=true
-export METALLB_ENABLED=true
-make start
-make up sample-app
-```
-
-The cluster configuration patterns from the first tutorial directly support different development workflows.
-
-## What Comes Next
-
-You've now experienced the complete HostK8s development workflow: from cluster configuration through application deployment to source code iteration. This completes the learning progression:
-
-- **Cluster Configuration** - Infrastructure foundation that supports different development needs
-- **Application Deployment** - Consistent deployment patterns that work for any source code
-- **Shared Components** - Reusable infrastructure that eliminates development overhead
-- **Development Workflows** - Rapid iteration within production-like environments
-
-These patterns work together to eliminate the traditional trade-offs between development velocity and production fidelity. You can iterate rapidly on source code while testing against realistic infrastructure, debug locally while deploying consistently, and build individual services while integrating with shared components.
-
-The HostK8s approach scales from individual developer workflows to team collaboration patterns. The same cluster configurations, application contracts, and development workflows that support individual development also enable consistent team environments, CI/CD integration, and production deployment patterns.
-
----
-
-**Congratulations!** You now have the complete HostK8s development toolkit. You can configure infrastructure for your needs, deploy applications consistently, build reusable components, and iterate on source code within production-like environments. These patterns form the foundation for building and deploying modern applications with the velocity of local development and the realism of production infrastructure.
+HostK8s is a local Kubernetes platform that bridges the gap between local development velocity and production infrastructure complexity, providing developers with complete development environments where they can build, test, and iterate on modern applications with confidence.

@@ -193,7 +193,6 @@ This is where Helm templates shine. They provide deployment-time flexibility whi
 ```bash
 # Restart the Cluster and enable both AddOns
 export INGRESS_ENABLED=true
-export METALLB_ENABLED=true
 
 make restart
 make deploy advanced

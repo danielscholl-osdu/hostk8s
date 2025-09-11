@@ -45,12 +45,18 @@ class ClusterSetup:
         self.kind_config_file = None  # Will be set in determine_kind_config
 
         # Addon flags (strip spaces from env values to handle .env formatting)
-        self.metallb_enabled = get_env('METALLB_ENABLED', 'false').strip().lower() == 'true'
-        self.ingress_enabled = get_env('INGRESS_ENABLED', 'false').strip().lower() == 'true'
-        self.registry_enabled = get_env('REGISTRY_ENABLED', 'false').strip().lower() == 'true'
+        # Support both ENABLE_* and *_ENABLED formats for backward compatibility
+        self.metallb_enabled = (get_env('METALLB_ENABLED', 'false').strip().lower() == 'true' or
+                               get_env('ENABLE_METALLB', 'false').strip().lower() == 'true')
+        self.ingress_enabled = (get_env('INGRESS_ENABLED', 'false').strip().lower() == 'true' or
+                               get_env('ENABLE_INGRESS', 'false').strip().lower() == 'true')
+        self.registry_enabled = (get_env('REGISTRY_ENABLED', 'false').strip().lower() == 'true' or
+                                get_env('ENABLE_REGISTRY', 'false').strip().lower() == 'true')
         self.metrics_disabled = get_env('METRICS_DISABLED', 'false').strip().lower() == 'true'
-        self.vault_enabled = get_env('VAULT_ENABLED', 'false').strip().lower() == 'true'
-        self.flux_enabled = get_env('FLUX_ENABLED', 'false').strip().lower() == 'true'
+        self.vault_enabled = (get_env('VAULT_ENABLED', 'false').strip().lower() == 'true' or
+                             get_env('ENABLE_VAULT', 'false').strip().lower() == 'true')
+        self.flux_enabled = (get_env('FLUX_ENABLED', 'false').strip().lower() == 'true' or
+                            get_env('ENABLE_FLUX', 'false').strip().lower() == 'true')
 
         # Registry configuration
         self.registry_name = "hostk8s-registry"
@@ -580,12 +586,12 @@ def main() -> None:
 Environment variables:
   CLUSTER_NAME       Cluster name (default: hostk8s)
   KIND_CONFIG        Kind config file to use
-  METALLB_ENABLED    Enable MetalLB LoadBalancer
-  INGRESS_ENABLED    Enable NGINX Ingress
-  REGISTRY_ENABLED   Enable local Docker registry
+  METALLB_ENABLED    Enable MetalLB LoadBalancer (or ENABLE_METALLB)
+  INGRESS_ENABLED    Enable NGINX Ingress (or ENABLE_INGRESS)
+  REGISTRY_ENABLED   Enable local Docker registry (or ENABLE_REGISTRY)
   METRICS_DISABLED   Disable metrics server
-  VAULT_ENABLED      Enable Vault secret management
-  FLUX_ENABLED       Enable Flux GitOps
+  VAULT_ENABLED      Enable Vault secret management (or ENABLE_VAULT)
+  FLUX_ENABLED       Enable Flux GitOps (or ENABLE_FLUX)
 
 Examples:
   %(prog)s                    # Start with defaults

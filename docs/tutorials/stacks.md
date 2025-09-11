@@ -289,10 +289,10 @@ make status
 
 The `make down` command uses the `hostk8s.stack: sample` labels you saw in the stack configuration to cleanly remove all components and applications belonging to this specific stack.
 
-## Ready for Real Development
+## Understanding the Magic
 
-You've mastered deploying complete software stacks with automated orchestration. But these have been pre-built applications - what about developing your own applications using these powerful stack environments?
+You've deployed a software stack where some capabilities **just worked**. But how do these components actually function? What makes them able to automatically provide the services your applications need?
 
-The next step is learning to build, deploy, and iterate on your own code within software stacks. This includes building source code, pushing images to the cluster registry, and having your applications automatically deploy and restart when you make changes.
+The sample stack deployed components, handling complex setup and orchestration automatically. Stacks can orchestrate many such components together that are combined into complete solutions. Before you start building applications that use these component capabilities, you should understand how they're structured and why they work.
 
-👉 **Continue to:** [Development Workflows](development.md) - *Learn to build and iterate applications within software stacks*
+👉 **Continue to:** [Understanding Components](components.md) - *Deconstruct the components you've been using to understand how they work*
