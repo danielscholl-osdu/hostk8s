@@ -12,7 +12,7 @@ Implement ephemeral secret management system using contract-based declarations w
 - **Contract-based declarations** via `hostk8s.secrets.yaml` files in stack directories
 - **Ephemeral generation** during stack deployment with no git storage
 - **Generic data format** supporting both static values and generated secrets
-- **Cross-platform implementation** with functional parity between .sh/.ps1 scripts
+- **Cross-platform implementation** with unified Python script architecture
 - **Automatic lifecycle integration** as part of `make up <stack>` workflow
 
 **Key Components:**
@@ -73,16 +73,15 @@ spec:
 - `uuid`: UUID format (correlation IDs)
 
 ### Cross-Platform Scripts
-- **Bash**: `infra/scripts/manage-secrets.sh`
-- **PowerShell**: `infra/scripts/manage-secrets.ps1`
-- **Functional Parity**: Identical behavior across platforms
-- **Common Interface**: `manage-secrets.{sh|ps1} <stack-name>`
+- **Python**: `infra/scripts/manage-secrets.py`
+- **Cross-Platform**: Single implementation works across all platforms via `uv`
+- **Common Interface**: `uv run ./infra/scripts/manage-secrets.py <stack-name>`
 
 ### Lifecycle Integration
 ```makefile
 up: ## Deploy software stack
-    @$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) $(stack)
-    @$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) $(stack) 2>/dev/null || true
+    @uv run ./infra/scripts/deploy-stack.py $(stack)
+    @uv run ./infra/scripts/manage-secrets.py $(stack) 2>/dev/null || true
 ```
 
 ### Security Features

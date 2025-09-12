@@ -96,7 +96,7 @@ Direct cluster management with manual application deployments.
 
 ```bash
 make start                      # Start cluster
-make deploy                     # Deploy the default app (simple) to the default namespace
+make deploy                     # Deploy the default app (simple)
 make status                     # Check cluster and app status
 make restart                    # Quick restart of the cluster
 make stop                       # Stop cluster (preserve data)
@@ -129,7 +129,7 @@ Custom applications and cluster configurations for specialized requirements.
 Duplicate `kind-custom.yaml` to `kind-config.yaml` found in the `infra/kubernetes` directory and customize as needed.
 
 ```bash
-export METALLB_ENABLED=true     # Windows: $env:METALLB_ENABLED = "true"
+# Override configuration with kind-config.yaml
 
 make start                      # Uses the modified cluster configuration
 ```
@@ -145,7 +145,9 @@ make status                    # Verify deployment
 **Custom Software Stacks:**
 ```bash
 # Create complete stacks in software/stacks/extension/
-export GITOPS_REPO=https://github.com/yourorg/custom-stack  # Windows: $env:GITOPS_REPO = "https://github.com/yourorg/custom-stack"
+
+# Windows: $env:GITOPS_REPO = "https://github.com/yourorg/custom-stack"
+export GITOPS_REPO=https://github.com/yourorg/custom-stack
 
 make up extension                 # Deploy complete custom environment
 make status                       # Monitor custom stack deployment

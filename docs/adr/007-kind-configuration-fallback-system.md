@@ -61,7 +61,7 @@ make start  # Uses kind-custom.yaml automatically
 
 ### Implementation Details
 ```bash
-# Decision logic in infra/scripts/cluster-up.sh
+# Decision logic in infra/scripts/cluster-up.py
 if [ -n "${KIND_CONFIG}" ]; then
     # Use explicit environment variable
     KIND_CONFIG_PATH="infra/kubernetes/${KIND_CONFIG_FILE}"

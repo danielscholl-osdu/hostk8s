@@ -116,7 +116,7 @@ Cluster Operations:
 # Prevents operations on wrong cluster
 up: install
 	@echo "🚀 Starting cluster..."
-	@./infra/scripts/cluster-up.sh
+	@uv run ./infra/scripts/cluster-up.py
 	@echo "💡 export KUBECONFIG=$(pwd)/data/kubeconfig/config"
 	@kubectl get nodes
 
@@ -136,19 +136,19 @@ deploy: ## Deploy application (Usage: make deploy [app-name] [namespace])
 		APP_NAME="simple"; \
 		echo "No app specified, using default: $$APP_NAME"; \
 	fi; \
-	./infra/scripts/deploy-app.sh "$$APP_NAME" "$$TARGET_NAMESPACE"
+	./infra/scripts/deploy-app.py "$$APP_NAME" "$$TARGET_NAMESPACE"
 
 # Source code builds with path validation
 build: ## Build and push application from src/
 	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
-	./infra/scripts/build.sh "$$APP_PATH"
+	uv run ./infra/scripts/build.py "$$APP_PATH"
 
 # Extension stack deployment with template processing
 up: ## Deploy software stack with extension support
 	@STACK_NAME="$(word 2,$(MAKECMDGOALS))"; \
 	if [[ "$$STACK_NAME" == extension/* ]]; then \
 		echo "Deploying extension software stack: $$STACK_NAME"; \
-		./infra/scripts/deploy-stack.sh "$$STACK_NAME"; \
+		uv run ./infra/scripts/deploy-stack.py "$$STACK_NAME"; \
 	fi
 ```
 

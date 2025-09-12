@@ -193,7 +193,7 @@ Docker Volume:  hostk8s-pv-data      → /mnt/pv/ (universal backend)
 
 ### Directory Creation Strategy
 ```bash
-# Automatic directory creation in cluster-up.sh
+# Automatic directory creation in cluster-up.py
 mkdir -p data/kubeconfig
 mkdir -p data/storage
 mkdir -p data/pv

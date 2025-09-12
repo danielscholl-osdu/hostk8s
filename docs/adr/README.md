@@ -169,7 +169,7 @@ id: 009
 title: Cross-Platform Implementation Strategy
 status: accepted
 date: 2025-01-15
-decision: Implement dual script architecture with functional parity between platform-native scripts (.sh/.ps1) rather than cross-platform scripting solutions.
+decision: Implement dual script architecture with functional parity between platform-native scripts (.sh/.ps1) rather than cross-platform scripting solutions. (Later replaced by unified Python architecture per ADR-015)
 why: |
 • Platform optimization: Native tooling integration (winget/chocolatey vs brew/apt) provides better user experience
 • Developer familiarity: Platform-specific scripting conventions align with developer expectations

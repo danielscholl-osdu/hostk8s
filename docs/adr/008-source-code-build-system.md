@@ -45,7 +45,7 @@ src/
 
 ### Build System Components
 
-**Build Script (`infra/scripts/build.sh`)**:
+**Build Script (`infra/scripts/build.py`)**:
 - Docker Compose validation and execution
 - Cluster registry integration
 - Multi-service application support
@@ -55,7 +55,7 @@ src/
 ```makefile
 build: ## Build and push application from src/
 	@APP_PATH="$(word 2,$(MAKECMDGOALS))"; \
-	./infra/scripts/build.sh "$$APP_PATH"
+	uv run ./infra/scripts/build.py "$$APP_PATH"
 ```
 
 **Registry Integration**:

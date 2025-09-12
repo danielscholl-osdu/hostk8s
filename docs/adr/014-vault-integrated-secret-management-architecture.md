@@ -51,7 +51,7 @@ Evolve the secret management architecture to use **HashiCorp Vault + External Se
 
 ```mermaid
 graph TD
-    A[make up stack] --> B[manage-secrets.sh add stack]
+    A[make up stack] --> B[manage-secrets.py add stack]
     B --> C[Store secrets in Vault KV]
     B --> D[Generate external-secrets.yaml]
     D --> E[Manual commit to Git]
@@ -67,7 +67,7 @@ graph TD
 **Creation (make up):**
 ```bash
 make up sample-app
-├── manage-secrets.sh add sample-app (called by Makefile)
+├── manage-secrets.py add sample-app (called by Makefile)
 │   ├── Parse hostk8s.secrets.yaml contract
 │   ├── Store generated secrets in Vault
 │   └── Generate manifests/external-secrets.yaml (manual commit required)
@@ -78,7 +78,7 @@ make up sample-app
 **Removal (make down):**
 ```bash
 make down sample-app
-├── manage-secrets.sh remove sample-app (called by Makefile)
+├── manage-secrets.py remove sample-app (called by Makefile)
 │   └── Delete secrets from Vault
 └── Flux removes stack resources (external-secrets.yaml remains committed)
 ```
@@ -121,23 +121,23 @@ spec:
 
 ### Command-Based Interface
 
-**Enhanced manage-secrets.sh:**
+**Enhanced manage-secrets.py:**
 ```bash
 # New command interface
-manage-secrets.sh add <stack>     # Store secrets + generate manifests
-manage-secrets.sh remove <stack>  # Clean Vault + manifests
-manage-secrets.sh list [stack]    # Show stored secrets
+manage-secrets.py add <stack>     # Store secrets + generate manifests
+manage-secrets.py remove <stack>  # Clean Vault + manifests
+manage-secrets.py list [stack]    # Show stored secrets
 ```
 
 **Integration with Make:**
 ```makefile
 up: ## Deploy software stack
-    @$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) add $(stack) 2>/dev/null || true
-    @$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) $(stack)
+    @uv run ./infra/scripts/manage-secrets.py add $(stack) 2>/dev/null || true
+    @uv run ./infra/scripts/deploy-stack.py $(stack)
 
 down: ## Remove software stack
-    @$(SCRIPT_RUNNER) ./infra/scripts/manage-secrets$(SCRIPT_EXT) remove $(stack) 2>/dev/null || true
-    @$(SCRIPT_RUNNER) ./infra/scripts/deploy-stack$(SCRIPT_EXT) down $(stack)
+    @uv run ./infra/scripts/manage-secrets.py remove $(stack) 2>/dev/null || true
+    @uv run ./infra/scripts/deploy-stack.py down $(stack)
 ```
 
 ### Infrastructure Addon Integration
@@ -150,7 +150,7 @@ down: ## Remove software stack
 
 **Addon Dependencies:**
 ```bash
-# cluster-up.sh sequence
+# cluster-up.py sequence
 NGINX Ingress → Vault → ESO → Stack Deployment
 ```
 
@@ -183,7 +183,7 @@ NGINX Ingress → Vault → ESO → Stack Deployment
 - **Documentation Enhancement**: Clear troubleshooting guides for Vault + ESO patterns
 - **Development Tooling**: Vault UI provides accessible secret inspection capabilities
 - **Graceful Degradation**: Stack deployment continues even if secret generation fails
-- **Cross-Platform Parity**: Identical Vault + ESO functionality across .sh/.ps1 scripts
+- **Cross-Platform Parity**: Unified Python implementation provides identical Vault + ESO functionality
 - **Migration Strategy**: Gradual adoption with ADR-013 patterns still functional
 
 ## Alternatives Considered

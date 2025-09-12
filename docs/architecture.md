@@ -310,21 +310,35 @@ The platform distinguishes between **infrastructure addons** (platform foundatio
 **Infrastructure Addon Principles:**
 - **Unified Namespace Strategy** - All infrastructure addons deploy to `hostk8s` namespace for operational simplicity
 - **Environment-Driven Configuration** - Enable/disable via environment variables (METALLB_ENABLED, INGRESS_DISABLED, etc.)
-- **Cross-Platform Script Parity** - Both .sh and .ps1 implementations for all addon setup scripts
+- **Cross-Platform Script Parity** - Unified Python scripts via `uv` for all addon setup scripts
 - **Lifecycle Integration** - Addon setup integrated into cluster startup sequence
 - **Component Labeling** - Consistent resource labels (`hostk8s.component: <name>`) for identification
 
 **Addon Integration Pattern:**
-```bash
-# cluster-up.sh integration pattern
-if [[ "${ADDON_ENABLED}" == "true" ]]; then
-    log_info "Setting up Addon..."
-    if [ -f "infra/scripts/setup-addon.sh" ]; then
-        KUBECONFIG="${KUBECONFIG_FULL_PATH}" ./infra/scripts/setup-addon.sh || log_warn "Addon setup failed, continuing..."
-    else
-        log_warn "Addon setup script not found, skipping..."
-    fi
-fi
+```python
+# cluster-up.py integration pattern (Python-based)
+def run_addon_script(self, script_name: str) -> bool:
+    """Run an addon setup script (Python-only for OS independence)."""
+    python_script = self.script_dir / f'{script_name}.py'
+    if python_script.exists() and shutil.which('uv'):
+        logger.info(f"[Script 🐍] Running script: [cyan]{script_name}.py[/cyan]")
+        try:
+            env = os.environ.copy()
+            env['KUBECONFIG'] = str(self.kubeconfig_path)
+            result = subprocess.run(['uv', 'run', str(python_script)],
+                                  env=env, check=False)
+            return result.returncode == 0
+        except Exception as e:
+            logger.debug(f"Error running Python script: {e}")
+            return False
+
+    logger.warn(f"{script_name}.py script not found, skipping")
+    return False
+
+# Usage in setup_addons()
+if self.addon_enabled:
+    if not self.run_addon_script('setup-addon'):
+        logger.warn("[Cluster] Addon setup failed, continuing")
 ```
 
 **Core Infrastructure Addons:**
