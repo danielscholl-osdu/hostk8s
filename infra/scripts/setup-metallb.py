@@ -22,6 +22,10 @@ This replaces the shell script version with improved error handling,
 better JSON processing for Docker network inspection, and more maintainable code structure.
 """
 
+# Default versions - update these for new releases
+DEFAULT_METALLB_CHART_VERSION = "0.15.2"
+DEFAULT_METALLB_APP_VERSION = "v0.15.2"
+
 import json
 import subprocess
 import sys
@@ -31,8 +35,8 @@ from typing import Optional, Dict, Any
 
 # Import common utilities
 from hostk8s_common import (
-    logger, HostK8sError, KubectlError,
-    run_kubectl, detect_kubeconfig, get_env
+    logger, HostK8sError, KubectlError, HelmError,
+    run_kubectl, run_helm, detect_kubeconfig, get_env
 )
 
 
@@ -43,6 +47,10 @@ class MetalLBSetup:
         self.prefix = "[MetalLB]"
         self.namespace = "hostk8s"
         self.default_subnet = "172.18.0.0/16"
+
+    def get_chart_version(self) -> str:
+        """Get MetalLB chart version from environment or default."""
+        return get_env('METALLB_VERSION', DEFAULT_METALLB_CHART_VERSION)
 
     def log_info(self, message: str):
         """Log with MetalLB prefix."""
@@ -66,45 +74,51 @@ class MetalLBSetup:
             sys.exit(1)
 
     def is_metallb_already_installed(self) -> bool:
-        """Check if MetalLB is already installed and running."""
+        """Check if MetalLB is already installed via Helm."""
         try:
-            # Check if namespace exists
-            result = run_kubectl(['get', 'namespace', self.namespace], check=False, capture_output=True)
-            if result.returncode != 0:
-                return False
+            # Check if Helm release exists
+            result = run_helm(['list', '-n', self.namespace, '-q'], check=False, capture_output=True)
+            if result.returncode == 0 and 'metallb' in result.stdout:
+                self.log_info("✅ MetalLB already installed via Helm")
+                return True
 
-            # Check if speaker deployment exists
-            result = run_kubectl(['get', 'deployment', 'speaker', '-n', self.namespace],
-                               check=False, capture_output=True)
-            if result.returncode != 0:
-                return False
-
-            # Check if pods are running
-            result = run_kubectl(['get', 'pods', '-n', self.namespace, '-l', 'app=metallb'],
-                               check=False, capture_output=True)
-
-            if result.returncode == 0 and 'Running' in result.stdout:
-                self.log_info("MetalLB already installed and running")
+            # Fallback: check for deployment (in case it was manually installed)
+            kubectl_result = run_kubectl(['get', 'deployment', 'metallb-controller', '-n', self.namespace],
+                                        check=False, capture_output=True)
+            if kubectl_result.returncode == 0:
+                self.log_info("ℹ️  MetalLB found (not managed by Helm)")
                 return True
 
             return False
-
         except Exception:
             return False
 
     def install_metallb(self) -> None:
-        """Install MetalLB LoadBalancer."""
-        self.log_info("Installing MetalLB")
-
-        manifest_path = Path("infra/manifests/metallb.yaml")
-        if not manifest_path.exists():
-            self.log_error(f"Manifest not found: {manifest_path}")
-            sys.exit(1)
+        """Install MetalLB LoadBalancer via Helm."""
+        chart_version = self.get_chart_version()
+        self.log_info(f"Installing MetalLB via Helm (chart version: {chart_version})")
 
         try:
-            run_kubectl(['apply', '-f', str(manifest_path)])
-        except KubectlError:
-            self.log_error("Failed to install MetalLB")
+            # Add MetalLB repo if not present
+            self.log_info("Adding MetalLB Helm repository")
+            run_helm(['repo', 'add', 'metallb',
+                     'https://metallb.github.io/metallb'], check=False)
+
+            # Update repo to get latest charts
+            run_helm(['repo', 'update'], check=False)
+
+            # Install MetalLB with HostK8s customizations
+            helm_args = [
+                'upgrade', '--install', 'metallb', 'metallb/metallb',
+                '--namespace', self.namespace,
+                '--create-namespace',
+                '--version', chart_version
+            ]
+
+            run_helm(helm_args)
+
+        except HelmError as e:
+            self.log_error(f"Failed to install MetalLB via Helm: {e}")
             sys.exit(1)
 
     def wait_for_metallb_ready(self) -> None:
@@ -113,7 +127,7 @@ class MetalLBSetup:
 
         try:
             run_kubectl(['wait', '--for=condition=ready', 'pod',
-                        '-l', 'app=metallb', '-n', self.namespace,
+                        '-l', 'app.kubernetes.io/name=metallb', '-n', self.namespace,
                         '--timeout=300s'])
         except KubectlError:
             self.log_error("MetalLB pods failed to become ready")

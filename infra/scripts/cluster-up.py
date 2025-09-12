@@ -175,11 +175,12 @@ class ClusterSetup:
                 logger.info(f"Using config from KIND_CONFIG: {self.kind_config}")
                 return config_path
             else:
-                logger.error(f"Kind config not found: {config_path}")
+                logger.error(f"Kind config '{self.kind_config}' not found (expected: kind-{self.kind_config}.yaml)")
                 logger.error("Available configurations:")
                 # List available configs
                 for conf in sorted((self.project_root / 'infra' / 'kubernetes').glob('kind-*.yaml')):
-                    logger.error(f"  {conf.stem.replace('kind-', '')}")
+                    config_name = conf.stem.replace('kind-', '')
+                    logger.error(f"  {config_name} ({conf.name})")
                 sys.exit(1)
 
         # 3. Default to kind-config.yaml if it exists

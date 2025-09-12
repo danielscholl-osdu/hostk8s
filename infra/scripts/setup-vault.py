@@ -35,6 +35,11 @@ from hostk8s_common import (
     run_kubectl, run_helm, detect_kubeconfig, get_env, load_environment
 )
 
+# Default versions (can be overridden via environment variables)
+DEFAULT_VAULT_CHART_VERSION = "0.30.1"
+DEFAULT_VAULT_APP_VERSION = "1.20.3"
+DEFAULT_EXTERNAL_SECRETS_CHART_VERSION = "0.19.2"
+
 
 class VaultSetup:
     """Handles Vault secret management setup operations."""
@@ -44,6 +49,11 @@ class VaultSetup:
         self.namespace = "hostk8s"
         self.vault_token = "hostk8s"
         self.vault_enabled = get_env('VAULT_ENABLED', 'false').strip().lower() == 'true'
+
+        # Version configuration with environment variable overrides
+        self.vault_chart_version = get_env('VAULT_CHART_VERSION', DEFAULT_VAULT_CHART_VERSION)
+        self.vault_app_version = get_env('VAULT_APP_VERSION', DEFAULT_VAULT_APP_VERSION)
+        self.external_secrets_chart_version = get_env('EXTERNAL_SECRETS_CHART_VERSION', DEFAULT_EXTERNAL_SECRETS_CHART_VERSION)
 
     def log_info(self, message: str):
         """Log with Vault prefix."""
@@ -134,9 +144,9 @@ class VaultSetup:
 
     def install_vault(self) -> None:
         """Install Vault in development mode."""
-        self.log_info("Installing Vault")
+        self.log_info(f"Installing Vault via Helm (chart version: {self.vault_chart_version})")
         # Note: If image pulls are slow, you can pre-pull the image with:
-        # docker pull hashicorp/vault:1.20.1 && kind load docker-image hashicorp/vault:1.20.1 --name hostk8s
+        # docker pull hashicorp/vault:{self.vault_app_version} && kind load docker-image hashicorp/vault:{self.vault_app_version} --name hostk8s
 
         max_retries = 3
         retry_count = 0
@@ -146,11 +156,13 @@ class VaultSetup:
                 # Helm install command with development configuration
                 helm_args = [
                     'upgrade', '--install', 'vault', 'hashicorp/vault',
+                    '--version', self.vault_chart_version,
                     '--namespace', self.namespace,
                     '--create-namespace',
                     '--set', 'server.dev.enabled=true',
                     '--set', f'server.dev.devRootToken={self.vault_token}',
                     '--set', 'injector.enabled=false',
+                    '--set', f'server.image.tag={self.vault_app_version}',
                     '--set', 'server.resources.requests.memory=64Mi',
                     '--set', 'server.resources.requests.cpu=10m',
                     '--set', 'server.resources.limits.memory=128Mi',
@@ -259,6 +271,7 @@ class VaultSetup:
             # Install External Secrets Operator
             helm_args = [
                 'upgrade', '--install', 'external-secrets', 'external-secrets/external-secrets',
+                '--version', self.external_secrets_chart_version,
                 '--namespace', self.namespace,
                 '--set', 'installCRDs=true',
                 '--set', 'webhook.port=9443',
@@ -380,6 +393,9 @@ stringData:
 
         # Update configuration from environment (in case .env changed values)
         self.vault_enabled = get_env('VAULT_ENABLED', 'false').strip().lower() == 'true'
+        self.vault_chart_version = get_env('VAULT_CHART_VERSION', DEFAULT_VAULT_CHART_VERSION)
+        self.vault_app_version = get_env('VAULT_APP_VERSION', DEFAULT_VAULT_APP_VERSION)
+        self.external_secrets_chart_version = get_env('EXTERNAL_SECRETS_CHART_VERSION', DEFAULT_EXTERNAL_SECRETS_CHART_VERSION)
 
         # Check prerequisites
         self.check_prerequisites()

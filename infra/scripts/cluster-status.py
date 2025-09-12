@@ -81,9 +81,24 @@ class EnhancedClusterStatusChecker:
                         ports = parts[2] if len(parts) > 2 else ''
 
                         if 'Up' in status:
+                            # Get registry version
+                            version = "unknown"
+                            try:
+                                version_result = subprocess.run(
+                                    ['docker', 'exec', name, '/bin/registry', '--version'],
+                                    capture_output=True, text=True, check=False
+                                )
+                                if version_result.returncode == 0 and version_result.stdout:
+                                    # Output format: "/bin/registry github.com/docker/distribution 2.8.3"
+                                    parts = version_result.stdout.strip().split()
+                                    if len(parts) >= 3:
+                                        version = f"v{parts[-1]}"  # Get last part and add 'v' prefix
+                            except Exception:
+                                pass
+
                             print(f"📦 Registry Container: Ready")
                             if ports:
-                                print(f"   Status: Running on {ports}")
+                                print(f"   Status: Running on {ports} - {version}")
                             print(f"   Network: Connected to Kind cluster")
                         else:
                             print(f"📦 Registry Container: {status}")
@@ -116,11 +131,14 @@ class EnhancedClusterStatusChecker:
         print()
 
     def _check_control_plane(self) -> None:
-        """Check control plane status."""
+        """Check control plane and worker nodes status."""
         try:
             # Get node info
             result = run_kubectl(['get', 'nodes', '--no-headers'], check=False)
             if result.returncode == 0 and result.stdout:
+                control_plane_found = False
+                worker_nodes = []
+
                 for line in result.stdout.strip().split('\n'):
                     if line.strip():
                         parts = line.split()
@@ -132,14 +150,36 @@ class EnhancedClusterStatusChecker:
                             version = parts[4]
 
                             if 'control-plane' in roles:
+                                # Display control plane
                                 if status == 'Ready':
                                     print(f"🕹️  Control Plane: Ready")
                                     print(f"   Status: Kubernetes {version} (up {age})")
+                                    print(f"   Node: {name}")
                                 else:
                                     print(f"🕹️  Control Plane: {status}")
-                                break
+                                    print(f"   Node: {name}")
+                                control_plane_found = True
+                            elif roles == '<none>' or 'worker' in roles.lower():
+                                # Collect worker nodes
+                                worker_nodes.append({
+                                    'name': name,
+                                    'status': status,
+                                    'version': version,
+                                    'age': age
+                                })
+
+                # Display worker nodes
+                for worker in worker_nodes:
+                    if worker['status'] == 'Ready':
+                        print(f"🚜 Worker: Ready")
+                        print(f"   Status: Kubernetes {worker['version']} (up {worker['age']})")
+                        print(f"   Node: {worker['name']}")
+                    else:
+                        print(f"🚜 Worker: {worker['status']}")
+                        print(f"   Node: {worker['name']}")
+
         except Exception as e:
-            logger.debug(f"Error checking control plane: {e}")
+            logger.debug(f"Error checking nodes: {e}")
 
     def _check_metrics_server(self) -> None:
         """Check Metrics Server status."""
@@ -152,14 +192,37 @@ class EnhancedClusterStatusChecker:
                                 '--no-headers'], check=False)
 
             if result.returncode == 0:
+                # Get metrics server version from container image
+                version_result = run_kubectl(['get', 'deployment', 'metrics-server', '-n', 'kube-system',
+                                            '-o', 'jsonpath={.spec.template.spec.containers[0].image}'], check=False)
+                version = "unknown"
+                if version_result.returncode == 0 and version_result.stdout:
+                    image = version_result.stdout.strip()
+                    # Handle image format with potential digest
+                    if ':v' in image:
+                        # Find the version tag starting with 'v'
+                        version_start = image.find(':v') + 1  # +1 to include the 'v'
+                        if '@' in image[version_start:]:
+                            version_end = image.find('@', version_start)
+                            version = image[version_start:version_end]
+                        else:
+                            version = image[version_start:]
+                    elif ':' in image:
+                        # Fallback to last part after colon
+                        version_part = image.split(':')[-1]
+                        if '@' in version_part:
+                            version = version_part.split('@')[0]
+                        else:
+                            version = version_part
+
                 # Check if metrics API is available
                 api_result = run_kubectl(['top', 'nodes'], check=False, capture_output=True)
                 if api_result.returncode == 0:
                     print(f"📊 Metrics Server: Ready")
-                    print(f"   Status: Resource metrics available (kubectl top)")
+                    print(f"   Status: Resource metrics available (kubectl top) - {version}")
                 else:
                     print(f"📊 Metrics Server: Installed but not ready")
-                    print(f"   Status: Waiting for metrics to be available")
+                    print(f"   Status: Waiting for metrics to be available - {version}")
         except Exception as e:
             logger.debug(f"Error checking metrics server: {e}")
 
@@ -167,12 +230,35 @@ class EnhancedClusterStatusChecker:
         """Check MetalLB status."""
         try:
             # Check if MetalLB is installed
-            result = run_kubectl(['get', 'deployment', 'speaker', '-n', 'hostk8s',
+            result = run_kubectl(['get', 'deployment', 'metallb-controller', '-n', 'hostk8s',
                                 '--no-headers'], check=False)
 
             if result.returncode == 0:
+                # Get MetalLB version from controller deployment image
+                version_result = run_kubectl(['get', 'deployment', 'metallb-controller', '-n', 'hostk8s',
+                                            '-o', 'jsonpath={.spec.template.spec.containers[0].image}'], check=False)
+                version = "unknown"
+                if version_result.returncode == 0 and version_result.stdout:
+                    image = version_result.stdout.strip()
+                    # Handle image format with potential digest
+                    if ':v' in image:
+                        # Find the version tag starting with 'v'
+                        version_start = image.find(':v') + 1  # +1 to include the 'v'
+                        if '@' in image[version_start:]:
+                            version_end = image.find('@', version_start)
+                            version = image[version_start:version_end]
+                        else:
+                            version = image[version_start:]
+                    elif ':' in image:
+                        # Fallback to last part after colon
+                        version_part = image.split(':')[-1]
+                        if '@' in version_part:
+                            version = version_part.split('@')[0]
+                        else:
+                            version = version_part
+
                 # Check if MetalLB pods are running
-                pods_result = run_kubectl(['get', 'pods', '-n', 'hostk8s', '-l', 'app=metallb',
+                pods_result = run_kubectl(['get', 'pods', '-n', 'hostk8s', '-l', 'app.kubernetes.io/name=metallb',
                                          '--no-headers'], check=False)
 
                 if pods_result.returncode == 0 and 'Running' in pods_result.stdout:
@@ -182,13 +268,13 @@ class EnhancedClusterStatusChecker:
 
                     if pool_result.returncode == 0 and pool_result.stdout.strip():
                         print(f"🔗 MetalLB (LoadBalancer): Ready")
-                        print(f"   Status: IP address pool configured")
+                        print(f"   Status: IP address pool configured - {version}")
                     else:
                         print(f"🔗 MetalLB (LoadBalancer): Running")
-                        print(f"   Status: No IP pools configured")
+                        print(f"   Status: No IP pools configured - {version}")
                 else:
                     print(f"🔗 MetalLB (LoadBalancer): Starting")
-                    print(f"   Status: Pods not yet running")
+                    print(f"   Status: Pods not yet running - {version}")
         except Exception as e:
             logger.debug(f"Error checking MetalLB: {e}")
 
@@ -200,6 +286,29 @@ class EnhancedClusterStatusChecker:
                                 '--no-headers'], check=False)
 
             if result.returncode == 0:
+                # Get NGINX Ingress version from container image
+                version_result = run_kubectl(['get', 'deployment', 'ingress-nginx-controller', '-n', 'hostk8s',
+                                            '-o', 'jsonpath={.spec.template.spec.containers[0].image}'], check=False)
+                version = "unknown"
+                if version_result.returncode == 0 and version_result.stdout:
+                    image = version_result.stdout.strip()
+                    # Handle image format like registry.k8s.io/ingress-nginx/controller:v1.13.2@sha256:...
+                    if ':v' in image:
+                        # Find the version tag starting with 'v'
+                        version_start = image.find(':v') + 1  # +1 to include the 'v'
+                        if '@' in image[version_start:]:
+                            version_end = image.find('@', version_start)
+                            version = image[version_start:version_end]
+                        else:
+                            version = image[version_start:]
+                    elif ':' in image:
+                        # Fallback to last part after colon
+                        version_part = image.split(':')[-1]
+                        if '@' in version_part:
+                            version = version_part.split('@')[0]
+                        else:
+                            version = version_part
+
                 # Check if pods are running
                 pods_result = run_kubectl(['get', 'pods', '-n', 'hostk8s',
                                          '-l', 'app.kubernetes.io/name=ingress-nginx',
@@ -207,10 +316,10 @@ class EnhancedClusterStatusChecker:
 
                 if pods_result.returncode == 0 and 'Running' in pods_result.stdout:
                     print(f"🌐 NGINX Ingress: Ready")
-                    print(f"   Status: Access via http://localhost:8080, https://localhost:8443")
+                    print(f"   Status: Access http:8080, https:8443 - {version}")
                 else:
                     print(f"🌐 NGINX Ingress: Starting")
-                    print(f"   Status: Controller pod not yet running")
+                    print(f"   Status: Controller pod not yet running - {version}")
         except Exception as e:
             logger.debug(f"Error checking ingress controller: {e}")
 
@@ -272,6 +381,26 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking registry: {e}")
 
+    def _get_vault_version(self) -> str:
+        """Get Vault version from container image."""
+        try:
+            # Get vault version from statefulset container image
+            version_result = run_kubectl(['get', 'statefulset', 'vault', '-n', 'hostk8s',
+                                        '-o', 'jsonpath={.spec.template.spec.containers[0].image}'], check=False)
+            if version_result.returncode == 0 and version_result.stdout:
+                image = version_result.stdout.strip()
+                # Handle image format like hashicorp/vault:1.18.2
+                if ':' in image:
+                    tag = image.split(':')[-1]
+                    # Remove any digest information
+                    if '@sha256' in tag:
+                        tag = tag.split('@')[0]
+                    if tag and tag != 'latest':
+                        return f"v{tag}"
+            return "unknown"
+        except Exception:
+            return "unknown"
+
     def _check_vault(self) -> None:
         """Check Vault status."""
         try:
@@ -285,13 +414,17 @@ class EnhancedClusterStatusChecker:
                                         '--no-headers'], check=False)
 
                 if pod_result.returncode == 0 and 'Running' in pod_result.stdout:
+                    # Get Vault version
+                    vault_version = self._get_vault_version()
+                    version_text = f" - {vault_version}" if vault_version else ""
+
                     print(f"🔐 Vault: Ready")
 
                     # Check for ingress
                     ingress_result = run_kubectl(['get', 'ingress', 'vault-ui', '-n', 'hostk8s',
                                                 '--no-headers'], check=False)
 
-                    print(f"   Status: Secret management available (dev mode)")
+                    print(f"   Status: Secret management available (dev mode){version_text}")
 
                     # Always show UI path, but with appropriate status
                     if ingress_result.returncode == 0:

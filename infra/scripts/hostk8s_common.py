@@ -286,8 +286,9 @@ def load_env_file(env_file: str = '.env') -> Dict[str, str]:
 
 
 def get_env(key: str, default: str = '') -> str:
-    """Get environment variable with default value."""
-    return os.environ.get(key, default)
+    """Get environment variable with default value and automatic whitespace stripping."""
+    value = os.environ.get(key, default)
+    return value.strip() if isinstance(value, str) else value
 
 
 def load_environment() -> None:

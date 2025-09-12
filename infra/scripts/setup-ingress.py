@@ -22,6 +22,10 @@ This replaces the shell script version with improved error handling,
 better JSON operations, and more maintainable code structure.
 """
 
+# Default versions - update these for new releases
+DEFAULT_INGRESS_NGINX_CHART_VERSION = "4.13.2"
+DEFAULT_INGRESS_NGINX_APP_VERSION = "1.13.2"
+
 import json
 import os
 import sys
@@ -31,8 +35,8 @@ from typing import Dict, Any, Optional
 
 # Import common utilities
 from hostk8s_common import (
-    logger, HostK8sError, KubectlError,
-    run_kubectl, detect_kubeconfig, get_env
+    logger, HostK8sError, KubectlError, HelmError,
+    run_kubectl, run_helm, detect_kubeconfig, get_env
 )
 
 
@@ -42,6 +46,10 @@ class IngressSetup:
     def __init__(self):
         self.prefix = "[Ingress]"
         self.namespace = "hostk8s"
+
+    def get_chart_version(self) -> str:
+        """Get NGINX Ingress chart version from environment or default."""
+        return get_env('INGRESS_VERSION', DEFAULT_INGRESS_NGINX_CHART_VERSION)
 
     def log_info(self, message: str):
         """Log with Ingress prefix."""
@@ -78,46 +86,55 @@ class IngressSetup:
             sys.exit(1)
 
     def is_ingress_already_installed(self) -> bool:
-        """Check if NGINX Ingress is already installed and running."""
+        """Check if NGINX Ingress is already installed via Helm."""
         try:
-            # Check if namespace exists
-            result = run_kubectl(['get', 'namespace', self.namespace], check=False, capture_output=True)
-            if result.returncode != 0:
-                return False
+            # Check if Helm release exists
+            result = run_helm(['list', '-n', self.namespace, '-q'], check=False, capture_output=True)
+            if result.returncode == 0 and 'ingress-nginx' in result.stdout:
+                self.log_info("✅ NGINX Ingress already installed via Helm")
+                return True
 
-            # Check if deployment exists
-            result = run_kubectl(['get', 'deployment', 'ingress-nginx-controller', '-n', self.namespace],
-                               check=False, capture_output=True)
-            if result.returncode != 0:
-                return False
-
-            # Check if pods are running
-            result = run_kubectl(['get', 'pods', '-n', self.namespace,
-                                '-l', 'app.kubernetes.io/name=ingress-nginx'],
-                               check=False, capture_output=True)
-
-            if result.returncode == 0 and 'Running' in result.stdout:
-                self.log_info("NGINX Ingress already installed and running")
+            # Fallback: check for deployment (in case it was manually installed)
+            kubectl_result = run_kubectl(['get', 'deployment', 'ingress-nginx-controller', '-n', self.namespace],
+                                        check=False, capture_output=True)
+            if kubectl_result.returncode == 0:
+                self.log_info("ℹ️  NGINX Ingress found (not managed by Helm)")
                 return True
 
             return False
-
         except Exception:
             return False
 
     def install_nginx_ingress(self) -> None:
-        """Install NGINX Ingress Controller."""
-        self.log_info("Installing NGINX Ingress Controller")
-
-        manifest_path = Path("infra/manifests/nginx-ingress.yaml")
-        if not manifest_path.exists():
-            self.log_error(f"Manifest not found: {manifest_path}")
-            sys.exit(1)
+        """Install NGINX Ingress Controller via Helm."""
+        chart_version = self.get_chart_version()
+        self.log_info(f"Installing NGINX Ingress Controller via Helm (chart version: {chart_version})")
 
         try:
-            run_kubectl(['apply', '-f', str(manifest_path)])
-        except KubectlError:
-            self.log_error("Failed to install NGINX Ingress Controller")
+            # Add ingress-nginx repo if not present
+            self.log_info("Adding ingress-nginx Helm repository")
+            run_helm(['repo', 'add', 'ingress-nginx',
+                     'https://kubernetes.github.io/ingress-nginx'], check=False)
+
+            # Update repo to get latest charts
+            run_helm(['repo', 'update'], check=False)
+
+            # Install NGINX Ingress with HostK8s customizations
+            helm_args = [
+                'upgrade', '--install', 'ingress-nginx', 'ingress-nginx/ingress-nginx',
+                '--namespace', self.namespace,
+                '--create-namespace',
+                '--version', chart_version,
+                '--set', 'controller.service.type=NodePort',
+                '--set', 'controller.service.nodePorts.http=30080',
+                '--set', 'controller.service.nodePorts.https=30443',
+                '--set', 'controller.admissionWebhooks.enabled=true'
+            ]
+
+            run_helm(helm_args)
+
+        except HelmError as e:
+            self.log_error(f"Failed to install NGINX Ingress via Helm: {e}")
             sys.exit(1)
 
     def is_metallb_installed(self) -> bool:
@@ -247,16 +264,19 @@ class IngressSetup:
             self.log_info("Continuing without waiting for ingress readiness")
 
     def wait_for_admission_webhook(self) -> None:
-        """Wait for admission webhook jobs to complete."""
-        self.log_info("Waiting for admission webhook setup jobs to complete")
+        """Check for admission webhook configuration (Helm chart doesn't use setup jobs)."""
+        self.log_info("Verifying admission webhook configuration")
 
         try:
-            run_kubectl(['wait', '--namespace', self.namespace,
-                        '--for=condition=complete', 'job',
-                        '--selector=app.kubernetes.io/component=admission-webhook',
-                        '--timeout=120s'])
-        except KubectlError:
-            self.log_warn("Admission webhook jobs did not complete in time, continuing")
+            # Check for ValidatingWebhookConfiguration instead of jobs
+            result = run_kubectl(['get', 'validatingwebhookconfiguration', 'ingress-nginx-admission'],
+                                check=False, capture_output=True)
+            if result.returncode == 0:
+                self.log_info("Admission webhook configuration verified")
+            else:
+                self.log_warn("Admission webhook configuration not found, but continuing")
+        except Exception:
+            self.log_warn("Could not verify admission webhook, continuing")
 
     def verify_admission_webhook(self) -> None:
         """Verify admission webhook configuration."""

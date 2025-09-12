@@ -21,14 +21,18 @@ This replaces the shell script version with improved error handling,
 structured retry logic, and more maintainable code.
 """
 
+# Default versions - update these for new releases
+DEFAULT_METRICS_SERVER_CHART_VERSION = "3.13.0"
+DEFAULT_METRICS_SERVER_APP_VERSION = "0.8.0"
+
 import sys
 import time
 from pathlib import Path
 
 # Import common utilities
 from hostk8s_common import (
-    logger, HostK8sError, KubectlError,
-    run_kubectl, load_environment, get_env
+    logger, HostK8sError, KubectlError, HelmError,
+    run_kubectl, run_helm, load_environment, get_env
 )
 
 
@@ -37,6 +41,10 @@ class MetricsSetup:
 
     def __init__(self):
         self.prefix = "[Metrics]"
+
+    def get_chart_version(self) -> str:
+        """Get metrics server chart version from environment or default."""
+        return get_env('METRICS_VERSION', DEFAULT_METRICS_SERVER_CHART_VERSION)
 
     def log_info(self, message: str):
         """Log with Metrics prefix."""
@@ -67,30 +75,53 @@ class MetricsSetup:
         return False
 
     def check_if_already_installed(self) -> bool:
-        """Check if metrics-server is already installed."""
+        """Check if metrics-server is already installed via Helm."""
         try:
-            result = run_kubectl(['get', 'deployment', 'metrics-server', '-n', 'kube-system'],
-                                check=False, capture_output=True)
-            if result.returncode == 0:
-                self.log_info("✅ Metrics Server already installed")
+            # Check if Helm release exists
+            result = run_helm(['list', '-n', 'kube-system', '-q'], check=False, capture_output=True)
+            if result.returncode == 0 and 'metrics-server' in result.stdout:
+                self.log_info("✅ Metrics Server already installed via Helm")
                 return True
+
+            # Fallback: check for deployment (in case it was manually installed)
+            kubectl_result = run_kubectl(['get', 'deployment', 'metrics-server', '-n', 'kube-system'],
+                                        check=False, capture_output=True)
+            if kubectl_result.returncode == 0:
+                self.log_info("ℹ️  Metrics Server found (not managed by Helm)")
+                return True
+
             return False
         except Exception:
             return False
 
     def install_metrics_server(self) -> None:
-        """Install Metrics Server from local manifest."""
-        self.log_info("Installing Metrics Server")
-
-        manifest_path = Path("infra/manifests/metrics-server.yaml")
-        if not manifest_path.exists():
-            self.log_error(f"Manifest not found: {manifest_path}")
-            sys.exit(1)
+        """Install Metrics Server via Helm."""
+        chart_version = self.get_chart_version()
+        self.log_info(f"Installing Metrics Server via Helm (chart version: {chart_version})")
 
         try:
-            run_kubectl(['apply', '-f', str(manifest_path)])
-        except KubectlError:
-            self.log_error("Failed to apply Metrics Server manifest")
+            # Add metrics-server repo if not present
+            self.log_info("Adding metrics-server Helm repository")
+            run_helm(['repo', 'add', 'metrics-server',
+                     'https://kubernetes-sigs.github.io/metrics-server/'], check=False)
+
+            # Update repo to get latest charts
+            run_helm(['repo', 'update'], check=False)
+
+            # Install metrics-server with HostK8s customizations
+            helm_args = [
+                'upgrade', '--install', 'metrics-server', 'metrics-server/metrics-server',
+                '--namespace', 'kube-system',
+                '--version', chart_version,
+                '--set', 'commonLabels.hostk8s\\.addon=metrics-server',
+                '--set', 'commonLabels.app\\.kubernetes\\.io/managed-by=hostk8s',
+                '--set', 'args={--kubelet-insecure-tls}'
+            ]
+
+            run_helm(helm_args)
+
+        except HelmError as e:
+            self.log_error(f"Failed to install Metrics Server via Helm: {e}")
             sys.exit(1)
 
     def wait_for_deployment_ready(self, timeout_seconds: int = 120) -> None:
