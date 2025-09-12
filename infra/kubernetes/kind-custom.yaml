@@ -68,5 +68,5 @@ nodes:
   #       containerPath: /mnt/local-storage
   #       readOnly: false
   #     - hostPath: ./data/storage
-  #       containerPath: /mnt/data
+  #       containerPath: /mnt/pv
   #       readOnly: false
