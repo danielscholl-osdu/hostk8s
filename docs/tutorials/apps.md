@@ -22,9 +22,7 @@ HostK8s addresses these through software application patterns just like it did w
 Let's start by getting our cluster running and deploying a simple application to understand what makes it work:
 
 ```bash
-# Start your cluster with ingress capabilities
-export INGRESS_ENABLED=true
-
+# Start your cluster (ingress is enabled by default)
 make start
 make deploy simple
 make status
@@ -191,9 +189,7 @@ This is where Helm templates shine. They provide deployment-time flexibility whi
 ### Helm in Action
 
 ```bash
-# Restart the Cluster and enable both AddOns
-export INGRESS_ENABLED=true
-
+# Restart the Cluster (ingress is enabled by default)
 make restart
 make deploy advanced
 make deploy advanced feature

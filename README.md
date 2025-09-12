@@ -71,14 +71,12 @@ Natural language cluster management and software troubleshooting through special
 Get started in 3 simple steps:
 
 ```bash
-export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
-
 make install                    # Install required tools
 make start                      # Start a gitops enabled cluster
 make up                         # Bring up a simple software stack
 ```
 
-#### Windows Setup
+> **Windows Users:** `make` is not installed by default.
 
 ```bash
 winget install ezwinports.make    # Install make
@@ -96,42 +94,28 @@ Direct cluster management with manual application deployments.
 
 > *Ideal for iterative development, learning Kubernetes, and testing individual applications.*
 
-**Basic Development:**
 ```bash
-export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
-
-make start                      # Start basic cluster
+make start                      # Start cluster
 make deploy                     # Deploy the default app (simple) to the default namespace
 make status                     # Check cluster and app status
-make clean                      # Complete cleanup
-```
-
-**Advanced Development:**
-```bash
-export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
-export METALLB_ENABLED=true     # Windows: $env:METALLB_ENABLED = "true"
-
-make start                      # Start cluster with LoadBalancer and Ingress
-make deploy basic               # Deploy a multi-tier app
-make status                     # Monitor cluster health
-make restart                    # Quick reset of the cluster without app
+make restart                    # Quick restart of the cluster
 make stop                       # Stop cluster (preserve data)
+make clean                      # Complete cleanup
 ```
 
 ### 2. Automated Operations
 
 Complete software stack deployments using GitOps automation.
 
-> *Perfect for consistent environments, team collaboration, and production-like setups.*
+> *Perfect for consistent environments, team collaboration, and complex setups.*
 
 **Built-in Sample Stack:**
 ```bash
-export FLUX_ENABLED=true        # Windows: $env:FLUX_ENABLED = "true"
-
-make start                      # Start the cluster with Flux
-make up sample                  # Deploy complete GitOps environment
+make start                      # Start cluster
+make up sample                  # Deploy default GitOops stack
 make status                     # Monitor GitOps reconciliation
 make sync                       # Force Flux reconciliation when needed
+make clean                      # Complete cleanup
 ```
 
 ### 3. Customizations
@@ -146,7 +130,7 @@ Duplicate `kind-custom.yaml` to `kind-config.yaml` found in the `infra/kubernete
 
 ```bash
 export METALLB_ENABLED=true     # Windows: $env:METALLB_ENABLED = "true"
-export INGRESS_ENABLED=true     # Windows: $env:INGRESS_ENABLED = "true"
+
 make start                      # Uses the modified cluster configuration
 ```
 
@@ -181,8 +165,8 @@ Duplicate `.env.example` to `.env` and customize as needed.
 | `KIND_CONFIG`     | Kind config (minimal, simple, default)       | `default` |
 | `PACKAGE_MANAGER` | Package manager preference (brew, native)    | `auto`    |
 | `METRICS_DISABLED`| Disable metrics-server addon                 | `false`   |
+| `INGRESS_DISABLED`| Disable NGINX Ingress Controller              | `false`   |
 | `METALLB_ENABLED` | Enable MetalLB for LoadBalancer support       | `false`   |
-| `INGRESS_ENABLED` | Enable NGINX Ingress Controller               | `false`   |
 | `REGISTRY_ENABLED`| Enable local container registry               | `false`   |
 | `VAULT_ENABLED`   | Enable Vault secret management addon         | `false`   |
 | `FLUX_ENABLED`    | Enable GitOps with Flux                       | `false`   |

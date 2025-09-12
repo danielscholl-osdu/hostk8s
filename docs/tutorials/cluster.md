@@ -140,8 +140,7 @@ Start your cluster with the customized configuration:
 
 ```bash
 # Uses your custom configuration automatically
-export INGRESS_ENABLED=true
-
+# Ingress is enabled by default
 make start
 make status
 ```

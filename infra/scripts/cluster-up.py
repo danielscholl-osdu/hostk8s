@@ -48,8 +48,8 @@ class ClusterSetup:
         # Support both ENABLE_* and *_ENABLED formats for backward compatibility
         self.metallb_enabled = (get_env('METALLB_ENABLED', 'false').strip().lower() == 'true' or
                                get_env('ENABLE_METALLB', 'false').strip().lower() == 'true')
-        self.ingress_enabled = (get_env('INGRESS_ENABLED', 'false').strip().lower() == 'true' or
-                               get_env('ENABLE_INGRESS', 'false').strip().lower() == 'true')
+        # Ingress is enabled by default, check for INGRESS_DISABLED to turn it off
+        self.ingress_enabled = not (get_env('INGRESS_DISABLED', 'false').strip().lower() == 'true')
         self.registry_enabled = (get_env('REGISTRY_ENABLED', 'false').strip().lower() == 'true' or
                                 get_env('ENABLE_REGISTRY', 'false').strip().lower() == 'true')
         self.metrics_disabled = get_env('METRICS_DISABLED', 'false').strip().lower() == 'true'
@@ -587,7 +587,7 @@ Environment variables:
   CLUSTER_NAME       Cluster name (default: hostk8s)
   KIND_CONFIG        Kind config file to use
   METALLB_ENABLED    Enable MetalLB LoadBalancer (or ENABLE_METALLB)
-  INGRESS_ENABLED    Enable NGINX Ingress (or ENABLE_INGRESS)
+  INGRESS_DISABLED   Disable NGINX Ingress (enabled by default)
   REGISTRY_ENABLED   Enable local Docker registry (or ENABLE_REGISTRY)
   METRICS_DISABLED   Disable metrics server
   VAULT_ENABLED      Enable Vault secret management (or ENABLE_VAULT)

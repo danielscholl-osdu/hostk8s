@@ -309,7 +309,7 @@ The platform distinguishes between **infrastructure addons** (platform foundatio
 
 **Infrastructure Addon Principles:**
 - **Unified Namespace Strategy** - All infrastructure addons deploy to `hostk8s` namespace for operational simplicity
-- **Environment-Driven Configuration** - Enable/disable via environment variables (METALLB_ENABLED, INGRESS_ENABLED, etc.)
+- **Environment-Driven Configuration** - Enable/disable via environment variables (METALLB_ENABLED, INGRESS_DISABLED, etc.)
 - **Cross-Platform Script Parity** - Both .sh and .ps1 implementations for all addon setup scripts
 - **Lifecycle Integration** - Addon setup integrated into cluster startup sequence
 - **Component Labeling** - Consistent resource labels (`hostk8s.component: <name>`) for identification
