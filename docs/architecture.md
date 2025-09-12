@@ -468,6 +468,9 @@ HostK8s provides architectural primitives that enable sophisticated CI/CD patter
 The platform's lightweight architecture enables CI/CD systems to implement **disposable test environments**:
 ```bash
 # CI/CD systems can leverage these patterns
+
+export INGRESS_DISALBED=true
+
 make start minimal       # Create lightweight validation cluster
 make status              # Validate functionality
 make clean               # Destroy environment
