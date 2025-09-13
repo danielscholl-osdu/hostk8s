@@ -16,7 +16,7 @@ Each service could define its own certificate issuer, DNS configuration, and Red
 
 ## What Is a Component?
 
-**A component is a pre-configured software capability that stacks can declare they need. Components solve the expertise and reliability problem by packaging the knowledge of proper setup for complex software (like certificate management or databases) into working, tested declarative building blocks that stack developers can easily consume without becoming experts in the underlying implementation.**
+> 💡 **Definition**: A component is a pre-configured software capability that stacks can declare they need. Components solve the expertise and reliability problem by packaging the knowledge of proper setup for complex software (like certificate management or databases) into working, tested declarative building blocks that stack developers can easily consume without becoming experts in the underlying implementation.
 
 Components are reusable across multiple stacks. They focus on software capabilities. Each component packages everything needed for that capability, whether that's Helm charts, plain Kubernetes manifests, operators, or custom resources. Flux deploys them automatically through declarative GitOps - you declare what you want in configuration rather than orchestrating imperative activities like `helm install` or `kubectl apply`.
 
@@ -53,9 +53,8 @@ Consider certificates: you can't just install a certificate. You need:
 1. **cert-manager** (the certificate management system)
 2. **Certificate Authority** (to sign certificates)
 3. **Certificate Issuer** (to handle certificate requests)
-4. Only then can **applications request certificates**
 
-**Each step depends on the previous one being ready**. This is exactly what Flux's `dependsOn` feature solves.
+Only then can applications request certificates. Each step depends on the previous one being ready. This is exactly what Flux's `dependsOn` feature solves.
 
 ### Component as Orchestrator
 

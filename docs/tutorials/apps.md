@@ -91,7 +91,7 @@ You'll see:
    Deployment: frontend (2/2 ready)
    Service: api (ClusterIP)
    Service: frontend (ClusterIP)
-   Ingress: app2-ingress -> http://localhost:8080/frontend
+   Ingress: app2-ingress -> http://localhost:8080/frontend, http://localhost:8080/api
 
 📱 simple
    Deployment: sample-app (2/2 ready)

@@ -39,7 +39,7 @@ Instead of developing in isolation and then deploying to real infrastructure, Ho
 
 ## The Platform
 
-Let's start by understanding what you're building toward. The sample application demonstrates a complete microservices architecture that you'll develop and deploy.
+Let's start by understanding what you're building toward. This sample application demonstrates a complete microservices architecture that you'll deploy.
 
 You can explore the source code structure in [`src/sample-app/`](../../src/sample-app/):
 ```
@@ -105,7 +105,7 @@ Isolated development works great for rapid iteration, but we need to build image
 
 ### HostK8s Integration
 
-HostK8s provides a **convention-based architecture** that can integrate with any source code, regardless of where it lives. The `src/sample-app` is included in the HostK8s repository for convenience, but demonstrates how any team's existing code can be integrated.
+HostK8s provides a **convention-based architecture** that can integrate with any source code. The `src/sample-app` is included in the HostK8s repository for convenience, but demonstrates how any team's existing code can be integrated.
 
 A developer can clone their application code into the `src/` directory and immediately get:
 - All the benefits of their normal isolated development workflow
@@ -149,8 +149,8 @@ To build and deploy applications to Kubernetes, we need a platform environment w
 Start a HostK8s cluster with the registry and ingress addons needed for platform development:
 
 ```bash
-export ENABLE_REGISTRY=true    # Windows --> $env:ENABLE_REGISTRY="true"
-export ENABLE_INGRESS=true     # Windows --> $env:ENABLE_INGRESS="true"
+# Windows: --> $env:ENABLE_REGISTRY="true"
+export ENABLE_REGISTRY=true
 
 make start
 make build src/sample-app
