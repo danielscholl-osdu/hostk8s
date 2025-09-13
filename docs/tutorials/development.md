@@ -170,13 +170,14 @@ You've built your application images and pushed them to the registry. But applic
 We need a place to securely store and manage secrets. Let's add Vault to our platform but do this without losing the images we've already built. Storage in hostk8s can be persistant and survive a stop or restart of the cluster which essentially destroys the cluster but not the persistant data available to it.
 
 ```bash
-export ENABLE_VAULT=true         # Windows --> $env:ENABLE_VAULT="true"
+# Windows: --> $env:ENABLE_VAULT="true"
+export ENABLE_VAULT=true
 
 make restart
 make status
 ```
 
-You can explore the empty Vault UI at http://localhost:8080/ui/ (no secrets yet).
+You can explore the empty Vault UI at http://localhost:8080/ui/ (no secrets yet) using the default token `hostk8s`.
 
 ### Secret Contracts
 
