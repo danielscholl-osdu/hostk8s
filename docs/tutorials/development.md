@@ -183,7 +183,9 @@ You can explore the empty Vault UI at http://localhost:8080/ui/ (no secrets yet)
 
 We need to be able to declare what secrets our applications require in code, but allow certain secret values to be generated rather than hardcoded. Flux has no capabilities for this and assumes that secrets exist as Kubernetes objects prior to starting any software components. This creates a fundamental timing problem: our declarative code needs to specify secret requirements, but the actual secret values must be generated and available before deployment begins.
 
-HostK8s solves the secrets problem through **secret contracts** - declarative specifications that tell the platform what credentials your application needs without hardcoding actual values. See the [Secret Contracts](../concepts/secret-contracts.md) documentation for complete details.
+HostK8s solves the secrets problem through **secret contracts** - declarative specifications that tell the platform what credentials your application needs without hardcoding actual values.
+
+> 📖 **Learn more**: [Secret Contracts](../concepts/secret-contracts.md)
 
 Here's a simplified example:
 
@@ -213,7 +215,9 @@ We just demonstrated that the platform preserves images across restarts. But sho
 
 ### Storage Contracts
 
-HostK8s uses **storage contracts** to declare persistent storage requirements. Applications specify what storage they need without worrying about the underlying implementation details. See the [Storage Contracts](../concepts/storage-contracts.md) documentation for complete details.
+HostK8s uses **storage contracts** to declare persistent storage requirements. Applications specify what storage they need without worrying about the underlying implementation details.
+
+> 📖 **Learn more**: [Storage Contracts](../concepts/storage-contracts.md)
 
 Here's a simplified example:
 
