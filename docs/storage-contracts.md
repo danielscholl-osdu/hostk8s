@@ -172,24 +172,42 @@ volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: false
 ```
 
-Your application's PVC will automatically bind to the PV and mount the storage.
+## Directory Properties
 
-## Directory Specification
+| Property | Required | Description |
+|----------|----------|-------------|
+| `name` | Yes | Unique identifier used in PV names |
+| `path` | Yes | Mount path inside containers |
+| `size` | Yes | Storage capacity (e.g., "5Gi") |
+| `accessModes` | Yes | Kubernetes access modes (e.g., `[ReadWriteOnce]`) |
+| `storageClass` | Yes | Storage class name for PVC binding |
+| `owner` | No | Directory ownership (default: `1000:1000`) |
+| `permissions` | No | Directory permissions (default: `755`) |
 
-Each directory in a storage contract has these properties:
+## Using Storage in Applications
 
-| Property | Required | Description | Purpose |
-|----------|----------|-------------|---------|
-| `name` | Yes | Unique identifier | Used in PV names and directory creation |
-| `path` | Yes | Mount path inside containers | Where applications see the storage |
-| `size` | Yes | Storage capacity | Sets PV size limit |
-| `accessModes` | Yes | Kubernetes access modes | Defines how PVs can be mounted |
-| `storageClass` | Yes | Storage class name | Links PVCs to PVs |
-| `owner` | No | UID:GID ownership | Sets directory ownership in volume (default: `1000:1000`) |
-| `permissions` | No | Directory permissions | Controls access (default: `755`) |
+Reference storage using standard Kubernetes PersistentVolumeClaims:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-storage
+  namespace: my-stack
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: my-stack-storage  # From your contract
+  resources:
+    requests:
+      storage: 5Gi
+```
 
 ## Usage
 
-1. Create `software/stacks/your-stack/hostk8s.storage.yaml` (define what storage you need)
-2. Run `make up your-stack` (HostK8s creates StorageClasses and PVs automatically)
-3. Create PVCs in your applications that reference the storage class names from your contract
+Storage contracts are processed automatically when you deploy stacks:
+
+```bash
+make up {stack-name}  # Processes hostk8s.storage.yaml if it exists
+```
+
+HostK8s creates directories, StorageClasses, and PersistentVolumes automatically. Your applications reference the storage classes in their PVCs to bind to the available storage.

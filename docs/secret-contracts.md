@@ -2,17 +2,34 @@
 
 ## Overview
 
-Secret contracts allow stacks to declare their secret requirements without storing any sensitive data in git. Secrets are generated automatically during stack deployment, stored in HashiCorp Vault, and synced to Kubernetes via the External Secrets Operator (ESO).
+Secret contracts provide a declarative interface for managing sensitive data in Kubernetes without storing secrets in version control. Applications declare their secret requirements through `SecretContract` resources, and HostK8s generates, stores, and syncs the secrets automatically using HashiCorp Vault and External Secrets Operator.
 
-## Contract Schema
+Secret Contracts implement the [Vault-integrated secret management architecture](adr/014-vault-integrated-secret-management-architecture.md) established in HostK8s.
 
-### File Location
-Secret contracts must be named `hostk8s.secrets.yaml` and placed in the stack directory:
+## Terminology
+
+To clarify the relationship between contract fields and Kubernetes resources:
+
+| SecretContract Term | Kubernetes Equivalent | Description |
+|---------------------|----------------------|-------------|
+| `spec.secrets[].name` | `Secret.metadata.name` | The name of the Kubernetes Secret that will be created |
+| `spec.secrets[].namespace` | `Secret.metadata.namespace` | The namespace where the Kubernetes Secret will be created |
+| `spec.secrets[].data[].key` | `Secret.data.{key}` | A data key within the Kubernetes Secret |
+| `spec.secrets[].data[].value` | `Secret.data.{key}` (base64 encoded) | The actual secret value stored in that field |
+
+**Example mapping:**
+```yaml
+# SecretContract declares this:
+secrets:
+  - name: postgres-credentials    # → Creates Kubernetes Secret named "postgres-credentials"
+    data:
+      - key: password            # → Creates data key "password" in that Secret
+        generate: password       # → With a generated value
 ```
-software/stacks/{stack-name}/hostk8s.secrets.yaml
-```
 
-### Schema Definition
+## Schema Definition
+
+### Contract Structure
 
 ```yaml
 apiVersion: hostk8s.io/v1
@@ -24,346 +41,146 @@ spec:
     - name: {secret-name}
       namespace: {namespace}
       data:
-        - key: {field-name}
-          value: {static-value}        # For static values
-          generate: {generation-type}  # For generated values
-          length: {length}             # Optional, for generated values
+        - key: {key-name}
+          value: {value}
+          # OR
+          generate: {type}
+          length: {length}
 ```
 
-## Data Field Types
+### Field Specification
 
-The generic `data` format supports both static values and generated secrets:
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `apiVersion` | string | ✅ | Must be `hostk8s.io/v1` |
+| `kind` | string | ✅ | Must be `SecretContract` |
+| `metadata.name` | string | ✅ | Stack name (must match the deploying stack) |
+| `spec.secrets` | array | ✅ | List of Kubernetes Secrets to create |
+| `spec.secrets[].name` | string | ✅ | Name of the Kubernetes Secret to create |
+| `spec.secrets[].namespace` | string | ✅ | Namespace where the Kubernetes Secret will be created |
+| `spec.secrets[].data` | array | ✅ | Data keys to include in the Kubernetes Secret (minimum 1) |
+| `spec.secrets[].data[].key` | string | ✅ | Data key name within the Kubernetes Secret |
+| `spec.secrets[].data[].value` | string | ⚠️ | Static value for this data key (mutually exclusive with `generate`) |
+| `spec.secrets[].data[].generate` | enum | ⚠️ | Auto-generate value for this data key (mutually exclusive with `value`) |
+| `spec.secrets[].data[].length` | integer | ❌ | Override default length for generated values |
 
-### Static Values
+## Processing Model
+
+When HostK8s processes a `SecretContract`, the following sequence occurs:
+
+1. **Contract Parsing**: HostK8s validates the contract against the schema requirements
+2. **Secret Generation**: Static values are used as provided; generated values are created using cryptographically secure randomness
+3. **Vault Storage**: All secrets are stored in HashiCorp Vault at path `secret/{stack}/{namespace}/{secret-name}`
+4. **Manifest Generation**: `ExternalSecret` resources are generated for GitOps deployment
+5. **Kubernetes Sync**: External Secrets Operator syncs Vault secrets to Kubernetes `Secret` resources
+6. **Application Access**: Applications reference secrets using standard `secretKeyRef` patterns
+
+## Data Key Types
+
+Each data key can specify its value in one of two ways:
+
+**`value`**: Provide the exact value to store (usernames, hostnames, ports)
+
+**`generate`**: Automatically create a secure value based on the specified type
+
+| Generate Type | Character Set | Default Length | Use Case |
+|---------------|---------------|----------------|----------|
+| `password` | A-Z, a-z, 0-9, `!@#$%^&*` | 32 | Database passwords, authentication credentials |
+| `token` | A-Z, a-z, 0-9 | 32 | API tokens, session keys, safe identifiers |
+| `hex` | a-f, 0-9 | 32 | Encryption keys, hash values, hexadecimal IDs |
+| `uuid` | UUID v4 format | 36 | Correlation IDs, unique identifiers (RFC 4122) |
 ```yaml
 data:
+  # Static values
   - key: username
     value: postgres
-  - key: database
-    value: voting
   - key: host
-    value: voting-db-rw.sample-app.svc.cluster.local
+    value: database.namespace.svc.cluster.local
   - key: port
     value: "5432"
-```
 
-### Generated Values
-
-| Type | Character Set | Default Length | Example | Use Case |
-|------|---------------|----------------|---------|----------|
-| `password` | A-Z, a-z, 0-9, `!@#$%^&*` | 32 | `A1b2C3!@#$%^&*Xy9Z` | Database passwords, secure authentication |
-| `token` | A-Z, a-z, 0-9 | 32 | `A1b2C3d4E5f6G7h8I9j0K1l2` | API tokens, session keys, safe identifiers |
-| `hex` | a-f, 0-9 | 32 | `a1b2c3d4e5f6789012345678` | Encryption keys, hash values, hex IDs |
-| `uuid` | Standard UUID v4 | Fixed (36) | `550e8400-e29b-41d4-a716-446655440000` | Correlation IDs, unique identifiers |
-
-**Notes:**
-- All generation uses cryptographically secure random sources
-- Length is configurable for `password`, `token`, and `hex` types (minimum 8 for passwords)
-- UUID length is always 36 characters (RFC 4122 standard)
-- Generated values are unique per secret generation
-
-```yaml
-data:
+  # Generated values
   - key: password
     generate: password
-    length: 32
   - key: api_token
     generate: token
     length: 64
-  - key: session_id
+  - key: session_key
     generate: hex
-    length: 16
   - key: correlation_id
     generate: uuid
 ```
 
-**Default Length**: 32 characters (configurable via `length` field)
-**Security**: All generated values use cryptographically secure random generation
+## Contract Processing
 
-## Complete Example
+When you run `make up {stack-name}`, HostK8s automatically processes any `hostk8s.secrets.yaml` file:
 
+1. Parses your SecretContract and validates the schema
+2. Generates or uses the specified values and stores them in Vault
+3. Creates ExternalSecret manifests that sync the Vault data to Kubernetes Secrets
+4. Deploys everything via GitOps, making the secrets available to your applications
+
+## Using Secrets in Applications
+
+Once your secret contract is processed, the secrets become available as standard Kubernetes Secret resources that applications can reference:
+
+```yaml
+env:
+  - name: DATABASE_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: postgres-credentials  # From contract: secrets[].name
+        key: password              # From contract: data[].key
+```
+
+The secret name and key names in your application manifests must match exactly what you declared in your SecretContract.
+
+
+## Examples
+
+### Basic Contract
 ```yaml
 apiVersion: hostk8s.io/v1
 kind: SecretContract
 metadata:
-  name: sample-app
+  name: simple-app
 spec:
   secrets:
-    # PostgreSQL database credentials
+    - name: basic-auth
+      namespace: simple-app
+      data:
+        - key: password
+          generate: password
+```
+
+### Advanced Contract
+```yaml
+apiVersion: hostk8s.io/v1
+kind: SecretContract
+metadata:
+  name: database-app
+spec:
+  secrets:
     - name: postgres-credentials
-      namespace: sample-app
+      namespace: database-app
       data:
         - key: username
           value: postgres
         - key: password
           generate: password
-          length: 8
-        - key: database
-          value: voting
         - key: host
-          value: voting-db-rw.sample-app.svc.cluster.local
+          value: postgres.database-app.svc.cluster.local
         - key: port
           value: "5432"
 
-    # Application secrets
     - name: app-secrets
-      namespace: sample-app
+      namespace: database-app
       data:
         - key: jwt_secret
           generate: token
           length: 64
-        - key: session_key
-          generate: password
-          length: 32
         - key: api_key
           generate: hex
-          length: 40
-        - key: correlation_id
-          generate: uuid
         - key: environment
-          value: development
+          value: production
 ```
-
-## Architecture: Vault + External Secrets Operator
-
-The secret management architecture uses HashiCorp Vault as the backend storage with External Secrets Operator syncing to Kubernetes:
-
-### Vault Storage
-Secrets are stored in Vault's KV v2 engine at path: `secret/{stack}/{namespace}/{secret-name}`
-
-Example Vault storage:
-```bash
-# Path: secret/sample-app/sample-app/postgres-credentials
-{
-  "username": "postgres",
-  "password": "A1b2C3!@#$%^&*Xy9Z",
-  "database": "voting",
-  "host": "voting-db-rw.sample-app.svc.cluster.local",
-  "port": "5432"
-}
-```
-
-### ExternalSecret Manifests
-Generated ExternalSecret manifests sync Vault secrets to Kubernetes:
-
-```yaml
-apiVersion: external-secrets.io/v1
-kind: ExternalSecret
-metadata:
-  name: {secret-name}
-  namespace: {namespace}
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "{stack-name}"
-spec:
-  refreshInterval: 1h
-  secretStoreRef:
-    name: vault-backend
-    kind: ClusterSecretStore
-  target:
-    name: {secret-name}
-    creationPolicy: Owner
-  data:
-  - secretKey: {key}
-    remoteRef:
-      key: {stack}/{namespace}/{secret-name}
-      property: {key}
-```
-
-### Resulting Kubernetes Secret
-External Secrets Operator creates the final Kubernetes secret:
-
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: {secret-name}
-  namespace: {namespace}
-  labels:
-    hostk8s.io/managed: "true"
-    hostk8s.io/contract: "{stack-name}"
-type: Opaque
-data:
-  {field}: {base64-encoded-value}
-```
-
-## Usage in Deployments
-
-Reference generated secrets normally in your deployments:
-
-```yaml
-# PostgreSQL connection using individual fields
-env:
-  - name: POSTGRES_HOST
-    valueFrom:
-      secretKeyRef:
-        name: postgres-credentials
-        key: host
-  - name: POSTGRES_USER
-    valueFrom:
-      secretKeyRef:
-        name: postgres-credentials
-        key: username
-  - name: POSTGRES_PASSWORD
-    valueFrom:
-      secretKeyRef:
-        name: postgres-credentials
-        key: password
-  - name: POSTGRES_DB
-    valueFrom:
-      secretKeyRef:
-        name: postgres-credentials
-        key: database
-
-# Application secrets
-env:
-  - name: JWT_SECRET
-    valueFrom:
-      secretKeyRef:
-        name: app-secrets
-        key: jwt_secret
-```
-
-## Validation Rules
-
-| Category | Field | Requirement | Details |
-|----------|-------|-------------|----------|
-| **Contract** | `name` | Required | Valid Kubernetes resource name (DNS-1123 subdomain) |
-| **Contract** | `namespace` | Required | Must exist or be created by stack deployment |
-| **Contract** | `data` | Required | At least one data field must be defined |
-| **Data Field** | `key` | Required | Valid Kubernetes secret key name (alphanumeric, dash, underscore) |
-| **Data Field** | `value` or `generate` | Required | Must specify one (mutually exclusive) |
-| **Generation** | `generate` | Optional | One of: `password`, `token`, `hex`, `uuid` |
-| **Generation** | `length` | Optional | Minimum 8 for passwords, ignored for UUID |
-
-### Field Constraints
-
-> **⚠️ Length Limits**: Maximum field name length is 63 characters (Kubernetes limit)
-> **🔒 Password Security**: Minimum password length is 8 characters
-> **🏷️ Key Format**: Secret keys support alphanumeric, dash, and underscore only
-
-## Security Considerations
-
-| Aspect | Implementation | Benefit |
-|--------|----------------|----------|
-| **Git Security** | Generated secrets never written to repository | 🔒 No sensitive data in version control |
-| **Cluster Isolation** | Secrets exist only in Kubernetes cluster | 🏰 Runtime-only secret storage |
-| **Ephemeral Generation** | Regenerated on fresh deployments only | ♻️ Fresh secrets per environment |
-| **Environment Separation** | Different secrets per cluster/environment | 🎯 Isolated secret contexts |
-| **Audit Trail** | All secrets labeled with contract source | 📋 Traceable secret provenance |
-| **Idempotency** | Existing secrets preserved during updates | 🔄 Stable secret lifecycle |
-
-### Security Best Practices
-
-> **✅ Recommended**: Use `password` type for authentication credentials
-> **✅ Recommended**: Use `token` type for API keys and session identifiers
-> **✅ Recommended**: Use `hex` type for encryption keys and hash values
-> **✅ Recommended**: Use `uuid` type for correlation and tracking IDs
-
-## Integration with Make
-
-Secret contracts are automatically processed during stack deployment:
-
-```bash
-make up {stack-name}  # Deploys stack and processes secrets if hostk8s.secrets.yaml exists
-```
-
-### Enhanced Vault+ESO Workflow
-
-The current architecture integrates Vault storage with GitOps deployment:
-
-```mermaid
-graph TD
-    A[make up stack-name] --> B[manage-secrets.py add stack]
-    B --> C[Store secrets in Vault KV]
-    B --> D[Generate external-secrets.yaml]
-    A --> E[Flux deploys stack]
-    D --> E
-    E --> F[ESO syncs Vault → K8s]
-    C --> F
-    F --> G[Kubernetes Secrets ready]
-```
-
-| Step | Action | Details |
-|------|--------|---------|
-| 1 | **Process Secret Contract** | `manage-secrets.py` parses `hostk8s.secrets.yaml` |
-| 2 | **Store in Vault** | Generated secrets stored in Vault KV v2 at `secret/{stack}/{namespace}/{secret-name}` |
-| 3 | **Generate ESO Manifests** | Create `external-secrets.yaml` for GitOps deployment |
-| 4 | **Deploy Stack** | Flux deploys stack manifests including ExternalSecret resources |
-| 5 | **Sync to Kubernetes** | External Secrets Operator pulls from Vault and creates K8s secrets |
-
-### Command Interface
-
-Enhanced secret lifecycle management:
-
-```bash
-# Automatically called by make up
-manage-secrets.py add {stack-name}     # Store in Vault + generate manifests
-
-# Manual lifecycle operations
-manage-secrets.py remove {stack-name}  # Remove from Vault
-manage-secrets.py list [stack-name]    # List stored secrets
-```
-
-### Troubleshooting
-
-#### Vault + ESO Troubleshooting
-
-If secrets are not available in Kubernetes:
-
-1. **Check Vault Storage**: Verify secrets are stored in Vault
-2. **Check ESO Status**: Ensure External Secrets Operator is functioning
-3. **Check ExternalSecret Resources**: Verify ExternalSecret manifests are deployed
-4. **Check Contract Syntax**: Validate your `hostk8s.secrets.yaml` with `yq`
-
-#### Debugging Commands
-
-**Vault Secret Inspection:**
-```bash
-# List secrets in Vault for a stack
-manage-secrets.py list sample-app
-
-# Access Vault UI for visual inspection
-open http://localhost:8080/ui/vault
-# Login token: hostk8s
-```
-
-**External Secrets Operator Status:**
-```bash
-# Check ExternalSecret resources
-kubectl get externalsecrets -n {namespace}
-
-# Check ExternalSecret status and sync
-kubectl describe externalsecret {secret-name} -n {namespace}
-
-# Check ESO controller logs
-kubectl logs -n hostk8s -l app.kubernetes.io/name=external-secrets
-```
-
-**Kubernetes Secret Verification:**
-```bash
-# View all keys in a secret
-kubectl get secret {secret-name} -n {namespace} -o jsonpath='{.data}' | jq
-
-# Decode a specific secret value
-kubectl get secret {secret-name} -n {namespace} -o jsonpath='{.data.{key}}' | base64 -d
-
-# View all managed secrets
-kubectl get secrets -n {namespace} -l hostk8s.io/managed=true
-
-# Example: Check postgres password
-kubectl get secret postgres-credentials -n sample-app -o jsonpath='{.data.password}' | base64 -d
-```
-
-#### Common Issues
-
-| Issue | Symptoms | Resolution |
-|-------|----------|------------|
-| **Vault not accessible** | ESO can't sync secrets | Check Vault addon is running: `make status` |
-| **ExternalSecret not deployed** | No K8s secrets created | Ensure `external-secrets.yaml` is committed to Git |
-| **ESO permission issues** | ESO can't access Vault | Check ClusterSecretStore configuration |
-| **Namespace timing** | ExternalSecret deployed before namespace | Flux handles sequencing automatically |
-
-> **🔄 Complete Reset**: Run `make down {stack}` then `make up {stack}` for full secret regeneration
-> **🔍 Debug Access**: Use Vault UI at `http://localhost:8080/ui/vault` (token: `hostk8s`) for visual secret inspection
-> **⚠️ Security**: Only decode secret values in secure environments for debugging purposes
