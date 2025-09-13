@@ -73,18 +73,19 @@ You'll see:
 **Default behavior:**
 - Uses the built-in `kind-custom.yaml` configuration automatically
 - One Docker container running everything
-- ~30 second startup time
+- Quick startup time
 - Applications share resources with Kubernetes system components
 
 Deploy an application to see the default behavior:
 
 ```bash
 make deploy simple
-kubectl get pods -o wide
-# All pods running on hostk8s-control-plane
 
-make clean
+# All pods running on control-plane
+kubectl get pods -o wide
+
 # Remove the cluster after exploration
+make clean
 ```
 
 **Single-Node Architecture:**
@@ -161,8 +162,10 @@ Deploy an application to verify worker node scheduling:
 
 ```bash
 make deploy simple
-kubectl get pods -o wide
+
 # Pod should run on hostk8s-worker (not control-plane)
+kubectl get pods -o wide
+
 
 make clean
 ```
