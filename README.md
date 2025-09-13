@@ -72,7 +72,7 @@ Get started in 3 simple steps:
 
 ```bash
 make install                    # Install required tools
-make start                      # Start a gitops enabled cluster
+make start                      # Start a cluster
 make up                         # Bring up a simple software stack
 ```
 
@@ -112,7 +112,7 @@ Complete software stack deployments using GitOps automation.
 **Built-in Sample Stack:**
 ```bash
 make start                      # Start cluster
-make up sample                  # Deploy default GitOops stack
+make up                         # Deploy default GitOops stack
 make status                     # Monitor GitOps reconciliation
 make sync                       # Force Flux reconciliation when needed
 make clean                      # Complete cleanup

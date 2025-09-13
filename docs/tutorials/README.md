@@ -4,7 +4,7 @@ Progressive learning series from cluster setup to complete development workflows
 
 ### Cluster Configuration
 
-*Learn configurable cluster architecture patterns that let you version control your development environment alongside your application code*
+*Learn configurable cluster architecture patterns*
 
 Experience the development workflow trade-offs that drive configuration decisions and understand how HostK8s eliminates infrastructure complexity through declarative cluster patterns.
 
@@ -14,7 +14,7 @@ Experience the development workflow trade-offs that drive configuration decision
 
 ### Deploying Applications
 
-*Understanding HostK8s application patterns and why they eliminate deployment complexity*
+*Understanding application patterns and why they eliminate deployment complexity*
 
 Deploy individual applications using HostK8s contracts. Experience the evolution from static YAML limitations to dynamic Helm templates and discover the application patterns that make deployment consistent.
 
@@ -24,7 +24,7 @@ Deploy individual applications using HostK8s contracts. Experience the evolution
 
 ### Software Stacks
 
-*Building complete development environments that eliminate service coordination chaos*
+*Build complete development environments that eliminate service coordination chaos*
 
 Learn how software stacks solve the multi-service reality through GitOps automation. Experience coordinated component management and understand how environments become reproducible and consistent.
 
