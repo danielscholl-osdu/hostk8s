@@ -163,7 +163,7 @@ Duplicate `.env.example` to `.env` and customize as needed.
 | ----------------- | --------------------------------------------- | --------- |
 | `LOG_LEVEL`       | Logging verbosity (debug, info, warn, error)  | `debug`   |
 | `CLUSTER_NAME`    | Name of the Kubernetes cluster                | `hostk8s` |
-| `K8S_VERSION`     | Kubernetes version to use                     | `v1.33.2` |
+| `K8S_VERSION`     | Kubernetes version to use                     | `v1.34.0` |
 | `KIND_CONFIG`     | Kind config (minimal, simple, default)       | `default` |
 | `PACKAGE_MANAGER` | Package manager preference (brew, native)    | `auto`    |
 | `METRICS_DISABLED`| Disable metrics-server addon                 | `false`   |

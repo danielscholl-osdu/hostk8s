@@ -39,7 +39,7 @@ class ClusterSetup:
 
         # Configuration from environment
         self.cluster_name = get_env('CLUSTER_NAME', 'hostk8s')
-        self.k8s_version = get_env('K8S_VERSION', 'v1.33.2')
+        self.k8s_version = get_env('K8S_VERSION', 'v1.34.0')
         self.kubeconfig_path = Path(get_env('KUBECONFIG_PATH', 'data/kubeconfig/config'))
         self.kind_config = get_env('KIND_CONFIG', '')
         self.kind_config_file = None  # Will be set in determine_kind_config

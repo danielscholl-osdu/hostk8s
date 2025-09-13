@@ -57,7 +57,7 @@ nodes:
         readOnly: false
 
   # - role: worker
-  #   image: kindest/node:v1.33.2
+  #   image: kindest/node:v1.34.0
   #   kubeadmConfigPatches:
   #     - |
   #       kind: JoinConfiguration

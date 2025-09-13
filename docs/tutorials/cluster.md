@@ -67,7 +67,7 @@ make status
 You'll see:
 ```
 🕹️ Control Plane: Ready
-   Status: Kubernetes v1.33.2 (up 30s)
+   Status: Kubernetes v1.34.0 (up 30s)
 ```
 
 **Default behavior:**
@@ -149,10 +149,10 @@ make status
 You should see your worker node is running:
 ```
 🕹️ Control Plane: Ready
-   Status: Kubernetes v1.33.2 (up 45s)
+   Status: Kubernetes v1.34.0 (up 45s)
    Node: hostk8s-control-plane
 🚜 Worker: Ready
-   Status: Kubernetes v1.33.2 (up 31s)
+   Status: Kubernetes v1.34.0 (up 31s)
    Node: hostk8s-worker
 ```
 
