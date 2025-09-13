@@ -185,7 +185,7 @@ We need to be able to declare what secrets our applications require in code, but
 
 HostK8s solves the secrets problem through **secret contracts** - declarative specifications that tell the platform what credentials your application needs without hardcoding actual values.
 
-> 📖 **Learn more**: [Secret Contracts](../concepts/secret-contracts.md)
+> 📖 **Learn more**: [Secret Contracts](../secret-contracts.md)
 
 Here's a simplified example:
 
@@ -217,7 +217,7 @@ We just demonstrated that the platform preserves images across restarts. But sho
 
 HostK8s uses **storage contracts** to declare persistent storage requirements. Applications specify what storage they need without worrying about the underlying implementation details.
 
-> 📖 **Learn more**: [Storage Contracts](../concepts/storage-contracts.md)
+> 📖 **Learn more**: [Storage Contracts](../storage-contracts.md)
 
 Here's a simplified example:
 
