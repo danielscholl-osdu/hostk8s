@@ -68,7 +68,7 @@ class HostK8sLogger:
         if self.quiet:
             self.console.print(f"[yellow][{timestamp}] WARNING:[/yellow] {message}")
         else:
-            self.console.print(f"[yellow][{timestamp}] ![/yellow] {message}")
+            self.console.print(f"[yellow][{timestamp}][/yellow] [yellow]![/yellow] {message}")
 
     def error(self, message: str):
         """Log error message to stderr."""
