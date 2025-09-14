@@ -15,7 +15,7 @@ To clarify the relationship between contract fields and Kubernetes resources:
 | `spec.secrets[].name` | `Secret.metadata.name` | The name of the Kubernetes Secret that will be created |
 | `spec.secrets[].namespace` | `Secret.metadata.namespace` | The namespace where the Kubernetes Secret will be created |
 | `spec.secrets[].data[].key` | `Secret.data.{key}` | A data key within the Kubernetes Secret |
-| `spec.secrets[].data[].value` | `Secret.data.{key}` (base64 encoded) | The actual secret value stored in that field |
+| `spec.secrets[].data[].value` | `Secret.data.{key}` | The stored secret value (base64-encoded in Kubernetes) |
 
 **Example mapping:**
 ```yaml
@@ -60,9 +60,9 @@ spec:
 | `spec.secrets[].namespace` | string | ✅ | Namespace where the Kubernetes Secret will be created |
 | `spec.secrets[].data` | array | ✅ | Data keys to include in the Kubernetes Secret (minimum 1) |
 | `spec.secrets[].data[].key` | string | ✅ | Data key name within the Kubernetes Secret |
-| `spec.secrets[].data[].value` | string | ⚠️ | Static value for this data key (mutually exclusive with `generate`) |
+| `spec.secrets[].data[].value` | string | ⚠️ | The stored secret value (mutually exclusive with `generate`) |
 | `spec.secrets[].data[].generate` | enum | ⚠️ | Auto-generate value for this data key (mutually exclusive with `value`) |
-| `spec.secrets[].data[].length` | integer | ❌ | Override default length for generated values |
+| `spec.secrets[].data[].length` | integer | ❌ | Optional; overrides default length (ignored for UUID) |
 
 ## Processing Model
 
@@ -111,14 +111,30 @@ data:
     generate: uuid
 ```
 
-## Contract Processing
+## Validation Rules
+
+### Contract Requirements
+- Contract `name` must match the deploying stack name
+- At least one secret must be defined in `spec.secrets`
+- Each secret must have at least one data key
+
+### Data Key Constraints
+- Each data key must specify either `value` OR `generate` (mutually exclusive)
+- Secret and key names must follow Kubernetes naming conventions (DNS-1123 subdomain)
+- Maximum key name length is 63 characters (Kubernetes limit)
+- Generated password minimum length is 8 characters
+- UUID generation ignores `length` parameter (always 36 characters)
+
+## Lifecycle
 
 When you run `make up {stack-name}`, HostK8s automatically processes any `hostk8s.secrets.yaml` file:
 
-1. Parses your SecretContract and validates the schema
-2. Generates or uses the specified values and stores them in Vault
-3. Creates ExternalSecret manifests that sync the Vault data to Kubernetes Secrets
-4. Deploys everything via GitOps, making the secrets available to your applications
+1. **Contract Parsing**: Validates the SecretContract against schema requirements
+2. **Value Generation**: Creates secure values for `generate` fields, uses provided `value` fields directly
+3. **Vault Storage**: Stores all secrets in HashiCorp Vault for secure backend storage
+4. **Manifest Generation**: Creates ExternalSecret resources for GitOps deployment
+5. **Kubernetes Sync**: External Secrets Operator syncs Vault data to Kubernetes Secret resources
+6. **Application Access**: Applications reference secrets using standard `secretKeyRef` patterns
 
 ## Using Secrets in Applications
 
@@ -146,11 +162,11 @@ metadata:
   name: simple-app
 spec:
   secrets:
-    - name: basic-auth
+    - name: basic-auth          # → Creates Kubernetes Secret "basic-auth"
       namespace: simple-app
       data:
-        - key: password
-          generate: password
+        - key: password         # → Secret will have data key "password"
+          generate: password    # → With auto-generated secure password
 ```
 
 ### Advanced Contract
@@ -165,9 +181,9 @@ spec:
       namespace: database-app
       data:
         - key: username
-          value: postgres
+          value: postgres       # Static value
         - key: password
-          generate: password
+          generate: password    # Generated password
         - key: host
           value: postgres.database-app.svc.cluster.local
         - key: port
@@ -177,10 +193,12 @@ spec:
       namespace: database-app
       data:
         - key: jwt_secret
-          generate: token
+          generate: token       # Generated token (alphanumeric)
           length: 64
         - key: api_key
-          generate: hex
+          generate: hex         # Generated hex string
+        - key: correlation_id
+          generate: uuid        # Generated UUID
         - key: environment
           value: production
 ```
