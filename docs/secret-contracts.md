@@ -52,17 +52,17 @@ spec:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `apiVersion` | string | ✅ | Must be `hostk8s.io/v1` |
-| `kind` | string | ✅ | Must be `SecretContract` |
-| `metadata.name` | string | ✅ | Stack name (must match the deploying stack) |
-| `spec.secrets` | array | ✅ | List of Kubernetes Secrets to create |
-| `spec.secrets[].name` | string | ✅ | Name of the Kubernetes Secret to create |
-| `spec.secrets[].namespace` | string | ✅ | Namespace where the Kubernetes Secret will be created |
-| `spec.secrets[].data` | array | ✅ | Data keys to include in the Kubernetes Secret (minimum 1) |
-| `spec.secrets[].data[].key` | string | ✅ | Data key name within the Kubernetes Secret |
-| `spec.secrets[].data[].value` | string | ⚠️ | The stored secret value (mutually exclusive with `generate`) |
-| `spec.secrets[].data[].generate` | enum | ⚠️ | Auto-generate value for this data key (mutually exclusive with `value`) |
-| `spec.secrets[].data[].length` | integer | ❌ | Optional; overrides default length (ignored for UUID) |
+| `apiVersion` | string | Required | Must be `hostk8s.io/v1` |
+| `kind` | string | Required | Must be `SecretContract` |
+| `metadata.name` | string | Required | Stack name (must match the deploying stack) |
+| `spec.secrets` | array | Required | List of Kubernetes Secrets to create |
+| `spec.secrets[].name` | string | Required | Name of the Kubernetes Secret to create |
+| `spec.secrets[].namespace` | string | Required | Namespace where the Kubernetes Secret will be created |
+| `spec.secrets[].data` | array | Required | Data keys to include in the Kubernetes Secret (minimum 1) |
+| `spec.secrets[].data[].key` | string | Required | Data key name within the Kubernetes Secret |
+| `spec.secrets[].data[].value` | string | Conditional | The stored secret value (mutually exclusive with `generate`) |
+| `spec.secrets[].data[].generate` | enum | Conditional | Auto-generate value for this data key (mutually exclusive with `value`) |
+| `spec.secrets[].data[].length` | integer | Optional | Optional; overrides default length (ignored for UUID) |
 
 ## Processing Model
 
