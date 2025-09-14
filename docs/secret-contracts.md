@@ -15,7 +15,7 @@ To clarify the relationship between contract fields and Kubernetes resources:
 | `spec.secrets[].name` | `Secret.metadata.name` | The name of the Kubernetes Secret that will be created |
 | `spec.secrets[].namespace` | `Secret.metadata.namespace` | The namespace where the Kubernetes Secret will be created |
 | `spec.secrets[].data[].key` | `Secret.data.{key}` | A data key within the Kubernetes Secret |
-| `spec.secrets[].data[].value` | `Secret.data.{key}` | The stored secret value (base64-encoded in Kubernetes) |
+| `spec.secrets[].data[].value` | `Secret.data.{key}` | Static secret value (stored base64-encoded in Kubernetes) |
 
 **Example mapping:**
 ```yaml
@@ -60,28 +60,34 @@ spec:
 | `spec.secrets[].namespace` | string | Required | Namespace where the Kubernetes Secret will be created |
 | `spec.secrets[].data` | array | Required | Data keys to include in the Kubernetes Secret (minimum 1) |
 | `spec.secrets[].data[].key` | string | Required | Data key name within the Kubernetes Secret |
-| `spec.secrets[].data[].value` | string | Conditional | The stored secret value (mutually exclusive with `generate`) |
-| `spec.secrets[].data[].generate` | enum | Conditional | Auto-generate value for this data key (mutually exclusive with `value`) |
-| `spec.secrets[].data[].length` | integer | Optional | Optional; overrides default length (ignored for UUID) |
+| `spec.secrets[].data[].value` | string | Optional | Optional; static value (mutually exclusive with `generate`) |
+| `spec.secrets[].data[].generate` | enum | Optional | Optional; generator type (mutually exclusive with `value`) |
+| `spec.secrets[].data[].length` | integer | Optional | Overrides default length (ignored for UUID) |
 
-## Processing Model
+## Validation Rules
 
-When HostK8s processes a `SecretContract`, the following sequence occurs:
+### Contract Requirements
+- Contract `metadata.name` must match the deploying stack name (used for Vault path prefixing)
+- At least one secret must be defined in `spec.secrets`
+- Each secret must have at least one data key
+- Each `spec.secrets[].namespace` must correspond to a Kubernetes namespace provisioned before ExternalSecrets are applied
 
-1. **Contract Parsing**: HostK8s validates the contract against the schema requirements
-2. **Secret Generation**: Static values are used as provided; generated values are created using cryptographically secure randomness
-3. **Vault Storage**: All secrets are stored in HashiCorp Vault at path `secret/{stack}/{namespace}/{secret-name}`
-4. **Manifest Generation**: `ExternalSecret` resources are generated for GitOps deployment
-5. **Kubernetes Sync**: External Secrets Operator syncs Vault secrets to Kubernetes `Secret` resources
-6. **Application Access**: Applications reference secrets using standard `secretKeyRef` patterns
+### Data Key Constraints
+- Each data key must specify exactly one of `value` OR `generate` (mutually exclusive)
+- Secret and key names must follow Kubernetes naming conventions (DNS-1123 subdomain)
+- Maximum key name length is 63 characters (Kubernetes limit)
+- Generated password minimum length is 8 characters
+- UUID generation ignores `length` parameter (always 36 characters)
 
 ## Data Key Types
 
 Each data key can specify its value in one of two ways:
 
-**`value`**: Provide the exact value to store (usernames, hostnames, ports)
+• **Use `value`**: Provide the exact value to store (usernames, hostnames, ports)
 
-**`generate`**: Automatically create a secure value based on the specified type
+• **Use `generate`**: Automatically create a secure value based on the specified type
+
+### Supported Generators
 
 | Generate Type | Character Set | Default Length | Use Case |
 |---------------|---------------|----------------|----------|
@@ -89,6 +95,7 @@ Each data key can specify its value in one of two ways:
 | `token` | A-Z, a-z, 0-9 | 32 | API tokens, session keys, safe identifiers |
 | `hex` | a-f, 0-9 | 32 | Encryption keys, hash values, hexadecimal IDs |
 | `uuid` | UUID v4 format | 36 | Correlation IDs, unique identifiers (RFC 4122) |
+
 ```yaml
 data:
   # Static values
@@ -111,30 +118,16 @@ data:
     generate: uuid
 ```
 
-## Validation Rules
-
-### Contract Requirements
-- Contract `name` must match the deploying stack name
-- At least one secret must be defined in `spec.secrets`
-- Each secret must have at least one data key
-
-### Data Key Constraints
-- Each data key must specify either `value` OR `generate` (mutually exclusive)
-- Secret and key names must follow Kubernetes naming conventions (DNS-1123 subdomain)
-- Maximum key name length is 63 characters (Kubernetes limit)
-- Generated password minimum length is 8 characters
-- UUID generation ignores `length` parameter (always 36 characters)
-
 ## Lifecycle
 
 When you run `make up {stack-name}`, HostK8s automatically processes any `hostk8s.secrets.yaml` file:
 
-1. **Contract Parsing**: Validates the SecretContract against schema requirements
-2. **Value Generation**: Creates secure values for `generate` fields, uses provided `value` fields directly
-3. **Vault Storage**: Stores all secrets in HashiCorp Vault for secure backend storage
-4. **Manifest Generation**: Creates ExternalSecret resources for GitOps deployment
-5. **Kubernetes Sync**: External Secrets Operator syncs Vault data to Kubernetes Secret resources
-6. **Application Access**: Applications reference secrets using standard `secretKeyRef` patterns
+1. **Contract parsing** → schema validation
+2. **Value resolution** → assign static values or generate new values
+3. **Vault storage** → persisted at `secret/{stack}/{namespace}/{secret-name}`
+4. **Manifest generation** → ExternalSecret resources produced
+5. **Kubernetes sync** → ESO reconciles Vault data to Kubernetes Secrets
+6. **Application access** → secrets available via `secretKeyRef`
 
 ## Using Secrets in Applications
 
@@ -151,54 +144,37 @@ env:
 
 The secret name and key names in your application manifests must match exactly what you declared in your SecretContract.
 
+## Example
 
-## Examples
-
-### Basic Contract
 ```yaml
 apiVersion: hostk8s.io/v1
 kind: SecretContract
 metadata:
-  name: simple-app
+  name: my-app
 spec:
   secrets:
-    - name: basic-auth          # → Creates Kubernetes Secret "basic-auth"
-      namespace: simple-app
-      data:
-        - key: password         # → Secret will have data key "password"
-          generate: password    # → With auto-generated secure password
-```
-
-### Advanced Contract
-```yaml
-apiVersion: hostk8s.io/v1
-kind: SecretContract
-metadata:
-  name: database-app
-spec:
-  secrets:
-    - name: postgres-credentials
-      namespace: database-app
+    - name: database-credentials   # PostgreSQL database secret
+      namespace: my-app
       data:
         - key: username
-          value: postgres       # Static value
+          value: postgres           # Static value
         - key: password
-          generate: password    # Generated password
+          generate: password        # Generated password (default length: 32)
         - key: host
-          value: postgres.database-app.svc.cluster.local
+          value: db.my-app.svc.cluster.local
         - key: port
           value: "5432"
 
-    - name: app-secrets
-      namespace: database-app
+    - name: app-secrets            # Application-specific secrets
+      namespace: my-app
       data:
         - key: jwt_secret
-          generate: token       # Generated token (alphanumeric)
+          generate: token           # Generated token
           length: 64
         - key: api_key
-          generate: hex         # Generated hex string
+          generate: hex             # Generated hex string
         - key: correlation_id
-          generate: uuid        # Generated UUID
+          generate: uuid            # Generated UUID
         - key: environment
           value: production
 ```
