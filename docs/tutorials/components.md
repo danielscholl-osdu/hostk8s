@@ -84,6 +84,6 @@ Notice something important: **components aren't limited to Helm charts**. Each s
 
 Now you understand how components eliminate the expertise burden and provide pre-configured software capabilities that stacks can declare they need. Components package complex software setup (from simple Helm charts to orchestrated dependency chains) into reliable building blocks.
 
-In the next tutorial, you'll learn how to develop applications within this component-based infrastructure, including hybrid workflows that bridge local development with Kubernetes deployment.
+In the next tutorial, you'll learn how to develop applications that integrate with these shared components, including hybrid workflows that seamlessly transition between local iteration and platform integration.
 
-👉 **Continue to:** [Development Workflows](development.md) - *Learn how to build applications that use the shared components you now understand*
+👉 **Continue to:** [Platform Development](platform.md) - *Learn how to build applications that leverage the shared infrastructure components you now understand*

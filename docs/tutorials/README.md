@@ -46,6 +46,6 @@ Understand the expertise burden of complex software setup and discover how compo
 
 *Complete inner-loop cycle within a local platform environment*
 
-Build and deploy applications within complete Kubernetes infrastructure. Experience hybrid development workflows that bridge local iteration with platform integration through secret and storage contracts.
+Experience hybrid development workflows that seamlessly transition between local iteration and platform integration. Build applications from source code, deploy to Kubernetes with shared components, and manage secrets and persistent storage through declarative contracts.
 
-👉 **[Start Tutorial](development.md)**
+👉 **[Start Tutorial](platform.md)**

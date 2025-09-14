@@ -28,8 +28,8 @@ To clarify the relationship between contract fields and Kubernetes resources:
 directories:
   - name: app-data                    # → Creates PV named "hostk8s-{stack}-app-data-pv"
     storageClass: my-stack-storage    # → Creates StorageClass named "my-stack-storage"
-    path: /mnt/pv/app-data           # → PV hostPath points to this container path
-    size: 5Gi                        # → PV capacity set to 5Gi
+    path: /mnt/pv/app-data            # → PV hostPath points to this container path
+    size: 5Gi                         # → PV capacity set to 5Gi
 ```
 
 ## Schema Definition
