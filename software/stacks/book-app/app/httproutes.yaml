@@ -62,6 +62,14 @@ spec:
           type: ReplaceFullPath
           replaceFullPath: /productpage
         statusCode: 301
+  # Static assets (CSS, JS, images)
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /static
+    backendRefs:
+    - name: productpage
+      port: 9080
   # Main productpage interface
   - matches:
     - path:
