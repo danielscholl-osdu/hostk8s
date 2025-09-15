@@ -12,6 +12,8 @@ metadata:
     # - Service: hostk8s-gateway-istio
     # - Deployment: hostk8s-gateway-istio
     hostk8s.io/description: "Main ingress gateway for HostK8s platform"
+    # Ensure NodePort for Kind cluster compatibility (Ambient mode requirement)
+    networking.istio.io/service-type: NodePort
 spec:
   gatewayClassName: istio
 
