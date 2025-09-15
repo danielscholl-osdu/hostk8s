@@ -69,8 +69,8 @@ spec:
               "type": "NodePort",
               "ports": [
                 {"name": "status-port", "port": 15021, "protocol": "TCP", "targetPort": 15021},
-                {"name": "http", "port": 80, "protocol": "TCP", "targetPort": 80, "nodePort": 30080},
-                {"name": "https", "port": 443, "protocol": "TCP", "targetPort": 443, "nodePort": 30443}
+                {"name": "http", "port": 80, "protocol": "TCP", "targetPort": 80, "nodePort": 30081},
+                {"name": "https", "port": 443, "protocol": "TCP", "targetPort": 443, "nodePort": 30444}
               ]
             }
           }'
