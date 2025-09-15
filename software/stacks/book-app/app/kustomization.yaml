@@ -10,7 +10,7 @@ resources:
 
 labels:
   - pairs:
-      hostk8s.stack: book-app-simple
+      hostk8s.stack: book-app
       hostk8s.app: bookinfo
 
 # Only productpage gets application label for clean status detection

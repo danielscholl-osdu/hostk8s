@@ -1,10 +1,10 @@
 ######################
-## Istio Bookinfo Demo Stack
-## Showcases Istio service mesh with Gateway API and Ambient mode
+## Book App Stack - Simplified
+## Clean separation: Infrastructure (components) + Application (manifests)
 ######################
 
 ---
-# Deploy cert-manager component first (required for TLS certificates)
+# Infrastructure: cert-manager component
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -23,18 +23,9 @@ spec:
   path: ./software/components/certs
   prune: true
   wait: true
-  healthChecks:
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: cert-manager
-      namespace: cert-manager
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: cert-manager-webhook
-      namespace: cert-manager
 
 ---
-# Deploy Istio component with Gateway API and Ambient mode
+# Infrastructure: Istio service mesh
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -45,28 +36,19 @@ metadata:
     hostk8s.type: component
 spec:
   dependsOn:
-    - name: component-certs  # Istio needs cert-manager for TLS
+    - name: component-certs
   interval: 1h
   retryInterval: 1m
-  timeout: 5m
+  timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
   path: ./software/components/istio
   prune: true
   wait: true
-  healthChecks:
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: istiod
-      namespace: istio-system
-    - apiVersion: apps/v1
-      kind: DaemonSet
-      name: ztunnel
-      namespace: istio-system
 
 ---
-# Deploy Bookinfo application
+# Application: Bookinfo demo
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -77,30 +59,13 @@ metadata:
     hostk8s.type: application
 spec:
   dependsOn:
-    - name: component-istio  # Bookinfo needs Istio to be ready
+    - name: component-istio
   interval: 1h
   retryInterval: 1m
   timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/book-app/manifests
+  path: ./software/stacks/book-app/app
   prune: true
   wait: true
-  healthChecks:
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: productpage-v1
-      namespace: bookinfo
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: details-v1
-      namespace: bookinfo
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: reviews-v1
-      namespace: bookinfo
-    - apiVersion: apps/v1
-      kind: Deployment
-      name: ratings-v1
-      namespace: bookinfo
