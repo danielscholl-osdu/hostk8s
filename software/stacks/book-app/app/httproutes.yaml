@@ -21,6 +21,35 @@ spec:
   - "localhost"
   - "bookinfo.hostk8s.local"
   rules:
+  # HTTP to HTTPS redirect for security
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301
+---
+# HTTPS-only routes for security (matches parentRef to HTTPS listener)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bookinfo-https
+  namespace: bookinfo
+  labels:
+    hostk8s.app: bookinfo
+    hostk8s.application: bookinfo
+spec:
+  parentRefs:
+  - name: hostk8s-gateway
+    namespace: istio-system
+    sectionName: https  # Target HTTPS listener specifically
+  hostnames:
+  - "localhost"
+  - "bookinfo.hostk8s.local"
+  rules:
   # Root path redirects to productpage
   - matches:
     - path:
