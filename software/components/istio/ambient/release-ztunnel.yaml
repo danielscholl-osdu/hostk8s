@@ -37,10 +37,7 @@ spec:
         cpu: 200m
         memory: 256Mi
 
-    # Environment configuration for ztunnel
-    env:
-      RUST_LOG: info
-      ISTIO_META_CLUSTER_ID: "hostk8s"
+    # Use default environment configuration
 
     # Affinity rules for single-node Kind cluster
     affinity: {}
