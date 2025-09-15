@@ -50,19 +50,7 @@ spec:
   - "localhost"
   - "bookinfo.hostk8s.local"
   rules:
-  # Root path redirects to productpage
-  - matches:
-    - path:
-        type: Exact
-        value: /
-    filters:
-    - type: RequestRedirect
-      requestRedirect:
-        path:
-          type: ReplaceFullPath
-          replaceFullPath: /productpage
-        statusCode: 301
-  # Static assets (CSS, JS, images)
+  # Static assets (CSS, JS, images) - most specific first
   - matches:
     - path:
         type: PathPrefix
@@ -70,15 +58,7 @@ spec:
     backendRefs:
     - name: productpage
       port: 9080
-  # Main productpage interface
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /productpage
-    backendRefs:
-    - name: productpage
-      port: 9080
-  # API endpoints for testing
+  # API endpoints - specific paths before catch-all
   - matches:
     - path:
         type: PathPrefix
@@ -105,6 +85,14 @@ spec:
     - path:
         type: Exact
         value: /health
+    backendRefs:
+    - name: productpage
+      port: 9080
+  # Productpage interface from root - catch-all LAST
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
     backendRefs:
     - name: productpage
       port: 9080
