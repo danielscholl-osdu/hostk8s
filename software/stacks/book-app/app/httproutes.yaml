@@ -17,6 +17,7 @@ spec:
   parentRefs:
   - name: hostk8s-gateway
     namespace: istio-system
+    sectionName: http  # Target only HTTP listener for redirect
   hostnames:
   - "localhost"
   - "bookinfo.hostk8s.local"
