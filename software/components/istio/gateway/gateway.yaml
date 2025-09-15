@@ -20,7 +20,7 @@ spec:
   - name: http
     protocol: HTTP
     port: 80
-    hostname: "*"  # Accept all hostnames
+    # No hostname specified = accept all hostnames
     allowedRoutes:
       namespaces:
         from: All  # Allow routes from all namespaces
@@ -34,7 +34,7 @@ spec:
   - name: https
     protocol: HTTPS
     port: 443
-    hostname: "*"  # Accept all hostnames
+    # No hostname specified = accept all hostnames
     tls:
       mode: Terminate
       certificateRefs:
