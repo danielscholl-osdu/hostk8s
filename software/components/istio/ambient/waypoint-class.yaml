@@ -1,21 +1,10 @@
 ######################
-## Waypoint GatewayClass
+## Waypoint Configuration
 ## Used for L7 processing in Ambient mode
+## Note: istio-waypoint GatewayClass is automatically created by Istio
 ######################
-apiVersion: gateway.networking.k8s.io/v1
-kind: GatewayClass
-metadata:
-  name: istio-waypoint
-spec:
-  controllerName: istio.io/waypoint
-  description: Istio Waypoint proxy for L7 processing in Ambient mode
-  parametersRef:
-    group: ""
-    kind: ConfigMap
-    name: waypoint-config
-    namespace: istio-system
 
----
+# Configuration for waypoint proxies
 apiVersion: v1
 kind: ConfigMap
 metadata:
