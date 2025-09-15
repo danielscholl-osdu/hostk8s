@@ -37,17 +37,10 @@ spec:
         cpu: 200m
         memory: 256Mi
 
-    # Environment configuration
+    # Environment configuration for ztunnel
     env:
-      # Set log level (info, debug, trace)
-      - name: RUST_LOG
-        value: info
-      # Enable DNS proxy for service discovery
-      - name: ISTIO_META_DNS_CAPTURE
-        value: "true"
-      # Local cluster configuration
-      - name: ISTIO_META_CLUSTER_ID
-        value: "hostk8s"
+      RUST_LOG: info
+      ISTIO_META_CLUSTER_ID: "hostk8s"
 
     # Affinity rules for single-node Kind cluster
     affinity: {}
