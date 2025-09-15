@@ -53,6 +53,10 @@ spec:
   healthChecks:
     - apiVersion: apps/v1
       kind: DaemonSet
+      name: istio-cni-node
+      namespace: istio-system
+    - apiVersion: apps/v1
+      kind: DaemonSet
       name: ztunnel
       namespace: istio-system
 
