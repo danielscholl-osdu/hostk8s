@@ -124,6 +124,7 @@ class EnhancedClusterStatusChecker:
         self._check_metrics_server()
         self._check_metallb()
         self._check_ingress_controller()
+        self._check_istio_gateway()
         self._check_registry()
         self._check_vault()
         self._check_flux()
@@ -322,6 +323,83 @@ class EnhancedClusterStatusChecker:
                     print(f"   Status: Controller pod not yet running - {version}")
         except Exception as e:
             logger.debug(f"Error checking ingress controller: {e}")
+
+    def _check_istio_gateway(self) -> None:
+        """Check Istio Gateway API status."""
+        try:
+            # Check if Gateway API CRDs are installed
+            gateway_crd_result = run_kubectl(['get', 'crd', 'gateways.gateway.networking.k8s.io'],
+                                           check=False, capture_output=True)
+
+            if gateway_crd_result.returncode != 0:
+                return  # Gateway API not installed
+
+            # Check for Istio Gateway resource
+            gateway_result = run_kubectl(['get', 'gateway', 'hostk8s-gateway', '-n', 'istio-system'],
+                                       check=False, capture_output=True)
+
+            if gateway_result.returncode == 0:
+                # Check if auto-deployed gateway pods are running
+                pods_result = run_kubectl(['get', 'pods', '-n', 'istio-system',
+                                         '-l', 'gateway.networking.k8s.io/gateway-name=hostk8s-gateway',
+                                         '--no-headers'], check=False)
+
+                # Get service port mapping
+                svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
+                                        '-o', 'jsonpath={.spec.ports[?(@.name=="http")].nodePort}'],
+                                       check=False)
+
+                https_svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
+                                              '-o', 'jsonpath={.spec.ports[?(@.name=="https")].nodePort}'],
+                                             check=False)
+
+                # Get Istio version from istiod
+                version_result = run_kubectl(['get', 'deployment', 'istiod', '-n', 'istio-system',
+                                            '-o', 'jsonpath={.spec.template.spec.containers[0].image}'], check=False)
+                version = "unknown"
+                if version_result.returncode == 0 and version_result.stdout:
+                    image = version_result.stdout.strip()
+                    if ':' in image:
+                        version_part = image.split(':')[-1]
+                        if '-' in version_part:
+                            version = version_part.split('-')[0]
+                        else:
+                            version = version_part
+
+                # Determine ports for access info
+                http_port = "8080"  # Default Kind mapping
+                https_port = "8443"  # Default Kind mapping
+
+                if svc_result.returncode == 0 and svc_result.stdout:
+                    try:
+                        nodeport = int(svc_result.stdout.strip())
+                        # Map common NodePorts to Kind ports
+                        if nodeport == 30080:
+                            http_port = "8080"
+                        else:
+                            http_port = str(nodeport)
+                    except ValueError:
+                        pass
+
+                if https_svc_result.returncode == 0 and https_svc_result.stdout:
+                    try:
+                        nodeport = int(https_svc_result.stdout.strip())
+                        if nodeport == 30443:
+                            https_port = "8443"
+                        else:
+                            https_port = str(nodeport)
+                    except ValueError:
+                        pass
+
+                if pods_result.returncode == 0 and 'Running' in pods_result.stdout:
+                    print(f"🌐 Istio Gateway API: Ready")
+                    print(f"   Status: Access http:{http_port}, https:{https_port} - {version}")
+                else:
+                    print(f"🌐 Istio Gateway API: Starting")
+                    print(f"   Status: Gateway pod not yet running - {version}")
+
+        except Exception as e:
+            logger.debug(f"Error checking Istio Gateway: {e}")
 
     def _check_registry(self) -> None:
         """Check Registry status (both container and UI deployment)."""
