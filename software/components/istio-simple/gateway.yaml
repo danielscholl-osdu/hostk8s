@@ -1,0 +1,114 @@
+######################
+## Gateway API Ingress
+## Simple Gateway configuration using proven pattern
+######################
+
+---
+# Gateway for ingress traffic (no complex parametersRef)
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: hostk8s-gateway
+  namespace: istio-system
+  annotations:
+    hostk8s.io/description: "Main ingress gateway for HostK8s platform"
+    # Use NodePort for Kind cluster compatibility
+    networking.istio.io/service-type: NodePort
+spec:
+  gatewayClassName: istio
+  listeners:
+  # HTTP listener
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  # HTTPS listener
+  - name: https
+    port: 443
+    protocol: HTTPS
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - kind: Secret
+        name: hostk8s-gateway-cert
+        namespace: istio-system
+    allowedRoutes:
+      namespaces:
+        from: All
+
+---
+# Post-deployment job to patch service NodePorts
+# This ensures Gateway uses Kind's expected ports (30080/30443)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: gateway-nodeport-patcher
+  namespace: istio-system
+spec:
+  template:
+    spec:
+      serviceAccountName: gateway-patcher
+      restartPolicy: OnFailure
+      containers:
+      - name: patcher
+        image: bitnami/kubectl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "Waiting for Gateway service to be created..."
+          while ! kubectl get service hostk8s-gateway-istio -n istio-system >/dev/null 2>&1; do
+            sleep 5
+          done
+
+          echo "Patching Gateway service NodePorts..."
+          kubectl patch service hostk8s-gateway-istio -n istio-system --type='strategic' -p='{
+            "spec": {
+              "type": "NodePort",
+              "ports": [
+                {"name": "status-port", "port": 15021, "protocol": "TCP", "targetPort": 15021},
+                {"name": "http", "port": 80, "protocol": "TCP", "targetPort": 80, "nodePort": 30080},
+                {"name": "https", "port": 443, "protocol": "TCP", "targetPort": 443, "nodePort": 30443}
+              ]
+            }
+          }'
+          echo "Gateway service patched successfully!"
+
+---
+# ServiceAccount for the patcher job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gateway-patcher
+  namespace: istio-system
+
+---
+# ClusterRole for patching services
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: gateway-patcher
+rules:
+- apiGroups: [""]
+  resources: ["services"]
+  verbs: ["get", "patch"]
+- apiGroups: ["gateway.networking.k8s.io"]
+  resources: ["gateways"]
+  verbs: ["get"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: gateway-patcher
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: gateway-patcher
+subjects:
+- kind: ServiceAccount
+  name: gateway-patcher
+  namespace: istio-system

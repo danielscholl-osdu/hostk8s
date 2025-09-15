@@ -124,7 +124,7 @@ class EnhancedClusterStatusChecker:
         self._check_metrics_server()
         self._check_metallb()
         self._check_ingress_controller()
-        self._check_istio_gateway()
+        self._check_gateway_api()
         self._check_registry()
         self._check_vault()
         self._check_flux()
@@ -324,8 +324,8 @@ class EnhancedClusterStatusChecker:
         except Exception as e:
             logger.debug(f"Error checking ingress controller: {e}")
 
-    def _check_istio_gateway(self) -> None:
-        """Check Istio Gateway API status."""
+    def _check_gateway_api(self) -> None:
+        """Check Kubernetes Gateway API status."""
         try:
             # Check if Gateway API CRDs are installed
             gateway_crd_result = run_kubectl(['get', 'crd', 'gateways.gateway.networking.k8s.io'],
@@ -353,12 +353,17 @@ class EnhancedClusterStatusChecker:
                                               '-o', 'jsonpath={.spec.ports[?(@.name=="https")].nodePort}'],
                                              check=False)
 
-                # Get Istio version from istiod
-                version_result = run_kubectl(['get', 'deployment', 'istiod', '-n', 'istio-system',
-                                            '-o', 'jsonpath={.spec.template.spec.containers[0].image}'], check=False)
+                # Detect Gateway API implementation (Istio, if available)
+                implementation = "Gateway API"
                 version = "unknown"
-                if version_result.returncode == 0 and version_result.stdout:
-                    image = version_result.stdout.strip()
+
+                # Check if this is implemented by Istio
+                istio_version_result = run_kubectl(['get', 'deployment', 'istiod', '-n', 'istio-system',
+                                                  '-o', 'jsonpath={.spec.template.spec.containers[0].image}'],
+                                                 check=False, capture_output=True)
+                if istio_version_result.returncode == 0 and istio_version_result.stdout:
+                    implementation = "Gateway API (Istio)"
+                    image = istio_version_result.stdout.strip()
                     if ':' in image:
                         version_part = image.split(':')[-1]
                         if '-' in version_part:
@@ -366,40 +371,66 @@ class EnhancedClusterStatusChecker:
                         else:
                             version = version_part
 
-                # Determine ports for access info
-                http_port = "8080"  # Default Kind mapping
-                https_port = "8443"  # Default Kind mapping
+                # Determine ports by checking actual Kind port mapping
+                http_port = "8080"  # Default fallback
+                https_port = "8443"  # Default fallback
+
+                # Get actual NodePorts from service
+                http_nodeport = None
+                https_nodeport = None
 
                 if svc_result.returncode == 0 and svc_result.stdout:
                     try:
-                        nodeport = int(svc_result.stdout.strip())
-                        # Map common NodePorts to Kind ports
-                        if nodeport == 30080:
-                            http_port = "8080"
-                        else:
-                            http_port = str(nodeport)
+                        http_nodeport = int(svc_result.stdout.strip())
                     except ValueError:
                         pass
 
                 if https_svc_result.returncode == 0 and https_svc_result.stdout:
                     try:
-                        nodeport = int(https_svc_result.stdout.strip())
-                        if nodeport == 30443:
-                            https_port = "8443"
-                        else:
-                            https_port = str(nodeport)
+                        https_nodeport = int(https_svc_result.stdout.strip())
                     except ValueError:
                         pass
 
+                # Check Kind container port mapping for actual host ports
+                try:
+                    import subprocess
+                    # Get cluster name from kubeconfig context
+                    cluster_name = "hostk8s"  # Default
+                    try:
+                        ctx_result = run_kubectl(['config', 'current-context'], check=False, capture_output=True)
+                        if ctx_result.returncode == 0 and 'kind-' in ctx_result.stdout:
+                            cluster_name = ctx_result.stdout.strip().replace('kind-', '')
+                    except:
+                        pass
+
+                    # Check Docker port mapping for Kind container
+                    docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
+                                                 capture_output=True, text=True, check=False)
+                    if docker_result.returncode == 0:
+                        for line in docker_result.stdout.strip().split('\n'):
+                            if f'{http_nodeport}/tcp' in line and http_nodeport:
+                                # Extract host port from "30080/tcp -> 0.0.0.0:8081"
+                                if ' -> 0.0.0.0:' in line:
+                                    http_port = line.split(' -> 0.0.0.0:')[1]
+                            elif f'{https_nodeport}/tcp' in line and https_nodeport:
+                                if ' -> 0.0.0.0:' in line:
+                                    https_port = line.split(' -> 0.0.0.0:')[1]
+                except Exception:
+                    # Fallback to NodePort if Docker inspection fails
+                    if http_nodeport:
+                        http_port = str(http_nodeport)
+                    if https_nodeport:
+                        https_port = str(https_nodeport)
+
                 if pods_result.returncode == 0 and 'Running' in pods_result.stdout:
-                    print(f"🌐 Istio Gateway API: Ready")
+                    print(f"🌐 {implementation}: Ready")
                     print(f"   Status: Access http:{http_port}, https:{https_port} - {version}")
                 else:
-                    print(f"🌐 Istio Gateway API: Starting")
+                    print(f"🌐 {implementation}: Starting")
                     print(f"   Status: Gateway pod not yet running - {version}")
 
         except Exception as e:
-            logger.debug(f"Error checking Istio Gateway: {e}")
+            logger.debug(f"Error checking Gateway API: {e}")
 
     def _check_registry(self) -> None:
         """Check Registry status (both container and UI deployment)."""
@@ -577,9 +608,9 @@ class EnhancedClusterStatusChecker:
             logger.debug(f"Error checking Flux: {e}")
 
     def is_ingress_controller_ready(self) -> bool:
-        """Check if ingress controller is ready."""
+        """Check if any ingress controller (NGINX or Gateway API) is ready."""
         try:
-            # Check hostk8s namespace first, then ingress-nginx namespace
+            # Check for NGINX Ingress Controller
             for namespace in ['hostk8s', 'ingress-nginx']:
                 result = run_kubectl(['get', 'deployment', 'ingress-nginx-controller',
                                     '-n', namespace, '--no-headers'], check=False)
@@ -590,7 +621,20 @@ class EnhancedClusterStatusChecker:
                         ready_str = parts[1]  # e.g., "1/1"
                         if '/' in ready_str:
                             ready, total = ready_str.split('/')
-                            return ready == total and int(ready) > 0
+                            if ready == total and int(ready) > 0:
+                                return True
+
+            # Check for Gateway API with Istio controller
+            gateway_result = run_kubectl(['get', 'gateway', 'hostk8s-gateway', '-n', 'istio-system'],
+                                       check=False, capture_output=True)
+            if gateway_result.returncode == 0:
+                # Verify the gateway pod is running
+                pod_result = run_kubectl(['get', 'pods', '-n', 'istio-system',
+                                        '-l', 'gateway.networking.k8s.io/gateway-name=hostk8s-gateway',
+                                        '--no-headers'], check=False, capture_output=True)
+                if pod_result.returncode == 0 and 'Running' in pod_result.stdout:
+                    return True
+
             return False
         except Exception:
             return False
@@ -821,17 +865,55 @@ class EnhancedClusterStatusChecker:
             host_result = run_kubectl(['get', 'ingress', name, '-n', namespace,
                                      '-o', 'jsonpath={.spec.rules[0].host}'], check=False)
 
+            # Get ingress class to determine correct ports
+            class_result = run_kubectl(['get', 'ingress', name, '-n', namespace,
+                                      '-o', 'jsonpath={.spec.ingressClassName}'], check=False)
+
             # Get paths for the ingress
             paths = self.get_ingress_paths(name, namespace)
+
+            # Determine ports based on ingress class
+            http_port = "8080"  # Default NGINX
+            https_port = "8443"  # Default NGINX
+
+            if class_result.returncode == 0 and class_result.stdout.strip() == "istio":
+                # For Istio ingress class, use Gateway API ports
+                # Get actual Gateway API ports from our detection method
+                try:
+                    svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
+                                            '-o', 'jsonpath={.spec.ports[?(@.name=="http")].nodePort}'], check=False)
+                    if svc_result.returncode == 0 and svc_result.stdout:
+                        nodeport = int(svc_result.stdout.strip())
+                        # Check Kind port mapping for this NodePort
+                        import subprocess
+                        cluster_name = "hostk8s"
+                        try:
+                            ctx_result = run_kubectl(['config', 'current-context'], check=False, capture_output=True)
+                            if ctx_result.returncode == 0 and 'kind-' in ctx_result.stdout:
+                                cluster_name = ctx_result.stdout.strip().replace('kind-', '')
+                        except:
+                            pass
+
+                        docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
+                                                     capture_output=True, text=True, check=False)
+                        if docker_result.returncode == 0:
+                            for line in docker_result.stdout.strip().split('\n'):
+                                if f'{nodeport}/tcp' in line:
+                                    if ' -> 0.0.0.0:' in line:
+                                        http_port = line.split(' -> 0.0.0.0:')[1]
+                                        break
+                except:
+                    # Fallback to common Gateway API ports
+                    http_port = "8081"
 
             # Determine the host to use
             if host_result.returncode == 0 and host_result.stdout.strip():
                 host = host_result.stdout.strip()
                 # Use the specific host
-                base_url = f"http://{host}:8080"
+                base_url = f"http://{host}:{http_port}"
             else:
                 # No host specified, use localhost
-                base_url = "http://localhost:8080"
+                base_url = f"http://localhost:{http_port}"
 
             # Build complete URLs
             urls = []
@@ -845,6 +927,14 @@ class EnhancedClusterStatusChecker:
 
             return urls
         except Exception:
+            # Fallback - try to detect ingress class for default port
+            try:
+                class_result = run_kubectl(['get', 'ingress', name, '-n', namespace,
+                                          '-o', 'jsonpath={.spec.ingressClassName}'], check=False)
+                if class_result.returncode == 0 and class_result.stdout.strip() == "istio":
+                    return ["http://localhost:8081/"]
+            except:
+                pass
             return ["http://localhost:8080/"]
 
     def has_ingress_tls(self, name: str, namespace: str) -> bool:
@@ -1033,32 +1123,20 @@ def show_gitops_applications() -> None:
                 ingress_list = checker.get_app_ingress(app_label, 'hostk8s.application')
                 for ingress in ingress_list:
                     if ingress['hosts'] in ['localhost', '*']:
-                        if checker.is_ingress_controller_ready():
-                            paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
-                            has_tls = checker.has_ingress_tls(ingress['name'], ingress['namespace'])
+                        # Use the centralized URL detection that handles ingress class properly
+                        urls = checker.get_ingress_urls(ingress['name'], ingress['namespace'])
 
-                            if len(paths) == 1 and paths[0] == '/':
-                                # Single root path
-                                if has_tls:
-                                    print(f"   Access: http://localhost:8080/, https://localhost:8443/ ({ingress['name']} ingress)")
-                                else:
-                                    print(f"   Access: http://localhost:8080/ ({ingress['name']} ingress)")
+                        if checker.is_ingress_controller_ready():
+                            if len(urls) == 1:
+                                print(f"   Access: {urls[0]} ({ingress['name']} ingress)")
                             else:
-                                # Multiple paths
-                                url_list = []
-                                for path in paths:
-                                    url_list.append(f"http://localhost:8080{path}")
-                                    if has_tls:
-                                        url_list.append(f"https://localhost:8443{path}")
-                                print(f"   Access: {', '.join(url_list)} ({ingress['name']} ingress)")
+                                print(f"   Access: {', '.join(urls)} ({ingress['name']} ingress)")
                         else:
                             # Show URL with warning to match UX pattern
-                            paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
-                            if len(paths) == 1 and paths[0] == '/':
-                                print(f"   Ingress: {ingress['name']} -> http://localhost:8080/ ⚠️ (No Ingress Controller)")
+                            if len(urls) == 1:
+                                print(f"   Ingress: {ingress['name']} -> {urls[0]} ⚠️ (No Ingress Controller)")
                             else:
-                                url_list = [f"http://localhost:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
-                                print(f"   Ingress: {ingress['name']} -> {', '.join(url_list)} ⚠️ (No Ingress Controller)")
+                                print(f"   Ingress: {ingress['name']} -> {', '.join(urls)} ⚠️ (No Ingress Controller)")
                     else:
                         # Non-localhost hosts
                         if checker.is_ingress_controller_ready():

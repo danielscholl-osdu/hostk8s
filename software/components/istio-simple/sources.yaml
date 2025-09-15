@@ -1,0 +1,47 @@
+######################
+## Helm Repository Sources
+## All required repositories for Istio installation
+######################
+
+---
+# Istio official charts
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: istio
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: https://istio-release.storage.googleapis.com/charts
+
+---
+# Gateway API CRDs from Kubernetes SIG
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gateway-api
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: https://github.com/kubernetes-sigs/gateway-api
+  ref:
+    tag: v1.2.0
+
+---
+# Gateway API CRDs installation
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api-crds
+  namespace: flux-system
+  labels:
+    hostk8s.component: istio
+spec:
+  interval: 10m
+  sourceRef:
+    kind: GitRepository
+    name: gateway-api
+  path: ./config/crd/standard
+  prune: false  # Never prune CRDs
+  wait: true
+  timeout: 2m

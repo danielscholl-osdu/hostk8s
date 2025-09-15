@@ -1,0 +1,73 @@
+######################
+## HTTPRoutes for Bookinfo Application
+## Clean routing configuration using Gateway API
+######################
+
+---
+# Main productpage route (primary web interface)
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bookinfo
+  namespace: bookinfo
+  labels:
+    hostk8s.app: bookinfo
+    hostk8s.application: bookinfo  # This makes it show up in status
+spec:
+  parentRefs:
+  - name: hostk8s-gateway
+    namespace: istio-system
+  hostnames:
+  - "localhost"
+  - "bookinfo.hostk8s.local"
+  rules:
+  # Root path redirects to productpage
+  - matches:
+    - path:
+        type: Exact
+        value: /
+    filters:
+    - type: RequestRedirect
+      requestRedirect:
+        path:
+          type: ReplaceFullPath
+          replaceFullPath: /productpage
+        statusCode: 301
+  # Main productpage interface
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /productpage
+    backendRefs:
+    - name: productpage
+      port: 9080
+  # API endpoints for testing
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /details
+    backendRefs:
+    - name: details
+      port: 9080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /reviews
+    backendRefs:
+    - name: reviews
+      port: 9080
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /ratings
+    backendRefs:
+    - name: ratings
+      port: 9080
+  # Health check
+  - matches:
+    - path:
+        type: Exact
+        value: /health
+    backendRefs:
+    - name: productpage
+      port: 9080

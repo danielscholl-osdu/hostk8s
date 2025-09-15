@@ -241,12 +241,26 @@ def has_flux_cli() -> bool:
 
 
 def has_ingress_controller() -> bool:
-    """Check if NGINX Ingress Controller is installed in the cluster."""
+    """Check if any ingress controller (NGINX or Gateway API) is installed in the cluster."""
     try:
-        result = run_kubectl(['get', 'deployment', '-n', 'hostk8s',
-                            '-l', 'app.kubernetes.io/name=ingress-nginx'],
-                           check=False, capture_output=True)
-        return result.returncode == 0 and result.stdout.strip() != ''
+        # Check for NGINX Ingress Controller
+        nginx_result = run_kubectl(['get', 'deployment', '-n', 'hostk8s',
+                                  '-l', 'app.kubernetes.io/name=ingress-nginx'],
+                                 check=False, capture_output=True)
+        if nginx_result.returncode == 0 and nginx_result.stdout.strip() != '':
+            return True
+
+        # Check for Gateway API with Istio controller
+        gateway_result = run_kubectl(['get', 'gateway', 'hostk8s-gateway', '-n', 'istio-system'],
+                                   check=False, capture_output=True)
+        if gateway_result.returncode == 0:
+            # Verify the gateway pod is running
+            pod_result = run_kubectl(['get', 'pods', '-n', 'istio-system',
+                                    '-l', 'gateway.networking.k8s.io/gateway-name=hostk8s-gateway',
+                                    '--no-headers'], check=False, capture_output=True)
+            return pod_result.returncode == 0 and 'Running' in pod_result.stdout
+
+        return False
     except (KubectlError, HostK8sError):
         return False
 
