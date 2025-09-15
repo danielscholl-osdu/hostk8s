@@ -1,0 +1,106 @@
+######################
+## Istio Bookinfo Demo Stack
+## Showcases Istio service mesh with Gateway API and Ambient mode
+######################
+
+---
+# Deploy cert-manager component first (required for TLS certificates)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-certs
+  namespace: flux-system
+  labels:
+    hostk8s.stack: book-app
+    hostk8s.type: component
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/certs
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: cert-manager
+      namespace: cert-manager
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: cert-manager-webhook
+      namespace: cert-manager
+
+---
+# Deploy Istio component with Gateway API and Ambient mode
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-istio
+  namespace: flux-system
+  labels:
+    hostk8s.stack: book-app
+    hostk8s.type: component
+spec:
+  dependsOn:
+    - name: component-certs  # Istio needs cert-manager for TLS
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/istio
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: istiod
+      namespace: istio-system
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: ztunnel
+      namespace: istio-system
+
+---
+# Deploy Bookinfo application
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-bookinfo
+  namespace: flux-system
+  labels:
+    hostk8s.stack: book-app
+    hostk8s.type: application
+spec:
+  dependsOn:
+    - name: component-istio  # Bookinfo needs Istio to be ready
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stacks/book-app/manifests
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: productpage-v1
+      namespace: bookinfo
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: details-v1
+      namespace: bookinfo
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: reviews-v1
+      namespace: bookinfo
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: ratings-v1
+      namespace: bookinfo

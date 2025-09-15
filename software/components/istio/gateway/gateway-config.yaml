@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-gateway-config
+  namespace: istio-system
+data:
+  # Service configuration for Kind NodePort mapping
+  service: |
+    type: NodePort
+    ports:
+    - name: status-port
+      port: 15021
+      protocol: TCP
+      targetPort: 15021
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30080  # Maps to Kind's hostPort 8080
+    - name: https
+      port: 443
+      protocol: TCP
+      targetPort: 443
+      nodePort: 30443  # Maps to Kind's hostPort 8443
+
+  # Deployment configuration optimized for local development
+  deployment: |
+    spec:
+      replicas: 1
+      template:
+        metadata:
+          annotations:
+            # Prometheus scraping for metrics
+            prometheus.io/port: "15020"
+            prometheus.io/scrape: "true"
+            prometheus.io/path: "/stats/prometheus"
+        spec:
+          containers:
+          - name: istio-proxy
+            image: auto  # Automatically determined by Istio
+            resources:
+              requests:
+                cpu: 50m
+                memory: 64Mi
+              limits:
+                cpu: 500m
+                memory: 256Mi
+            env:
+            # Gateway-specific environment variables
+            - name: ISTIO_META_ROUTER_MODE
+              value: standard
+            - name: PILOT_ENABLE_WORKLOAD_ENTRY_AUTOREGISTRATION
+              value: "true"
+            # Reduce logging in development
+            - name: ISTIO_DEFAULT_LOG_LEVEL
+              value: "warning"
+            # Enable access logs
+            - name: ISTIO_META_ENABLE_ACCESS_LOG
+              value: "true"
+
+  # ServiceAccount configuration
+  serviceAccount: |
+    metadata:
+      annotations:
+        # Add any cloud-specific annotations here if needed

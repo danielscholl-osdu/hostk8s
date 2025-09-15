@@ -1,0 +1,56 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: ztunnel
+  namespace: flux-system
+spec:
+  targetNamespace: istio-system
+  releaseName: ztunnel
+  dependsOn:
+    - name: istiod
+      namespace: flux-system
+  chart:
+    spec:
+      chart: ztunnel
+      version: ">=1.24.0 <2.0.0"  # Auto-update minor versions
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: flux-system
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    # Variant for development/testing
+    variant: distroless
+
+    # Resources optimized for local development
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    # Environment configuration
+    env:
+      # Set log level (info, debug, trace)
+      - name: RUST_LOG
+        value: info
+      # Enable DNS proxy for service discovery
+      - name: ISTIO_META_DNS_CAPTURE
+        value: "true"
+      # Local cluster configuration
+      - name: ISTIO_META_CLUSTER_ID
+        value: "hostk8s"
+
+    # Affinity rules for single-node Kind cluster
+    affinity: {}
+
+    # Termination grace period for clean shutdown
+    terminationGracePeriodSeconds: 30

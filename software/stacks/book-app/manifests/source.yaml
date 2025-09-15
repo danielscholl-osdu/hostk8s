@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: bookinfo
+  namespace: flux-system
+spec:
+  interval: 10m
+  url: https://evry-ace.github.io/helm-charts/

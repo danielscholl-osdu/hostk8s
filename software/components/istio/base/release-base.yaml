@@ -1,0 +1,29 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: istio-base
+  namespace: flux-system
+spec:
+  targetNamespace: istio-system
+  releaseName: istio-base
+  chart:
+    spec:
+      chart: base
+      version: ">=1.24.0 <2.0.0"  # Auto-update minor versions
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: flux-system
+  interval: 1h
+  install:
+    remediation:
+      retries: 3
+    createNamespace: true
+  upgrade:
+    remediation:
+      retries: 3
+  values:
+    defaultRevision: default
+    # Enable validation webhook
+    global:
+      istioNamespace: istio-system

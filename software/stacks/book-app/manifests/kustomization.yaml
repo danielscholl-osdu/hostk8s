@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - source.yaml
+  - release.yaml
+  - httproutes.yaml
+  # waypoint.yaml.optional is not included by default
+  # Apply it separately when L7 features are needed
+
+commonLabels:
+  hostk8s.stack: book-app
+  hostk8s.app: bookinfo

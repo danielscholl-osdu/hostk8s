@@ -1,0 +1,40 @@
+######################
+## Default Route Example
+## Catch-all route for the root path
+######################
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default-route
+  namespace: istio-system
+spec:
+  parentRefs:
+  - name: hostk8s-gateway
+    namespace: istio-system
+
+  hostnames:
+  - "localhost"
+  - "hostk8s.local"
+
+  rules:
+  # Health check endpoint
+  - matches:
+    - path:
+        type: Exact
+        value: /healthz
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: istiod
+      namespace: istio-system
+      port: 15021
+      weight: 1
+
+  # Default backend (optional - remove if not needed)
+  # - matches:
+  #   - path:
+  #       type: PathPrefix
+  #       value: /
+  #   backendRefs:
+  #   - name: default-backend
+  #     port: 80

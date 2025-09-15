@@ -1,0 +1,90 @@
+######################
+## Istio Service Mesh Component
+## Provides Gateway API ingress and Ambient mode service mesh
+## This file orchestrates the deployment of all Istio sub-components
+######################
+
+---
+# Base: Istio control plane and Gateway API CRDs
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-istio-base
+  namespace: flux-system
+  labels:
+    hostk8s.component: istio
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/istio/base
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: istiod
+      namespace: istio-system
+
+---
+# Ambient: Zero-trust tunnel for L4 features
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-istio-ambient
+  namespace: flux-system
+  labels:
+    hostk8s.component: istio
+spec:
+  dependsOn:
+    - name: component-istio-base
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/istio/ambient
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: DaemonSet
+      name: ztunnel
+      namespace: istio-system
+
+---
+# Gateway: Ingress gateway with automated deployment
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-istio-gateway
+  namespace: flux-system
+  labels:
+    hostk8s.component: istio
+spec:
+  dependsOn:
+    - name: component-istio-ambient
+    - name: component-certs-issuer  # Requires cert-manager for TLS
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/istio/gateway
+  prune: true
+  wait: true
+  healthChecks:
+    # The Gateway resource auto-creates these
+    - apiVersion: v1
+      kind: Service
+      name: hostk8s-gateway-istio
+      namespace: istio-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: hostk8s-gateway-istio
+      namespace: istio-system
