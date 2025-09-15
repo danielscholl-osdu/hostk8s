@@ -1248,16 +1248,16 @@ def show_gitops_applications() -> None:
                                     pass
 
                             if checker.is_ingress_controller_ready():
-                                # For HTTPS-only apps, show HTTPS URL (root path)
-                                print(f"   Access: https://localhost:{https_port}/ ({httproute['name']} httproute)")
+                                # Show HTTP access URL (main productpage)
+                                print(f"   Access: http://localhost:{http_port}/productpage ({httproute['name']} httproute)")
                             else:
-                                print(f"   HTTPRoute: {httproute['name']} -> https://localhost:{https_port}/ ⚠️ (No Gateway API)")
+                                print(f"   HTTPRoute: {httproute['name']} -> http://localhost:{http_port}/productpage ⚠️ (No Gateway API)")
                         except Exception:
                             # Fallback
                             if checker.is_ingress_controller_ready():
-                                print(f"   Access: https://localhost:8444/ ({httproute['name']} httproute)")
+                                print(f"   Access: http://localhost:8081/productpage ({httproute['name']} httproute)")
                             else:
-                                print(f"   HTTPRoute: {httproute['name']} -> https://localhost:8444/ ⚠️ (No Gateway API)")
+                                print(f"   HTTPRoute: {httproute['name']} -> http://localhost:8081/productpage ⚠️ (No Gateway API)")
 
         except Exception:
             pass
