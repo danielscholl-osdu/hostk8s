@@ -67,14 +67,11 @@ spec:
           service: prometheus.istio-system.svc.cluster.local
           port: 9090
 
-    # Telemetry v2 configuration (minimal)
+    # Telemetry configuration (minimal for Ambient mode)
     telemetry:
       v2:
+        enabled: true
         prometheus:
-          configOverride:
-            inboundSidecar:
-              disable: true
-            outboundSidecar:
-              disable: true
-            gateway:
-              disable: false  # Keep gateway metrics
+          service:
+            enabled: true
+          # configOverride is deprecated in Istio 1.27+
