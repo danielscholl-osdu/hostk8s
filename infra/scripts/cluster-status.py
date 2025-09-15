@@ -837,6 +837,45 @@ class EnhancedClusterStatusChecker:
             logger.debug(f"Error getting ingress for {app_name}: {e}")
         return ingress_list
 
+    def get_app_httproutes(self, app_name: str, label_key: str, namespace: str = None) -> List[Dict[str, Any]]:
+        """Get HTTPRoute resources for an application."""
+        route_list = []
+        try:
+            if namespace:
+                # Get HTTPRoute for specific namespace
+                result = run_kubectl(['get', 'httproute', '-l', f'{label_key}={app_name}',
+                                    '-n', namespace, '--no-headers'], check=False)
+            else:
+                # Get HTTPRoute across all namespaces
+                result = run_kubectl(['get', 'httproute', '-l', f'{label_key}={app_name}',
+                                    '--all-namespaces', '--no-headers'], check=False)
+
+            if result.returncode == 0 and result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip():
+                        parts = line.split()
+                        if namespace:
+                            # Format: NAME HOSTNAMES AGE
+                            if len(parts) >= 2:
+                                route_list.append({
+                                    'namespace': namespace,
+                                    'name': parts[0],
+                                    'hostnames': parts[1] if len(parts) > 1 else '',
+                                    'age': parts[2] if len(parts) > 2 else ''
+                                })
+                        else:
+                            # Format: NAMESPACE NAME HOSTNAMES AGE
+                            if len(parts) >= 3:
+                                route_list.append({
+                                    'namespace': parts[0],
+                                    'name': parts[1],
+                                    'hostnames': parts[2] if len(parts) > 2 else '',
+                                    'age': parts[3] if len(parts) > 3 else ''
+                                })
+        except Exception as e:
+            logger.debug(f"Error getting HTTPRoutes for {app_name}: {e}")
+        return route_list
+
     def get_ingress_paths(self, name: str, namespace: str) -> List[str]:
         """Get ingress paths for an ingress resource."""
         try:
@@ -1119,8 +1158,11 @@ def show_gitops_applications() -> None:
                     else:
                         print(f"   Service: {service['name']} ({service['type']})")
 
-                # Show ingress
+                # Show ingress and HTTPRoute resources
                 ingress_list = checker.get_app_ingress(app_label, 'hostk8s.application')
+                httproute_list = checker.get_app_httproutes(app_label, 'hostk8s.application')
+
+                # Process traditional Ingress resources
                 for ingress in ingress_list:
                     if ingress['hosts'] in ['localhost', '*']:
                         # Use the centralized URL detection that handles ingress class properly
@@ -1151,6 +1193,72 @@ def show_gitops_applications() -> None:
                                 print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']})")
                         else:
                             print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']}) ⚠️ (No Ingress Controller)")
+
+                # Process HTTPRoute resources (Gateway API)
+                for httproute in httproute_list:
+                    if 'localhost' in httproute['hostnames']:
+                        # HTTPRoutes with localhost - determine correct Gateway API ports
+                        try:
+                            # Get actual Gateway API ports from service
+                            svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
+                                                    '-o', 'jsonpath={.spec.ports[?(@.name=="http")].nodePort}'], check=False)
+                            https_svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
+                                                          '-o', 'jsonpath={.spec.ports[?(@.name=="https")].nodePort}'], check=False)
+
+                            # Default Gateway API ports
+                            http_port = "8081"
+                            https_port = "8444"
+
+                            # Get actual host ports from Kind mapping
+                            if svc_result.returncode == 0 and svc_result.stdout:
+                                try:
+                                    nodeport = int(svc_result.stdout.strip())
+                                    import subprocess
+                                    cluster_name = "hostk8s"
+                                    try:
+                                        ctx_result = run_kubectl(['config', 'current-context'], check=False, capture_output=True)
+                                        if ctx_result.returncode == 0 and 'kind-' in ctx_result.stdout:
+                                            cluster_name = ctx_result.stdout.strip().replace('kind-', '')
+                                    except:
+                                        pass
+
+                                    docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
+                                                                 capture_output=True, text=True, check=False)
+                                    if docker_result.returncode == 0:
+                                        for line in docker_result.stdout.strip().split('\n'):
+                                            if f'{nodeport}/tcp' in line:
+                                                if ' -> 0.0.0.0:' in line:
+                                                    http_port = line.split(' -> 0.0.0.0:')[1]
+                                                    break
+                                except:
+                                    pass
+
+                            if https_svc_result.returncode == 0 and https_svc_result.stdout:
+                                try:
+                                    nodeport = int(https_svc_result.stdout.strip())
+                                    docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
+                                                                 capture_output=True, text=True, check=False)
+                                    if docker_result.returncode == 0:
+                                        for line in docker_result.stdout.strip().split('\n'):
+                                            if f'{nodeport}/tcp' in line:
+                                                if ' -> 0.0.0.0:' in line:
+                                                    https_port = line.split(' -> 0.0.0.0:')[1]
+                                                    break
+                                except:
+                                    pass
+
+                            if checker.is_ingress_controller_ready():
+                                # For HTTPS-only apps, show HTTPS URL
+                                print(f"   Access: https://localhost:{https_port}/productpage ({httproute['name']} httproute)")
+                            else:
+                                print(f"   HTTPRoute: {httproute['name']} -> https://localhost:{https_port}/productpage ⚠️ (No Gateway API)")
+                        except Exception:
+                            # Fallback
+                            if checker.is_ingress_controller_ready():
+                                print(f"   Access: https://localhost:8444/productpage ({httproute['name']} httproute)")
+                            else:
+                                print(f"   HTTPRoute: {httproute['name']} -> https://localhost:8444/productpage ⚠️ (No Gateway API)")
+
         except Exception:
             pass
 
