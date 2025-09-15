@@ -6,9 +6,11 @@ resources:
   - source.yaml
   - release.yaml
   - httproutes.yaml
+  - ingress.yaml
   # waypoint.yaml.optional is not included by default
   # Apply it separately when L7 features are needed
 
 commonLabels:
   hostk8s.stack: book-app
   hostk8s.app: bookinfo
+  hostk8s.application: bookinfo

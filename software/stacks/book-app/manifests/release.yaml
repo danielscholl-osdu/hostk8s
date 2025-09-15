@@ -23,6 +23,13 @@ spec:
     remediation:
       retries: 3
   values:
+    # Global HostK8s labels for all resources
+    global:
+      labels:
+        hostk8s.stack: book-app
+        hostk8s.app: bookinfo
+        hostk8s.application: bookinfo
+
     # Enable all services
     productpage:
       enabled: true
