@@ -6,6 +6,7 @@ resources:
   - external-secret.yaml
   - elastic-user-vault-secret.yaml
   - elasticsearch.yaml
+  - elasticsearch-ingress.yaml
 
 commonLabels:
   hostk8s.component: elasticsearch
