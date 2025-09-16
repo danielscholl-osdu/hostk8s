@@ -1,0 +1,6 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: hostk8s
+  labels:
+    hostk8s.component: elasticsearch

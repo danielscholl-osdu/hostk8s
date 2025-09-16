@@ -1,0 +1,14 @@
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: elastic-stack
+  namespace: elasticsearch
+spec:
+  directories:
+    - name: elasticsearch-data
+      path: /mnt/pv/elasticsearch
+      size: 10Gi
+      accessModes: ["ReadWriteOnce"]
+      storageClass: standard
+      owner: "1000:1000"
+      permissions: "755"

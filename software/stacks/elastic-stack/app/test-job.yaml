@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: elasticsearch-test
+  namespace: elastic-test
+spec:
+  backoffLimit: 3
+  template:
+    metadata:
+      labels:
+        app: elasticsearch-test
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: test
+          image: curlimages/curl:8.5.0
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for Elasticsearch to be ready..."
+              until curl -s http://elasticsearch-es-http.elasticsearch:9200/_cluster/health | grep -E '"status":"(green|yellow)"'; do
+                echo "Waiting for cluster to be healthy..."
+                sleep 10
+              done
+
+              echo ""
+              echo "=== Elasticsearch Cluster Health ==="
+              curl -s http://elasticsearch-es-http.elasticsearch:9200/_cluster/health?pretty
+
+              echo ""
+              echo "=== Creating test index ==="
+              curl -X PUT http://elasticsearch-es-http.elasticsearch:9200/test-index \
+                -H 'Content-Type: application/json' \
+                -d '{
+                  "settings": {
+                    "number_of_shards": 1,
+                    "number_of_replicas": 0
+                  }
+                }'
+
+              echo ""
+              echo "=== Indexing test document ==="
+              curl -X POST http://elasticsearch-es-http.elasticsearch:9200/test-index/_doc/1 \
+                -H 'Content-Type: application/json' \
+                -d '{
+                  "title": "Test Document",
+                  "description": "This is a test document for HostK8s Elasticsearch",
+                  "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
+                }'
+
+              echo ""
+              echo "=== Searching for document ==="
+              sleep 2
+              curl -X GET http://elasticsearch-es-http.elasticsearch:9200/test-index/_search?pretty \
+                -H 'Content-Type: application/json' \
+                -d '{
+                  "query": {
+                    "match_all": {}
+                  }
+                }'
+
+              echo ""
+              echo "=== Test completed successfully ==="
+              echo "You can access Kibana at: http://kibana.localhost"

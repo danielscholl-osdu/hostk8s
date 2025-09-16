@@ -1,0 +1,84 @@
+######################
+## Elasticsearch Component
+## Internal orchestration for ECK operator, Elasticsearch cluster, and Kibana
+## This file provides single entry point abstraction for Elasticsearch functionality
+######################
+
+---
+# Step 1: ECK Operator
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-elasticsearch-operator
+  namespace: flux-system
+  labels:
+    hostk8s.component: elasticsearch
+spec:
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/elasticsearch/operator
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: elastic-operator
+      namespace: hostk8s
+
+---
+# Step 2: Elasticsearch Cluster
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-elasticsearch-cluster
+  namespace: flux-system
+  labels:
+    hostk8s.component: elasticsearch
+spec:
+  dependsOn:
+    - name: component-elasticsearch-operator
+  interval: 1h
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/elasticsearch/cluster
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: elasticsearch.k8s.elastic.co/v1
+      kind: Elasticsearch
+      name: elasticsearch
+      namespace: elasticsearch
+
+---
+# Step 3: Kibana UI
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-elasticsearch-kibana
+  namespace: flux-system
+  labels:
+    hostk8s.component: elasticsearch
+spec:
+  dependsOn:
+    - name: component-elasticsearch-cluster
+  interval: 1h
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/elasticsearch/kibana
+  prune: true
+  wait: true
+  healthChecks:
+    - apiVersion: kibana.k8s.elastic.co/v1
+      kind: Kibana
+      name: kibana
+      namespace: elasticsearch

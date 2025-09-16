@@ -1,0 +1,43 @@
+apiVersion: kibana.k8s.elastic.co/v1
+kind: Kibana
+metadata:
+  name: kibana
+  namespace: elasticsearch
+spec:
+  version: 8.15.2
+  count: 1  # Single instance for development
+
+  # Reference to the Elasticsearch cluster
+  elasticsearchRef:
+    name: elasticsearch
+
+  # Disable TLS for local development
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      spec:
+        type: ClusterIP
+
+  # Pod configuration
+  podTemplate:
+    spec:
+      containers:
+        - name: kibana
+          env:
+            # Elasticsearch connection (HTTP without TLS)
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://elasticsearch-es-http.elasticsearch:9200"
+            # Disable some production features for dev
+            - name: MONITORING_ENABLED
+              value: "false"
+            - name: TELEMETRY_ENABLED
+              value: "false"
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 100m
+            limits:
+              memory: 1Gi
+              cpu: 500m

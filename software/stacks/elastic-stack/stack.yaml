@@ -1,0 +1,42 @@
+######################
+## Elastic Stack
+## Test stack for Elasticsearch component with sample data
+######################
+
+---
+# Deploy the Elasticsearch component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: elastic-stack-components
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/elasticsearch
+  prune: true
+  wait: true
+
+---
+# Deploy test application (optional sample data loader)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: elastic-stack-app
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: elastic-stack-components
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/stacks/elastic-stack/app
+  prune: true
+  wait: false  # Don't wait for test job

@@ -1,0 +1,58 @@
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: elasticsearch
+  namespace: elasticsearch
+spec:
+  version: 8.15.2
+
+  # Disable TLS for local development
+  http:
+    tls:
+      selfSignedCertificate:
+        disabled: true
+    service:
+      spec:
+        type: ClusterIP
+
+  # Auth configuration - use external secret
+  auth:
+    fileRealm:
+      - secretName: elasticsearch-credentials
+
+  nodeSets:
+    - name: default
+      count: 1  # Single node for development
+
+      # Node configuration
+      config:
+        node.store.allow_mmap: false
+        node.roles: ["master", "data", "ingest"]  # All roles on single node
+
+      # Volume claim for data persistence
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 10Gi
+            storageClassName: standard
+
+      # Pod configuration
+      podTemplate:
+        spec:
+          containers:
+            - name: elasticsearch
+              env:
+                - name: ES_JAVA_OPTS
+                  value: "-Xms1g -Xmx1g"  # 1GB heap for development
+              resources:
+                requests:
+                  memory: 2Gi
+                  cpu: 100m
+                limits:
+                  memory: 2Gi
+                  cpu: 1000m

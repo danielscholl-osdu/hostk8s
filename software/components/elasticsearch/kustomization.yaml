@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - component.yaml
+
+labels:
+  - pairs:
+      hostk8s.component: elasticsearch
+      component.hostk8s.io/type: orchestrated
