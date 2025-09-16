@@ -44,6 +44,9 @@ spec:
 
       # Pod configuration
       podTemplate:
+        metadata:
+          labels:
+            hostk8s.app: elasticsearch
         spec:
           containers:
             - name: elasticsearch

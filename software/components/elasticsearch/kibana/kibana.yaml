@@ -26,6 +26,9 @@ spec:
 
   # Pod configuration
   podTemplate:
+    metadata:
+      labels:
+        hostk8s.app: kibana
     spec:
       containers:
         - name: kibana
