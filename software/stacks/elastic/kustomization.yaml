@@ -5,4 +5,4 @@ resources:
   - stack.yaml
 
 commonLabels:
-  hostk8s.stack: elastic-stack
+  hostk8s.stack: elastic

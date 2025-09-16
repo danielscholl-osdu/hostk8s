@@ -6,5 +6,5 @@ resources:
   - test-job.yaml
 
 commonLabels:
-  hostk8s.stack: elastic-stack
+  hostk8s.stack: elastic
   hostk8s.app: test-data-loader

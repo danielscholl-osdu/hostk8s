@@ -8,7 +8,7 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: elastic-stack-components
+  name: elastic-components
   namespace: flux-system
 spec:
   interval: 10m
@@ -26,17 +26,17 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: elastic-stack-app
+  name: elastic-app
   namespace: flux-system
 spec:
   dependsOn:
-    - name: elastic-stack-components
+    - name: elastic-components
   interval: 10m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/elastic-stack/app
+  path: ./software/stacks/elastic/app
   prune: true
   wait: false  # Don't wait for test job
