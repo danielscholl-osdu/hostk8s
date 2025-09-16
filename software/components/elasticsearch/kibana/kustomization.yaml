@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - kibana.yaml
   - ingress.yaml
+  - status-beacon.yaml
 
 commonLabels:
   hostk8s.component: elasticsearch

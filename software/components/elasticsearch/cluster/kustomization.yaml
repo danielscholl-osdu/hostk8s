@@ -5,7 +5,9 @@ resources:
   - namespace.yaml
   - external-secret.yaml
   - elasticsearch.yaml
+  - status-beacon.yaml
 
 commonLabels:
   hostk8s.component: elasticsearch
   component.hostk8s.io/role: cluster
+  hostk8s.app: elasticsearch
