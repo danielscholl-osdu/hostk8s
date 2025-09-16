@@ -492,7 +492,11 @@ http:
 
     def setup_addons(self) -> None:
         """Setup enabled addons."""
-        # Setup Metrics Server first (core Kubernetes API extension)
+        # Setup Gateway API CRDs first (foundational Kubernetes infrastructure)
+        if not self.run_addon_script('setup-gateway-api'):
+            logger.warn("[Cluster] Gateway API setup failed, continuing")
+
+        # Setup Metrics Server (core Kubernetes API extension)
         if not self.metrics_disabled:
             if not self.run_addon_script('setup-metrics'):
                 logger.warn("[Cluster] Metrics Server setup failed, continuing")
