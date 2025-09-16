@@ -8,7 +8,7 @@ metadata:
   annotations:
     eck.k8s.alpha.elastic.co/propagate-labels: "hostk8s.app"
 spec:
-  version: 9.0.7
+  version: 9.1.3
 
   # Disable TLS for local development
   http:
