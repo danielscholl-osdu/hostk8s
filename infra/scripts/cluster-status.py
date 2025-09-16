@@ -746,11 +746,11 @@ class EnhancedClusterStatusChecker:
                                 'age': parts[5]
                             })
 
-            # Manual applications (hostk8s.app label)
-            manual_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
-                                       '--all-namespaces', '--no-headers'], check=False)
-            if manual_result.returncode == 0 and manual_result.stdout:
-                for line in manual_result.stdout.strip().split('\n'):
+            # Manual applications (hostk8s.app label) - check both deployments and statefulsets
+            deployment_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
+                                           '--all-namespaces', '--no-headers'], check=False)
+            if deployment_result.returncode == 0 and deployment_result.stdout:
+                for line in deployment_result.stdout.strip().split('\n'):
                     if line.strip():
                         parts = line.split()
                         if len(parts) >= 6:
@@ -760,7 +760,26 @@ class EnhancedClusterStatusChecker:
                                 'ready': parts[2],
                                 'up_to_date': parts[3],
                                 'total': parts[4],
-                                'age': parts[5]
+                                'age': parts[5],
+                                'type': 'deployment'
+                            })
+
+            # Manual applications (hostk8s.app label) - StatefulSets
+            statefulset_result = run_kubectl(['get', 'statefulsets', '-l', 'hostk8s.app',
+                                            '--all-namespaces', '--no-headers'], check=False)
+            if statefulset_result.returncode == 0 and statefulset_result.stdout:
+                for line in statefulset_result.stdout.strip().split('\n'):
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 4:
+                            manual_apps.append({
+                                'namespace': parts[0],
+                                'name': parts[1],
+                                'ready': parts[2],
+                                'up_to_date': parts[2],  # StatefulSets don't have separate up_to_date
+                                'total': parts[2],       # Use ready count for total
+                                'age': parts[3],
+                                'type': 'statefulset'
                             })
 
         except Exception as e:
@@ -1004,13 +1023,32 @@ class EnhancedClusterStatusChecker:
         # If GitOps is complete or not used, check individual app health
         unhealthy_apps = []
 
-        # Check manual deployed apps
+        # Check manual deployed apps (both deployments and statefulsets)
         try:
-            result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
-                                '--all-namespaces', '--no-headers'], check=False)
+            # Check deployments
+            deployment_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
+                                           '--all-namespaces', '--no-headers'], check=False)
 
-            if result.returncode == 0 and result.stdout:
-                for line in result.stdout.strip().split('\n'):
+            if deployment_result.returncode == 0 and deployment_result.stdout:
+                for line in deployment_result.stdout.strip().split('\n'):
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 3:
+                            namespace = parts[0]
+                            name = parts[1]
+                            ready = parts[2]
+
+                            if '/' in ready:
+                                desired, actual = ready.split('/')
+                                if desired != actual or actual == '0':
+                                    unhealthy_apps.append(f"{namespace}/{name} ({ready})")
+
+            # Check statefulsets
+            statefulset_result = run_kubectl(['get', 'statefulsets', '-l', 'hostk8s.app',
+                                            '--all-namespaces', '--no-headers'], check=False)
+
+            if statefulset_result.returncode == 0 and statefulset_result.stdout:
+                for line in statefulset_result.stdout.strip().split('\n'):
                     if line.strip():
                         parts = line.split()
                         if len(parts) >= 3:
@@ -1279,8 +1317,9 @@ def show_manual_deployed_apps() -> None:
     app_groups = {}
     for app in manual_apps:
         try:
-            # Get app label
-            label_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
+            # Get app label from the appropriate resource type
+            resource_type = app.get('type', 'deployment')
+            label_result = run_kubectl(['get', resource_type, app['name'], '-n', app['namespace'],
                                       '-o', 'jsonpath={.metadata.labels.hostk8s\\.app}'], check=False)
             if label_result.returncode == 0 and label_result.stdout:
                 app_label = label_result.stdout.strip()
@@ -1299,9 +1338,10 @@ def show_manual_deployed_apps() -> None:
     for display_name, group in app_groups.items():
         print(f"📱 {display_name}")
 
-        # Show deployments
+        # Show deployments and statefulsets
         for app in group['apps']:
-            print(f"   Deployment: {app['name']} ({app['ready']} ready)")
+            resource_type = app.get('type', 'deployment').title()
+            print(f"   {resource_type}: {app['name']} ({app['ready']} ready)")
 
         # Show services
         services = checker.get_app_services(group['label'], 'hostk8s.app')
