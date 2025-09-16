@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: eck-operator
-      version: "2.x"  # Uses latest 2.x version
+      version: "2.15.0"  # ECK operator version 2.15.0 (contains ECK 3.1.0)
       sourceRef:
         kind: HelmRepository
         name: elastic

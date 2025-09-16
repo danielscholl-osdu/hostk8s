@@ -3,8 +3,12 @@ kind: Kibana
 metadata:
   name: kibana
   namespace: elasticsearch
+  labels:
+    hostk8s.app: kibana
+  annotations:
+    eck.k8s.alpha.elastic.co/propagate-labels: "hostk8s.app"
 spec:
-  version: 8.15.2
+  version: 9.1.3
   count: 1  # Single instance for development
 
   # Reference to the Elasticsearch cluster

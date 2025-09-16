@@ -3,8 +3,12 @@ kind: Elasticsearch
 metadata:
   name: elasticsearch
   namespace: elasticsearch
+  labels:
+    hostk8s.app: elasticsearch
+  annotations:
+    eck.k8s.alpha.elastic.co/propagate-labels: "hostk8s.app"
 spec:
-  version: 8.15.2
+  version: 9.0.7
 
   # Disable TLS for local development
   http:
