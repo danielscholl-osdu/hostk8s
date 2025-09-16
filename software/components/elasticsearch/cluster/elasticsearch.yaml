@@ -19,10 +19,7 @@ spec:
       spec:
         type: ClusterIP
 
-  # Auth configuration - use external secret
-  auth:
-    fileRealm:
-      - secretName: elasticsearch-credentials
+  # Auth configuration - ECK will use elasticsearch-es-elastic-user secret from Vault
 
   nodeSets:
     - name: default

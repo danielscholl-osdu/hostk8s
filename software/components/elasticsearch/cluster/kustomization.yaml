@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespace.yaml
   - external-secret.yaml
+  - elastic-user-vault-secret.yaml
   - elasticsearch.yaml
 
 commonLabels:
