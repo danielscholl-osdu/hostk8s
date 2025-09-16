@@ -8,3 +8,4 @@ resources:
 commonLabels:
   hostk8s.component: elasticsearch
   component.hostk8s.io/role: kibana
+  hostk8s.app: kibana
