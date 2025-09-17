@@ -15,6 +15,6 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system-${SOFTWARE_STACK}
-  path: ./software/stacks/${SOFTWARE_STACK}
+  path: ./software/stacks/${SOFTWARE_STACK_PATH}
   prune: true
   wait: false

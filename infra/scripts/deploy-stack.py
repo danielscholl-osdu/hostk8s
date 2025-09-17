@@ -140,8 +140,10 @@ class StackDeployer:
         # Check if any kustomizations exist for this stack
         logger.info(f"[Stack] Checking for stack '{stack_name}' kustomizations")
 
+        # Extract stack name from path for labeling
+        stack_name_only = stack_name.split('/')[-1]
         result = run_kubectl(['get', 'kustomizations', '-n', 'flux-system',
-                            '-l', f'hostk8s.stack={stack_name}', '--no-headers',
+                            '-l', f'hostk8s.stack={stack_name_only}', '--no-headers',
                             '-o', 'custom-columns=NAME:.metadata.name'],
                            check=False, capture_output=True)
 
@@ -155,18 +157,19 @@ class StackDeployer:
         logger.info(f"[Stack] Found kustomizations for stack '{stack_name}' - proceeding with removal")
 
         # Remove the bootstrap kustomization first (if it exists)
-        result = run_kubectl(['get', 'kustomization', f'bootstrap-{stack_name}',
+        stack_name_only = stack_name.split('/')[-1]
+        result = run_kubectl(['get', 'kustomization', f'bootstrap-{stack_name_only}',
                             '-n', 'flux-system', '--no-headers'],
                            check=False, capture_output=True)
         if result.returncode == 0:
-            logger.info(f"[Stack] Removing bootstrap kustomization: bootstrap-{stack_name}")
-            run_kubectl(['delete', 'kustomization', f'bootstrap-{stack_name}',
+            logger.info(f"[Stack] Removing bootstrap kustomization: bootstrap-{stack_name_only}")
+            run_kubectl(['delete', 'kustomization', f'bootstrap-{stack_name_only}',
                         '-n', 'flux-system'], check=False)
 
         # Remove all kustomizations labeled with this stack
         logger.info(f"[Stack] Removing all kustomizations for stack '{stack_name}'")
         run_kubectl(['delete', 'kustomizations', '-n', 'flux-system',
-                    '-l', f'hostk8s.stack={stack_name}'], check=False)
+                    '-l', f'hostk8s.stack={stack_name_only}'], check=False)
 
         # Clean up the stack-specific GitRepository
         if stack_name.startswith('extension/'):
@@ -174,8 +177,8 @@ class StackDeployer:
             run_kubectl(['delete', 'gitrepository', 'extension-stack-system',
                         '-n', 'flux-system'], check=False)
         else:
-            logger.info(f"[Stack] Cleaning up stack-specific GitRepository: flux-system-{stack_name}")
-            run_kubectl(['delete', 'gitrepository', f'flux-system-{stack_name}',
+            logger.info(f"[Stack] Cleaning up stack-specific GitRepository: flux-system-{stack_name_only}")
+            run_kubectl(['delete', 'gitrepository', f'flux-system-{stack_name_only}',
                         '-n', 'flux-system'], check=False)
 
             # Check if any component kustomizations remain (from any stack)
@@ -220,11 +223,14 @@ class StackDeployer:
             logger.info("[Stack] Processing template variables for stack file")
             # Create template and substitute variables
             template = Template(yaml_content)
+            # Extract stack name from path (e.g., "foundation/elastic" -> "elastic")
+            stack_name_only = stack_name.split('/')[-1]
             yaml_content = template.safe_substitute(
                 REPO_NAME=self.repo_name,
                 GITOPS_REPO=self.gitops_repo,
                 GITOPS_BRANCH=self.gitops_branch,
-                SOFTWARE_STACK=stack_name,
+                SOFTWARE_STACK=stack_name_only,
+                SOFTWARE_STACK_PATH=stack_name,
                 COMPONENTS_REPO=self.components_repo,
                 COMPONENTS_BRANCH=self.components_branch
             )

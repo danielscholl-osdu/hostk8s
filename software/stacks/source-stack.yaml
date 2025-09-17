@@ -10,4 +10,4 @@ spec:
     branch: ${GITOPS_BRANCH}
   ignore: |
     exclude all
-    !/software/stacks/${SOFTWARE_STACK}/
+    !/software/stacks/${SOFTWARE_STACK_PATH}/
