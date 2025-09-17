@@ -4,5 +4,5 @@ metadata:
   name: redis
   labels:
     hostk8s.component: redis
-    component.hostk8s.io/type: infrastructure
+    component.hostk8s.io/type: foundation
     component.hostk8s.io/category: database
