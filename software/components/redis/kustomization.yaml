@@ -9,8 +9,10 @@ metadata:
 
 resources:
   - namespace.yaml
-  - source.yaml
-  - release.yaml
+  - redis-deployment.yaml     # Using direct deployment instead of Helm due to Bitnami image issues
+  - redis-commander.yaml      # Simple deployment for Redis Commander UI
+  # - source.yaml             # Disabled: Bitnami chart sources
+  # - release.yaml            # Disabled: HelmRelease with image issues
   - ingress.yaml
   - external-secret.yaml
 
