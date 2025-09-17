@@ -13,6 +13,11 @@ spec:
     name: redis-bitnami
     namespace: flux-system
   values:
+    # Allow non-standard images for Bitnami Secure Images
+    global:
+      security:
+        allowInsecureImages: true
+
     # Override image to use Bitnami Secure Images due to Bitnami migration
     # See: https://github.com/bitnami/charts/issues/35164
     image:
