@@ -1,7 +1,7 @@
 apiVersion: hostk8s.io/v1
 kind: StorageContract
 metadata:
-  name: elastic
+  name: foundation/elastic
   namespace: elasticsearch
 spec:
   directories:

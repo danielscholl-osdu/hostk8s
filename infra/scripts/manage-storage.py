@@ -254,8 +254,9 @@ class StorageManager:
         access_modes = directory['accessModes']
         storage_class = directory['storageClass']
 
-        # Generate PV name
-        pv_name = f"hostk8s-{stack}-{name}-pv"
+        # Generate PV name (replace / with - for nested stacks)
+        safe_stack_name = stack.replace('/', '-')
+        pv_name = f"hostk8s-{safe_stack_name}-{name}-pv"
 
         # Check if PV already exists
         result = subprocess.run(['kubectl', 'get', 'pv', pv_name],
@@ -272,7 +273,7 @@ class StorageManager:
             'metadata': {
                 'name': pv_name,
                 'labels': {
-                    'hostk8s.stack': stack,
+                    'hostk8s.stack': safe_stack_name,
                     'hostk8s.storage.name': name
                 }
             },
@@ -349,8 +350,9 @@ class StorageManager:
         logger.info(f"[Storage] Cleaning up storage for stack '{stack}'")
 
         try:
-            # Remove PersistentVolumes for this stack
-            result = subprocess.run(['kubectl', 'get', 'pv', '-l', f'hostk8s.stack={stack}', '-o', 'name'],
+            # Remove PersistentVolumes for this stack (replace / with - for nested stacks)
+            safe_stack_name = stack.replace('/', '-')
+            result = subprocess.run(['kubectl', 'get', 'pv', '-l', f'hostk8s.stack={safe_stack_name}', '-o', 'name'],
                                   capture_output=True, text=True, check=False)
 
             if result.returncode == 0 and result.stdout.strip():
@@ -426,8 +428,9 @@ class StorageManager:
                 size = directory['size']
                 path = directory['path']
 
-                # Check if PV exists
-                pv_name = f"hostk8s-{stack}-{name}-pv"
+                # Check if PV exists (replace / with - for nested stacks)
+                safe_stack_name = stack.replace('/', '-')
+                pv_name = f"hostk8s-{safe_stack_name}-{name}-pv"
                 result = subprocess.run(['kubectl', 'get', 'pv', pv_name],
                                       capture_output=True, check=False)
                 status = "✅ Ready" if result.returncode == 0 else "❌ Missing"
