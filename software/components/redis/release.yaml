@@ -13,12 +13,16 @@ spec:
     name: redis-bitnami
     namespace: flux-system
   values:
-    # Override image to use official Redis instead of Bitnami
+    # Override image to use official Redis (Bitnami images currently unavailable)
     image:
       registry: docker.io
       repository: redis
-      tag: "7.2-alpine"
+      tag: "7-alpine"
       pullPolicy: IfNotPresent
+
+    # Disable metrics to avoid Bitnami exporter image issues
+    metrics:
+      enabled: false
 
     # Architecture - simple replication for development
     architecture: standalone
