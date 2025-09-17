@@ -13,6 +13,17 @@ spec:
     name: redis-bitnami
     namespace: flux-system
   values:
+    # Override image to use Bitnami Secure Images due to Bitnami migration
+    # See: https://github.com/bitnami/charts/issues/35164
+    image:
+      repository: bitnamisecure/redis
+      tag: latest
+
+    sentinel:
+      image:
+        repository: bitnamisecure/redis-sentinel
+        tag: latest
+
     # Architecture - simple replication for development
     architecture: standalone
 
