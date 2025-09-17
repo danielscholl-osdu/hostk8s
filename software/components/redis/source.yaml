@@ -8,8 +8,6 @@ metadata:
 spec:
   interval: 5m
   url: oci://registry-1.docker.io/bitnamicharts/redis
-  ref:
-    semver: ">=19.0.0"
 ---
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: GitRepository
