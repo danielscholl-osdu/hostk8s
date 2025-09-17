@@ -4,7 +4,7 @@ kind: Kustomization
 resources:
   - component.yaml
 
-labels:
+commonLabels:
   hostk8s.component: elasticsearch
   component.hostk8s.io/type: foundation
   component.hostk8s.io/category: database
