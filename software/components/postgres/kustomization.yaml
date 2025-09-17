@@ -9,7 +9,5 @@ resources:
   - pgadmin-service.yaml
   - pgadmin-ingress.yaml
 
-commonLabels:
-  hostk8s.component: postgres
-  component.hostk8s.io/type: foundation
-  component.hostk8s.io/category: database
+# Note: commonLabels removed - they conflict with HelmRelease label management
+# Labels should be managed directly in resources
