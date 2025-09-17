@@ -7,7 +7,7 @@ spec:
   directories:
     - name: elasticsearch-data
       path: /mnt/pv/elasticsearch
-      size: 10Gi
+      size: 5Gi
       accessModes: ["ReadWriteOnce"]
       storageClass: standard
       owner: "1000:1000"
