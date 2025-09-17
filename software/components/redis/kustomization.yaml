@@ -14,7 +14,7 @@ resources:
   - ingress.yaml
   - external-secret.yaml
 
-labels:
+commonLabels:
   hostk8s.component: redis
   component.hostk8s.io/type: foundation
   component.hostk8s.io/category: database

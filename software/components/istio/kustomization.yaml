@@ -9,7 +9,7 @@ resources:
   - gateway.yaml
   - certificate.yaml
 
-labels:
-  - pairs:
-      hostk8s.component: istio
-      component.hostk8s.io/role: mesh
+commonLabels:
+  hostk8s.component: istio
+  component.hostk8s.io/type: foundation
+  component.hostk8s.io/category: database

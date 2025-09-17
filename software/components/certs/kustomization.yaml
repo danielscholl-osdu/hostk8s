@@ -6,3 +6,5 @@ resources:
 
 commonLabels:
   hostk8s.component: certs
+  component.hostk8s.io/type: foundation
+  component.hostk8s.io/category: network
