@@ -1,6 +1,6 @@
 ######################
-## Book App Stack - Simplified
-## Clean separation: Infrastructure (components) + Application (manifests)
+## Istio Stack
+## Foundation stack for Istio service mesh with Bookinfo demo application
 ######################
 
 ---
@@ -8,13 +8,10 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-certs
+  name: istio-certs
   namespace: flux-system
-  labels:
-    hostk8s.stack: book-app
-    hostk8s.type: component
 spec:
-  interval: 1h
+  interval: 10m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
@@ -29,15 +26,12 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-istio
+  name: istio-components
   namespace: flux-system
-  labels:
-    hostk8s.stack: book-app
-    hostk8s.type: component
 spec:
   dependsOn:
-    - name: component-certs
-  interval: 1h
+    - name: istio-certs
+  interval: 10m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
@@ -52,20 +46,17 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: app-bookinfo
+  name: istio-app
   namespace: flux-system
-  labels:
-    hostk8s.stack: book-app
-    hostk8s.type: application
 spec:
   dependsOn:
-    - name: component-istio
-  interval: 1h
+    - name: istio-components
+  interval: 10m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/book-app/app
+  path: ./software/stacks/foundation/istio/app
   prune: true
   wait: true

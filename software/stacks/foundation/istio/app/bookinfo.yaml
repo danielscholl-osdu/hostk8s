@@ -36,7 +36,7 @@ metadata:
   labels:
     app: details
     service: details
-    hostk8s.stack: book-app
+    hostk8s.stack: istio
     hostk8s.app: bookinfo
     hostk8s.application: bookinfo
 spec:
@@ -52,7 +52,7 @@ metadata:
   name: bookinfo-details
   labels:
     account: details
-    hostk8s.stack: book-app
+    hostk8s.stack: istio
     hostk8s.app: bookinfo
     hostk8s.application: bookinfo
 ---
@@ -63,7 +63,7 @@ metadata:
   labels:
     app: details
     version: v1
-    hostk8s.stack: book-app
+    hostk8s.stack: istio
     hostk8s.app: bookinfo
     hostk8s.application: bookinfo
 spec:

@@ -3,3 +3,6 @@ kind: Kustomization
 
 resources:
   - stack.yaml
+
+commonLabels:
+  hostk8s.stack: istio
