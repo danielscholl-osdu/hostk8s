@@ -53,7 +53,7 @@ spec:
       restartPolicy: OnFailure
       containers:
       - name: patcher
-        image: bitnami/kubectl:1.30
+        image: bitnamisecure/kubectl:latest
         command:
         - /bin/sh
         - -c
