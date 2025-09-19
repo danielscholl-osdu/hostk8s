@@ -1,14 +1,14 @@
 apiVersion: hostk8s.io/v1
 kind: StorageContract
 metadata:
-  name: foundation/elastic
+  name: foundation-elastic
   namespace: elasticsearch
 spec:
   directories:
     - name: elasticsearch-data
       path: /mnt/pv/elasticsearch
-      size: 5Gi
+      size: 10Gi
       accessModes: ["ReadWriteOnce"]
-      storageClass: standard
+      storageClass: foundation-elastic-storage
       owner: "1000:1000"
       permissions: "755"

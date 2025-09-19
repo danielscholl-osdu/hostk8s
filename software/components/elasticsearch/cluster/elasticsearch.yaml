@@ -30,7 +30,7 @@ spec:
         node.store.allow_mmap: false
         node.roles: ["master", "data", "ingest"]  # All roles on single node
 
-      # Volume claim for data persistence
+      # Volume claim for data persistence - uses HostK8s storage contract
       volumeClaimTemplates:
         - metadata:
             name: elasticsearch-data
@@ -40,7 +40,7 @@ spec:
             resources:
               requests:
                 storage: 10Gi
-            storageClassName: standard
+            storageClassName: foundation-elastic-storage
 
       # Pod configuration
       podTemplate:
