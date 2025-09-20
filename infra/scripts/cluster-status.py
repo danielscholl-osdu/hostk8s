@@ -674,6 +674,37 @@ class EnhancedClusterStatusChecker:
             logger.debug(f"Error getting Git repositories: {e}")
         return repos
 
+    def get_flux_helm_repositories(self) -> List[Dict[str, Any]]:
+        """Get Flux HelmRepository resources."""
+        repos = []
+        try:
+            if has_flux_cli():
+                result = run_flux(['get', 'sources', 'helm'], check=False)
+                if result.returncode == 0 and result.stdout:
+                    lines = result.stdout.strip().split('\n')
+                    if len(lines) > 1 and 'NAME' in lines[0]:  # Has header
+                        for line in lines[1:]:
+                            if line.strip():
+                                parts = line.split('\t')
+                                if len(parts) >= 5:
+                                    name = parts[0].strip()
+                                    # Get additional details via kubectl
+                                    url_result = run_kubectl(['get', 'helmrepository.source.toolkit.fluxcd.io',
+                                                            name, '-n', 'flux-system',
+                                                            '-o', 'jsonpath={.spec.url}'], check=False)
+
+                                    repos.append({
+                                        'name': name,
+                                        'revision': parts[1].strip(),
+                                        'suspended': parts[2].strip(),
+                                        'ready': parts[3].strip(),
+                                        'message': parts[4].strip() if len(parts) > 4 else '',
+                                        'url': url_result.stdout.strip() if url_result.returncode == 0 else 'unknown'
+                                    })
+        except Exception as e:
+            logger.debug(f"Error getting Helm repositories: {e}")
+        return repos
+
     def get_flux_kustomizations(self) -> List[Dict[str, Any]]:
         """Get Flux Kustomization resources."""
         kustomizations = []
@@ -1101,42 +1132,121 @@ def show_gitops_resources() -> None:
         return
 
     checker = EnhancedClusterStatusChecker()
-    repos = checker.get_flux_git_repositories()
+    git_repos = checker.get_flux_git_repositories()
+    helm_repos = checker.get_flux_helm_repositories()
     kustomizations = checker.get_flux_kustomizations()
 
-    if not repos and not kustomizations:
+    if not git_repos and not helm_repos and not kustomizations:
         return
 
     logger.info("GitOps Resources")
 
     # Show Git Repositories
-    if repos:
-        for repo in repos:
-            print(f"📁 Repository: {repo['name']}")
-            print(f"   URL: {repo['url']}")
-            print(f"   Branch: {repo['branch']}")
-            print(f"   Revision: {repo['revision']}")
-            print(f"   Ready: {repo['ready']}")
-            print(f"   Suspended: {repo['suspended']}")
-            if repo['message'] and repo['message'] != '-':
-                print(f"   Message: {repo['message']}")
-            print()
-    else:
-        print("📁 No GitRepositories configured")
+    if git_repos:
+        # Group repositories by URL/organization for compacting
+        url_groups = {}
+        problematic_repos = []
+
+        for repo in git_repos:
+            # Check if repo has problems
+            if repo['ready'] != 'True' or repo['suspended'] == 'True' or (repo['message'] and 'failed' in repo['message'].lower()):
+                problematic_repos.append(repo)
+            else:
+                # Group healthy repos by URL base
+                url_base = repo['url'].split('/')[-2] + '/' + repo['url'].split('/')[-1] if '/' in repo['url'] else repo['url']
+                # Extract just the SHA part from revision (format: "main@sha1:262aa13f")
+                if '@sha1:' in repo['revision']:
+                    sha = repo['revision'].split('@sha1:')[1][:7]
+                    branch_rev = f"{repo['branch']}@{sha}"
+                else:
+                    branch_rev = f"{repo['branch']}@{repo['revision'][:7]}"
+
+                if url_base not in url_groups:
+                    url_groups[url_base] = {'repos': [], 'branch_rev': branch_rev}
+                url_groups[url_base]['repos'].append(repo['name'])
+
+        print("📁 Git Repositories")
+
+        # Show healthy repos grouped by URL
+        for url_base, group in url_groups.items():
+            repo_list = ', '.join(group['repos'])
+            print(f"   [✓] {repo_list} ({url_base}@{group['branch_rev']})")
+
+        # Show problematic repos with full details
+        for repo in problematic_repos:
+            status = "[FAIL]" if repo['ready'] != 'True' else "[PAUSED]"
+            print(f"   {status} {repo['name']} ({repo['url']})")
+            if repo['suspended'] == 'True':
+                print(f"        Suspended: {repo['suspended']}")
+            if repo['message'] and repo['message'] not in ['-', '']:
+                print(f"        Message: {repo['message']}")
+
+        print()
+
+    # Show Helm Repositories
+    if helm_repos:
+        # Group repositories by URL/domain for compacting
+        domain_groups = {}
+        problematic_repos = []
+
+        for repo in helm_repos:
+            # Check if repo has problems
+            if repo['ready'] != 'True' or repo['suspended'] == 'True' or (repo['message'] and 'failed' in repo['message'].lower()):
+                problematic_repos.append(repo)
+            else:
+                # Group healthy repos by domain
+                if repo['url'].startswith('http'):
+                    # Extract domain from URL (e.g., "https://charts.bitnami.com/bitnami" -> "charts.bitnami.com")
+                    domain = repo['url'].split('//')[1].split('/')[0]
+                else:
+                    domain = repo['url']
+
+                # Use revision (SHA) for Helm repos
+                revision = repo['revision'][:8] if repo['revision'] else 'unknown'
+
+                if domain not in domain_groups:
+                    domain_groups[domain] = {'repos': [], 'revision': revision}
+                domain_groups[domain]['repos'].append(repo['name'])
+
+        print("📦 Helm Repositories")
+
+        # Show healthy repos grouped by domain
+        for domain, group in domain_groups.items():
+            repo_list = ', '.join(group['repos'])
+            print(f"   [✓] {repo_list} ({domain}@{group['revision']})")
+
+        # Show problematic repos with full details
+        for repo in problematic_repos:
+            status = "[FAIL]" if repo['ready'] != 'True' else "[PAUSED]"
+            print(f"   {status} {repo['name']} ({repo['url']})")
+            if repo['suspended'] == 'True':
+                print(f"        Suspended: {repo['suspended']}")
+            if repo['message'] and repo['message'] not in ['-', '']:
+                print(f"        Message: {repo['message']}")
+
+        print()
+
+    # Show "no sources" message only if neither Git nor Helm repos exist
+    if not git_repos and not helm_repos:
+        print("📁 No Source Repositories configured")
         print("   Run 'make restart sample' to configure a software stack")
         print()
 
-    # Show Kustomizations
+    # Show Kustomizations (compact format)
     if kustomizations:
+        print("🔧 Kustomizations")
         for kust in kustomizations:
-            print(f"{kust['status_icon']} Kustomization: {kust['name']}")
-            print(f"   Source: {kust['source_ref']}")
-            print(f"   Revision: {kust['revision']}")
-            print(f"   Ready: {kust['ready']}")
-            print(f"   Suspended: {kust['suspended']}")
-            if kust['message'] and kust['message'] not in ['-', '']:
-                print(f"   Message: {kust['message']}")
-            print()
+            # Compact one-line format: [STATUS] name (source, revision)
+            compact_line = f"   {kust['status_icon']} {kust['name']} ({kust['source_ref']}, {kust['revision']})"
+            print(compact_line)
+
+            # Show additional details only for problematic states
+            if kust['ready'] != 'True' or kust['suspended'] == 'True':
+                if kust['suspended'] == 'True':
+                    print(f"        Suspended: {kust['suspended']}")
+                if kust['message'] and kust['message'] not in ['-', '']:
+                    print(f"        Message: {kust['message']}")
+        print()
     else:
         print("🔧 No Kustomizations configured")
         print("   GitOps resources will appear here after configuring a stack")
@@ -1153,152 +1263,163 @@ def show_gitops_applications() -> None:
 
     logger.info("Stack Applications")
 
-    # Show ingress controller status only when it's ready
-    if checker.is_ingress_controller_ready():
-        print("🌐 Ingress Controller: ingress-nginx (Ready ✅)")
-        print("   Access: http://localhost:8080, https://localhost:8443")
-        print()
-
+    # Group deployments by their application label
+    app_groups = {}
     for app in gitops_apps:
-        # Display name with namespace qualification if not default
-        if app['namespace'] == 'default':
-            display_name = app['name']
-        else:
-            display_name = f"{app['namespace']}.{app['name']}"
-
-        print(f"📱 {display_name}")
-        print(f"   Deployment: {app['name']} ({app['ready']} ready)")
-
-        # Get app label for services/ingress lookup
         try:
+            # Get the application and stack labels
             label_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
                                       '-o', 'jsonpath={.metadata.labels.hostk8s\\.application}'], check=False)
+            stack_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
+                                      '-o', 'jsonpath={.metadata.labels.hostk8s\\.stack}'], check=False)
+
             if label_result.returncode == 0 and label_result.stdout:
                 app_label = label_result.stdout.strip()
+                stack_label = stack_result.stdout.strip() if stack_result.returncode == 0 and stack_result.stdout else None
 
-                # Show services
-                services = checker.get_app_services(app_label, 'hostk8s.application')
-                for service in services:
-                    if service['type'] == 'NodePort':
-                        # Extract NodePort
-                        port_info = service['ports']  # e.g., "80:30080/TCP"
-                        if ':' in port_info:
-                            nodeport = port_info.split(':')[1].split('/')[0]
-                            print(f"   Service: {service['name']} (NodePort {nodeport})")
-                        else:
-                            print(f"   Service: {service['name']} (NodePort)")
-                    elif service['type'] == 'LoadBalancer':
-                        external_ip = service['external_ip']
-                        if external_ip and external_ip != '<none>':
-                            print(f"   Service: {service['name']} (LoadBalancer, {external_ip})")
-                        else:
-                            print(f"   Service: {service['name']} (LoadBalancer, pending)")
-                    else:
-                        print(f"   Service: {service['name']} ({service['type']})")
+                # Create display name: stack.application (if stack exists), otherwise application.namespace
+                if stack_label:
+                    app_key = f"{stack_label}.{app_label}"
+                elif app['namespace'] == 'default':
+                    app_key = app_label
+                else:
+                    app_key = f"{app_label}.{app['namespace']}"
 
-                # Show ingress and HTTPRoute resources
-                ingress_list = checker.get_app_ingress(app_label, 'hostk8s.application')
-                httproute_list = checker.get_app_httproutes(app_label, 'hostk8s.application')
-
-                # Process traditional Ingress resources
-                for ingress in ingress_list:
-                    if ingress['hosts'] in ['localhost', '*']:
-                        # Use the centralized URL detection that handles ingress class properly
-                        urls = checker.get_ingress_urls(ingress['name'], ingress['namespace'])
-
-                        if checker.is_ingress_controller_ready():
-                            if len(urls) == 1:
-                                print(f"   Access: {urls[0]} ({ingress['name']} ingress)")
-                            else:
-                                print(f"   Access: {', '.join(urls)} ({ingress['name']} ingress)")
-                        else:
-                            # Show URL with warning to match UX pattern
-                            if len(urls) == 1:
-                                print(f"   Ingress: {ingress['name']} -> {urls[0]} ⚠️ (No Ingress Controller)")
-                            else:
-                                print(f"   Ingress: {ingress['name']} -> {', '.join(urls)} ⚠️ (No Ingress Controller)")
-                    else:
-                        # Non-localhost hosts
-                        if checker.is_ingress_controller_ready():
-                            if ingress['hosts'].endswith('.localhost'):
-                                paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
-                                if len(paths) == 1 and paths[0] == '/':
-                                    print(f"   Access: http://{ingress['hosts']}:8080/ ({ingress['name']} ingress)")
-                                else:
-                                    url_list = [f"http://{ingress['hosts']}:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
-                                    print(f"   Access: {', '.join(url_list)} ({ingress['name']} ingress)")
-                            else:
-                                print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']})")
-                        else:
-                            print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']}) ⚠️ (No Ingress Controller)")
-
-                # Process HTTPRoute resources (Gateway API)
-                for httproute in httproute_list:
-                    if 'localhost' in httproute['hostnames']:
-                        # HTTPRoutes with localhost - determine correct Gateway API ports
-                        try:
-                            # Get actual Gateway API ports from service
-                            svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
-                                                    '-o', 'jsonpath={.spec.ports[?(@.name=="http")].nodePort}'], check=False)
-                            https_svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
-                                                          '-o', 'jsonpath={.spec.ports[?(@.name=="https")].nodePort}'], check=False)
-
-                            # Default Gateway API ports
-                            http_port = "8081"
-                            https_port = "8444"
-
-                            # Get actual host ports from Kind mapping
-                            if svc_result.returncode == 0 and svc_result.stdout:
-                                try:
-                                    nodeport = int(svc_result.stdout.strip())
-                                    import subprocess
-                                    cluster_name = "hostk8s"
-                                    try:
-                                        ctx_result = run_kubectl(['config', 'current-context'], check=False, capture_output=True)
-                                        if ctx_result.returncode == 0 and 'kind-' in ctx_result.stdout:
-                                            cluster_name = ctx_result.stdout.strip().replace('kind-', '')
-                                    except:
-                                        pass
-
-                                    docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
-                                                                 capture_output=True, text=True, check=False)
-                                    if docker_result.returncode == 0:
-                                        for line in docker_result.stdout.strip().split('\n'):
-                                            if f'{nodeport}/tcp' in line:
-                                                if ' -> 0.0.0.0:' in line:
-                                                    http_port = line.split(' -> 0.0.0.0:')[1]
-                                                    break
-                                except:
-                                    pass
-
-                            if https_svc_result.returncode == 0 and https_svc_result.stdout:
-                                try:
-                                    nodeport = int(https_svc_result.stdout.strip())
-                                    docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
-                                                                 capture_output=True, text=True, check=False)
-                                    if docker_result.returncode == 0:
-                                        for line in docker_result.stdout.strip().split('\n'):
-                                            if f'{nodeport}/tcp' in line:
-                                                if ' -> 0.0.0.0:' in line:
-                                                    https_port = line.split(' -> 0.0.0.0:')[1]
-                                                    break
-                                except:
-                                    pass
-
-                            if checker.is_ingress_controller_ready():
-                                # Show HTTP access URL (main productpage)
-                                print(f"   Access: http://localhost:{http_port}/productpage ({httproute['name']} httproute)")
-                            else:
-                                print(f"   HTTPRoute: {httproute['name']} -> http://localhost:{http_port}/productpage ⚠️ (No Gateway API)")
-                        except Exception:
-                            # Fallback
-                            if checker.is_ingress_controller_ready():
-                                print(f"   Access: http://localhost:8081/productpage ({httproute['name']} httproute)")
-                            else:
-                                print(f"   HTTPRoute: {httproute['name']} -> http://localhost:8081/productpage ⚠️ (No Gateway API)")
-
+                if app_key not in app_groups:
+                    app_groups[app_key] = {
+                        'label': app_label,
+                        'stack': stack_label,
+                        'namespace': app['namespace'],
+                        'deployments': []
+                    }
+                app_groups[app_key]['deployments'].append(app)
         except Exception:
-            pass
+            continue
+
+    # Display each application group
+    for app_key, group in app_groups.items():
+        print(f"📱 {app_key}")
+
+        # Calculate overall application health
+        total_ready = 0
+        total_desired = 0
+        deployment_details = []
+
+        for deployment in group['deployments']:
+            deployment_details.append(f"{deployment['name']} ({deployment['ready']})")
+            if '/' in deployment['ready']:
+                ready_count, desired_count = deployment['ready'].split('/')
+                total_ready += int(ready_count)
+                total_desired += int(desired_count)
+
+        # Show deployment summary
+        if len(group['deployments']) == 1:
+            print(f"   Deployment: {deployment_details[0]}")
+        else:
+            print(f"   Deployments: {len(group['deployments'])} ({total_ready}/{total_desired} total ready)")
+            for detail in deployment_details:
+                print(f"     • {detail}")
+
+        # Show consolidated services (avoid duplicates)
+        services = checker.get_app_services(group['label'], 'hostk8s.application')
+        unique_services = {}
+        for service in services:
+            unique_services[service['name']] = service
+
+        for service in unique_services.values():
+            if service['type'] == 'NodePort':
+                port_info = service['ports']
+                if ':' in port_info:
+                    nodeport = port_info.split(':')[1].split('/')[0]
+                    print(f"   Service: {service['name']} (NodePort {nodeport})")
+                else:
+                    print(f"   Service: {service['name']} (NodePort)")
+            elif service['type'] == 'LoadBalancer':
+                external_ip = service['external_ip']
+                if external_ip and external_ip != '<none>':
+                    print(f"   Service: {service['name']} (LoadBalancer, {external_ip})")
+                else:
+                    print(f"   Service: {service['name']} (LoadBalancer, pending)")
+            else:
+                print(f"   Service: {service['name']} ({service['type']})")
+
+        # Show access URLs (consolidated to avoid repetition)
+        ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.application')
+        httproute_list = checker.get_app_httproutes(group['label'], 'hostk8s.application')
+
+        # Process traditional Ingress resources
+        shown_access = False
+        for ingress in ingress_list:
+            if not shown_access:  # Only show the first access URL to avoid repetition
+                if ingress['hosts'] in ['localhost', '*']:
+                    urls = checker.get_ingress_urls(ingress['name'], ingress['namespace'])
+                    if checker.is_ingress_controller_ready():
+                        if len(urls) == 1:
+                            print(f"   Access: {urls[0]} ({ingress['name']} ingress)")
+                        else:
+                            print(f"   Access: {', '.join(urls)} ({ingress['name']} ingress)")
+                    else:
+                        if len(urls) == 1:
+                            print(f"   Ingress: {ingress['name']} -> {urls[0]} ⚠️ (No Ingress Controller)")
+                        else:
+                            print(f"   Ingress: {ingress['name']} -> {', '.join(urls)} ⚠️ (No Ingress Controller)")
+                    shown_access = True
+                elif ingress['hosts'].endswith('.localhost'):
+                    if checker.is_ingress_controller_ready():
+                        paths = checker.get_ingress_paths(ingress['name'], ingress['namespace'])
+                        if len(paths) == 1 and paths[0] == '/':
+                            print(f"   Access: http://{ingress['hosts']}:8080/ ({ingress['name']} ingress)")
+                        else:
+                            url_list = [f"http://{ingress['hosts']}:8080{path}{'/' if not path.endswith('/') else ''}" for path in paths]
+                            print(f"   Access: {', '.join(url_list)} ({ingress['name']} ingress)")
+                    else:
+                        print(f"   Ingress: {ingress['name']} (hosts: {ingress['hosts']}) ⚠️ (No Ingress Controller)")
+                    shown_access = True
+
+        # Process HTTPRoute resources (Gateway API)
+        for httproute in httproute_list:
+            if not shown_access and 'localhost' in httproute['hostnames']:
+                try:
+                    # Get actual Gateway API ports
+                    svc_result = run_kubectl(['get', 'service', 'hostk8s-gateway-istio', '-n', 'istio-system',
+                                            '-o', 'jsonpath={.spec.ports[?(@.name=="http")].nodePort}'], check=False)
+
+                    http_port = "8081"  # Default
+                    if svc_result.returncode == 0 and svc_result.stdout:
+                        try:
+                            nodeport = int(svc_result.stdout.strip())
+                            import subprocess
+                            cluster_name = "hostk8s"
+                            try:
+                                ctx_result = run_kubectl(['config', 'current-context'], check=False, capture_output=True)
+                                if ctx_result.returncode == 0 and 'kind-' in ctx_result.stdout:
+                                    cluster_name = ctx_result.stdout.strip().replace('kind-', '')
+                            except:
+                                pass
+
+                            docker_result = subprocess.run(['docker', 'port', f'{cluster_name}-control-plane'],
+                                                         capture_output=True, text=True, check=False)
+                            if docker_result.returncode == 0:
+                                for line in docker_result.stdout.strip().split('\n'):
+                                    if f'{nodeport}/tcp' in line and ' -> 0.0.0.0:' in line:
+                                        http_port = line.split(' -> 0.0.0.0:')[1]
+                                        break
+                        except:
+                            pass
+
+                    if checker.is_ingress_controller_ready():
+                        print(f"   Access: http://localhost:{http_port}/productpage ({httproute['name']} httproute)")
+                    else:
+                        print(f"   HTTPRoute: {httproute['name']} -> http://localhost:{http_port}/productpage ⚠️ (No Gateway API)")
+                    shown_access = True
+                    break
+                except Exception:
+                    if checker.is_ingress_controller_ready():
+                        print(f"   Access: http://localhost:8081/productpage ({httproute['name']} httproute)")
+                    else:
+                        print(f"   HTTPRoute: {httproute['name']} -> http://localhost:8081/productpage ⚠️ (No Gateway API)")
+                    shown_access = True
+                    break
 
         print()
 

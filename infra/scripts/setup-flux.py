@@ -115,18 +115,6 @@ class FluxSetup:
 
             if result.returncode == 0 and 'Running' in result.stdout:
                 logger.info("Flux appears to already be running")
-
-                # Show flux status
-                try:
-                    result = run_flux(['get', 'all'], check=False)
-                    if result.returncode == 0:
-                        logger.info("Current Flux status:")
-                        print(result.stdout)
-                    else:
-                        logger.warn("Could not get flux status")
-                except FluxError:
-                    logger.warn("Could not get flux status")
-
                 return True
 
             return False
@@ -277,16 +265,7 @@ spec:
 
     def show_flux_status(self) -> None:
         """Show Flux installation status."""
-        self.log_info("Flux installation completed! Checking status")
-
-        try:
-            result = run_flux(['get', 'all'], check=False)
-            if result.returncode == 0:
-                print(result.stdout)
-            else:
-                logger.warn("Could not get flux status")
-        except FluxError:
-            logger.warn("Could not get flux status")
+        self.log_info("Flux installation completed! ✅")
 
     def show_completion_summary(self) -> None:
         """Show completion summary with configuration details."""
