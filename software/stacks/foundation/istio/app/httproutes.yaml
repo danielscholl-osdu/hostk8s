@@ -10,9 +10,6 @@ kind: HTTPRoute
 metadata:
   name: bookinfo
   namespace: bookinfo
-  labels:
-    hostk8s.app: bookinfo
-    hostk8s.application: bookinfo  # This makes it show up in status
 spec:
   parentRefs:
   - name: hostk8s-gateway
