@@ -21,6 +21,9 @@ spec:
   interval: 10m0s
   values:
     installCRDs: true
+    # Add HostK8s labels for component visibility
+    commonLabels:
+      hostk8s.component: cert-manager
     resources:
       limits:
         cpu: 100m

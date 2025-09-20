@@ -279,6 +279,7 @@ class VaultSetup:
                 '--set', 'resources.requests.cpu=10m',
                 '--set', 'resources.limits.memory=64Mi',
                 '--set', 'resources.limits.cpu=50m',
+                '--set', 'commonLabels.hostk8s\.component=external-secrets',
                 '--wait', '--timeout', '2m'
             ]
 
