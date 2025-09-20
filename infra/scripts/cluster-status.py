@@ -1151,7 +1151,7 @@ def show_gitops_applications() -> None:
     if not gitops_apps:
         return
 
-    logger.info("GitOps Applications")
+    logger.info("Stack Applications")
 
     # Show ingress controller status only when it's ready
     if checker.is_ingress_controller_ready():
@@ -1311,7 +1311,7 @@ def show_manual_deployed_apps() -> None:
     if not manual_apps:
         return
 
-    logger.info("Manual Deployed Apps")
+    logger.info("Component Services")
 
     # Group apps by label and namespace to avoid duplicates
     app_groups = {}
