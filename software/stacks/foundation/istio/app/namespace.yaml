@@ -5,6 +5,3 @@ metadata:
   labels:
     # Enable Istio Ambient mode - instant mTLS without sidecars!
     istio.io/dataplane-mode: ambient
-    # Stack identification
-    hostk8s.stack: istio
-    hostk8s.app: bookinfo

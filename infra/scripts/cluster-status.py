@@ -746,8 +746,8 @@ class EnhancedClusterStatusChecker:
                                 'age': parts[5]
                             })
 
-            # Manual applications (hostk8s.app label) - check both deployments and statefulsets
-            deployment_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
+            # Component services (hostk8s.component label) - check both deployments and statefulsets
+            deployment_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.component',
                                            '--all-namespaces', '--no-headers'], check=False)
             if deployment_result.returncode == 0 and deployment_result.stdout:
                 for line in deployment_result.stdout.strip().split('\n'):
@@ -764,8 +764,8 @@ class EnhancedClusterStatusChecker:
                                 'type': 'deployment'
                             })
 
-            # Manual applications (hostk8s.app label) - StatefulSets
-            statefulset_result = run_kubectl(['get', 'statefulsets', '-l', 'hostk8s.app',
+            # Component services (hostk8s.component label) - StatefulSets
+            statefulset_result = run_kubectl(['get', 'statefulsets', '-l', 'hostk8s.component',
                                             '--all-namespaces', '--no-headers'], check=False)
             if statefulset_result.returncode == 0 and statefulset_result.stdout:
                 for line in statefulset_result.stdout.strip().split('\n'):
@@ -1026,7 +1026,7 @@ class EnhancedClusterStatusChecker:
         # Check manual deployed apps (both deployments and statefulsets)
         try:
             # Check deployments
-            deployment_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
+            deployment_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.component',
                                            '--all-namespaces', '--no-headers'], check=False)
 
             if deployment_result.returncode == 0 and deployment_result.stdout:
@@ -1044,7 +1044,7 @@ class EnhancedClusterStatusChecker:
                                     unhealthy_apps.append(f"{namespace}/{name} ({ready})")
 
             # Check statefulsets
-            statefulset_result = run_kubectl(['get', 'statefulsets', '-l', 'hostk8s.app',
+            statefulset_result = run_kubectl(['get', 'statefulsets', '-l', 'hostk8s.component',
                                             '--all-namespaces', '--no-headers'], check=False)
 
             if statefulset_result.returncode == 0 and statefulset_result.stdout:
@@ -1320,13 +1320,13 @@ def show_manual_deployed_apps() -> None:
             # Get app label from the appropriate resource type
             resource_type = app.get('type', 'deployment')
             label_result = run_kubectl(['get', resource_type, app['name'], '-n', app['namespace'],
-                                      '-o', 'jsonpath={.metadata.labels.hostk8s\\.app}'], check=False)
+                                      '-o', 'jsonpath={.metadata.labels.hostk8s\\.component}'], check=False)
             if label_result.returncode == 0 and label_result.stdout:
                 app_label = label_result.stdout.strip()
                 if app['namespace'] == 'default':
                     key = app_label
                 else:
-                    key = f"{app['namespace']}.{app_label}"
+                    key = f"{app_label}.{app['namespace']}"
 
                 if key not in app_groups:
                     app_groups[key] = {'apps': [], 'label': app_label, 'namespaces': set()}
@@ -1344,14 +1344,14 @@ def show_manual_deployed_apps() -> None:
             print(f"   {resource_type}: {app['name']} ({app['ready']} ready)")
 
         # Show services
-        services = checker.get_app_services(group['label'], 'hostk8s.app')
+        services = checker.get_app_services(group['label'], 'hostk8s.component')
         for service in services:
             print(f"   Service: {service['name']} ({service['type']})")
 
         # Show ingress - check each namespace individually to avoid duplicates
         shown_ingress = set()
         for namespace in group['namespaces']:
-            ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.app', namespace)
+            ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.component', namespace)
             for ingress in ingress_list:
                 # Use namespace+name as unique key to avoid showing duplicates
                 ingress_key = f"{ingress['namespace']}.{ingress['name']}"

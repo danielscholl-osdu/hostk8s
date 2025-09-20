@@ -11,14 +11,6 @@ resources:
 labels:
   - pairs:
       hostk8s.stack: istio
-      hostk8s.app: istio
+      hostk8s.application: bookinfo
 
-# Only productpage gets application label for clean status detection
-patches:
-  - target:
-      name: productpage
-      kind: Service
-    patch: |-
-      - op: add
-        path: /metadata/labels/hostk8s.application
-        value: bookinfo
+# Labels applied to all bookinfo resources via kustomization
