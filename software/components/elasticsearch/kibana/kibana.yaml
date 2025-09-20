@@ -4,9 +4,9 @@ metadata:
   name: kibana
   namespace: elasticsearch
   labels:
-    hostk8s.app: kibana
+    hostk8s.component: elastic
   annotations:
-    eck.k8s.alpha.elastic.co/propagate-labels: "hostk8s.app"
+    eck.k8s.alpha.elastic.co/propagate-labels: "hostk8s.component"
 spec:
   version: 9.1.3
   count: 1  # Single instance for development
@@ -28,7 +28,7 @@ spec:
   podTemplate:
     metadata:
       labels:
-        hostk8s.app: kibana
+        hostk8s.component: elastic
     spec:
       containers:
         - name: kibana
