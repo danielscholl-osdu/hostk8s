@@ -36,9 +36,6 @@ metadata:
   labels:
     app: details
     service: details
-    hostk8s.stack: istio
-    hostk8s.app: bookinfo
-    hostk8s.application: bookinfo
 spec:
   ports:
   - port: 9080
