@@ -35,7 +35,7 @@ spec:
           env:
             # Elasticsearch connection (HTTP without TLS)
             - name: ELASTICSEARCH_HOSTS
-              value: "http://elasticsearch-es-http.elasticsearch:9200"
+              value: "http://elasticsearch-es-http.elastic:9200"
             # Disable some production features for dev
             - name: MONITORING_ENABLED
               value: "false"
