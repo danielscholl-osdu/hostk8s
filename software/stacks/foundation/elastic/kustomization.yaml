@@ -5,4 +5,5 @@ resources:
   - stack.yaml
 
 labels:
-  hostk8s.stack: elastic
+- pairs:
+    hostk8s.stack: elastic

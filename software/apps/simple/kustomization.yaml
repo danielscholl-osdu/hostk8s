@@ -7,8 +7,8 @@ metadata:
     hostk8s.app: simple
 
 labels:
-  - pairs:
-      hostk8s.app: simple
+- pairs:
+    hostk8s.app: simple
 
 resources:
   - deployment.yaml

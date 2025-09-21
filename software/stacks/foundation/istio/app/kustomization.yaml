@@ -9,7 +9,7 @@ resources:
   - httproutes.yaml
 
 labels:
-  - pairs:
+- pairs:
       hostk8s.stack: istio
       hostk8s.application: bookinfo
 

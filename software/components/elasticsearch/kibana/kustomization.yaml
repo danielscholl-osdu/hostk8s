@@ -6,6 +6,6 @@ resources:
   - ingress.yaml
 
 labels:
-  - pairs:
+- pairs:
       hostk8s.component: elastic
       component.hostk8s.io/role: kibana

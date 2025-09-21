@@ -9,4 +9,5 @@ resources:
   - service.yaml
 
 labels:
-  hostk8s.component: registry
+- pairs:
+    hostk8s.component: registry

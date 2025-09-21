@@ -5,4 +5,5 @@ resources:
   - certificate.yaml
 
 labels:
-  hostk8s.component: certs
+- pairs:
+    hostk8s.component: certs

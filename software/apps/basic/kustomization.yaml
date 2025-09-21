@@ -18,5 +18,5 @@ resources:
   - ingress.yaml
 
 labels:
-  - pairs:
+- pairs:
       hostk8s.app: basic

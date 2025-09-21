@@ -5,6 +5,7 @@ resources:
   - component.yaml
 
 labels:
-  hostk8s.component: elasticsearch
-  component.hostk8s.io/type: foundation
-  component.hostk8s.io/category: database
+- pairs:
+    hostk8s.component: elasticsearch
+    component.hostk8s.io/type: foundation
+    component.hostk8s.io/category: database

@@ -18,4 +18,5 @@ resources:
   - voting-ingress.yaml
 
 labels:
-  hostk8s.app: sample-app
+- pairs:
+    hostk8s.app: sample-app
