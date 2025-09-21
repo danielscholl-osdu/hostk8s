@@ -842,6 +842,78 @@ class EnhancedClusterStatusChecker:
             logger.debug(f"Error getting services for {app_name}: {e}")
         return services
 
+    def get_app_pvcs(self, app_name: str, label_key: str) -> List[Dict[str, Any]]:
+        """Get PersistentVolumeClaims for an application."""
+        pvcs = []
+        try:
+            result = run_kubectl(['get', 'pvc', '-l', f'{label_key}={app_name}',
+                                '--all-namespaces', '--no-headers'], check=False)
+            if result.returncode == 0 and result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 6:
+                            pvcs.append({
+                                'namespace': parts[0],
+                                'name': parts[1],
+                                'status': parts[2],
+                                'volume': parts[3],
+                                'capacity': parts[4],
+                                'access_modes': parts[5],
+                                'storage_class': parts[6] if len(parts) > 6 else '',
+                                'age': parts[7] if len(parts) > 7 else ''
+                            })
+        except Exception as e:
+            logger.debug(f"Error getting PVCs for {app_name}: {e}")
+        return pvcs
+
+    def get_namespace_pvcs(self, namespace: str) -> List[Dict[str, Any]]:
+        """Get all PersistentVolumeClaims in a specific namespace."""
+        pvcs = []
+        try:
+            result = run_kubectl(['get', 'pvc', '-n', namespace, '--no-headers'], check=False)
+            if result.returncode == 0 and result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 6:
+                            pvcs.append({
+                                'namespace': namespace,
+                                'name': parts[0],
+                                'status': parts[1],
+                                'volume': parts[2],
+                                'capacity': parts[3],
+                                'access_modes': parts[4],
+                                'storage_class': parts[5] if len(parts) > 5 else '',
+                                'age': parts[6] if len(parts) > 6 else ''
+                            })
+        except Exception as e:
+            logger.debug(f"Error getting PVCs for namespace {namespace}: {e}")
+        return pvcs
+
+    def get_namespace_services(self, namespace: str) -> List[Dict[str, Any]]:
+        """Get all services in a specific namespace."""
+        services = []
+        try:
+            result = run_kubectl(['get', 'services', '-n', namespace, '--no-headers'], check=False)
+            if result.returncode == 0 and result.stdout:
+                for line in result.stdout.strip().split('\n'):
+                    if line.strip():
+                        parts = line.split()
+                        if len(parts) >= 6:
+                            services.append({
+                                'namespace': namespace,
+                                'name': parts[0],
+                                'type': parts[1],
+                                'cluster_ip': parts[2],
+                                'external_ip': parts[3],
+                                'ports': parts[4],
+                                'age': parts[5] if len(parts) > 5 else ''
+                            })
+        except Exception as e:
+            logger.debug(f"Error getting services for namespace {namespace}: {e}")
+        return services
+
     def get_app_ingress(self, app_name: str, label_key: str, namespace: str = None) -> List[Dict[str, Any]]:
         """Get ingress resources for an application."""
         ingress_list = []
@@ -1253,28 +1325,67 @@ def show_gitops_resources() -> None:
         print()
 
 
-def show_gitops_applications() -> None:
-    """Show GitOps-deployed applications."""
+def show_all_applications() -> None:
+    """Show all deployed applications (both GitOps and manual)."""
     checker = EnhancedClusterStatusChecker()
     gitops_apps, _ = checker.get_deployed_apps()
 
-    if not gitops_apps:
+    # Also get manual apps with hostk8s.app labels
+    manual_apps = []
+    try:
+        manual_result = run_kubectl(['get', 'deployments', '-l', 'hostk8s.app',
+                                   '--all-namespaces', '--no-headers'], check=False)
+        if manual_result.returncode == 0 and manual_result.stdout:
+            for line in manual_result.stdout.strip().split('\n'):
+                if line.strip():
+                    parts = line.split()
+                    if len(parts) >= 6:
+                        manual_apps.append({
+                            'namespace': parts[0],
+                            'name': parts[1],
+                            'ready': parts[2],
+                            'up_to_date': parts[3],
+                            'total': parts[4],
+                            'age': parts[5],
+                            'type': 'manual'
+                        })
+    except Exception as e:
+        logger.debug(f"Error getting manual apps: {e}")
+
+    # Combine both types
+    all_apps = gitops_apps + manual_apps
+
+    if not all_apps:
         return
 
-    logger.info("Stack Applications")
+    logger.info("Applications")
 
     # Group deployments by their application label
     app_groups = {}
-    for app in gitops_apps:
+    for app in all_apps:
         try:
-            # Get the application and stack labels
+            # Try hostk8s.application first (GitOps stack apps), then hostk8s.app (manual apps)
             label_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
                                       '-o', 'jsonpath={.metadata.labels.hostk8s\\.application}'], check=False)
-            stack_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
-                                      '-o', 'jsonpath={.metadata.labels.hostk8s\\.stack}'], check=False)
+
+            app_label = None
+            label_key = None
 
             if label_result.returncode == 0 and label_result.stdout:
                 app_label = label_result.stdout.strip()
+                label_key = 'hostk8s.application'
+            else:
+                # Try hostk8s.app for manual apps
+                manual_label_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
+                                                 '-o', 'jsonpath={.metadata.labels.hostk8s\\.app}'], check=False)
+                if manual_label_result.returncode == 0 and manual_label_result.stdout:
+                    app_label = manual_label_result.stdout.strip()
+                    label_key = 'hostk8s.app'
+
+            if app_label:
+                # Get stack label for GitOps apps
+                stack_result = run_kubectl(['get', 'deployment', app['name'], '-n', app['namespace'],
+                                          '-o', 'jsonpath={.metadata.labels.hostk8s\\.stack}'], check=False)
                 stack_label = stack_result.stdout.strip() if stack_result.returncode == 0 and stack_result.stdout else None
 
                 # Create display name: stack.application (if stack exists), otherwise application.namespace
@@ -1288,6 +1399,7 @@ def show_gitops_applications() -> None:
                 if app_key not in app_groups:
                     app_groups[app_key] = {
                         'label': app_label,
+                        'label_key': label_key,
                         'stack': stack_label,
                         'namespace': app['namespace'],
                         'deployments': []
@@ -1321,7 +1433,7 @@ def show_gitops_applications() -> None:
                 print(f"     • {detail}")
 
         # Show consolidated services (avoid duplicates)
-        services = checker.get_app_services(group['label'], 'hostk8s.application')
+        services = checker.get_app_services(group['label'], group['label_key'])
         unique_services = {}
         for service in services:
             unique_services[service['name']] = service
@@ -1344,8 +1456,8 @@ def show_gitops_applications() -> None:
                 print(f"   Service: {service['name']} ({service['type']})")
 
         # Show access URLs (consolidated to avoid repetition)
-        ingress_list = checker.get_app_ingress(group['label'], 'hostk8s.application')
-        httproute_list = checker.get_app_httproutes(group['label'], 'hostk8s.application')
+        ingress_list = checker.get_app_ingress(group['label'], group['label_key'])
+        httproute_list = checker.get_app_httproutes(group['label'], group['label_key'])
 
         # Process traditional Ingress resources
         shown_access = False
@@ -1425,17 +1537,14 @@ def show_gitops_applications() -> None:
 
 
 def show_manual_deployed_apps() -> None:
-    """Show manually deployed applications."""
+    """Show component services (infrastructure)."""
     checker = EnhancedClusterStatusChecker()
     _, manual_apps = checker.get_deployed_apps()
 
-    if not manual_apps:
-        return
-
-    logger.info("Component Services")
-
     # Group apps by label and namespace to avoid duplicates
     app_groups = {}
+
+    # First, add labeled components
     for app in manual_apps:
         try:
             # Get app label from the appropriate resource type
@@ -1450,11 +1559,18 @@ def show_manual_deployed_apps() -> None:
                     key = f"{app_label}.{app['namespace']}"
 
                 if key not in app_groups:
-                    app_groups[key] = {'apps': [], 'label': app_label, 'namespaces': set()}
+                    app_groups[key] = {'apps': [], 'label': app_label, 'namespaces': set(), 'label_key': 'hostk8s.component'}
                 app_groups[key]['apps'].append(app)
                 app_groups[key]['namespaces'].add(app['namespace'])
         except Exception:
             continue
+
+
+    # Only show Component Services header if we have actual components to display
+    if not app_groups:
+        return
+
+    logger.info("Component Services")
 
     for display_name, group in app_groups.items():
         print(f"📱 {display_name}")
@@ -1468,6 +1584,26 @@ def show_manual_deployed_apps() -> None:
         services = checker.get_app_services(group['label'], 'hostk8s.component')
         for service in services:
             print(f"   Service: {service['name']} ({service['type']})")
+
+        # Show storage (PVCs)
+        pvcs = checker.get_app_pvcs(group['label'], 'hostk8s.component')
+
+        # Also get PVCs from component namespaces (for operators that don't label PVCs)
+        for namespace in group['namespaces']:
+            namespace_pvcs = checker.get_namespace_pvcs(namespace)
+            pvcs.extend(namespace_pvcs)
+
+        # Remove duplicates by name
+        unique_pvcs = {}
+        for pvc in pvcs:
+            unique_pvcs[pvc['name']] = pvc
+
+        for pvc in unique_pvcs.values():
+            if pvc['status'] == 'Bound':
+                print(f"   Storage: {pvc['name']} (Bound, {pvc['capacity']})")
+            else:
+                status_indicator = " ⚠️" if pvc['status'] in ['Pending', 'Lost'] else ""
+                print(f"   Storage: {pvc['name']} ({pvc['status']}){status_indicator}")
 
         # Show ingress - check each namespace individually to avoid duplicates
         shown_ingress = set()
@@ -1510,7 +1646,7 @@ def main() -> None:
 
         # Show applications (keep existing functionality)
         show_gitops_resources()
-        show_gitops_applications()
+        show_all_applications()
         show_manual_deployed_apps()
 
         # Health check
