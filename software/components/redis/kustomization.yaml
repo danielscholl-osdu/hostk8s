@@ -4,8 +4,8 @@ kind: Kustomization
 metadata:
   name: redis
   annotations:
-    component.hostk8s.io/description: "Redis infrastructure component with management UI"
-    component.hostk8s.io/version: "1.0.0"
+  component.hostk8s.io/description: "Redis infrastructure component with management UI"
+  component.hostk8s.io/version: "1.0.0"
 
 resources:
   - namespace.yaml

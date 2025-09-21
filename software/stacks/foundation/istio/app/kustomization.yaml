@@ -8,9 +8,8 @@ resources:
   - bookinfo.yaml
   - httproutes.yaml
 
-labels:
-- pairs:
-      hostk8s.stack: istio
-      hostk8s.application: bookinfo
+commonLabels:
+    hostk8s.stack: istio
+    hostk8s.application: bookinfo
 
 # Labels applied to all bookinfo resources via kustomization

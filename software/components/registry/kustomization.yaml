@@ -8,6 +8,5 @@ resources:
   - deployment.yaml
   - service.yaml
 
-labels:
-- pairs:
-    hostk8s.component: registry
+commonLabels:
+  hostk8s.component: registry

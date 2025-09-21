@@ -4,7 +4,7 @@ kind: Kustomization
 metadata:
   name: basic
   labels:
-    hostk8s.app: basic
+  hostk8s.app: basic
 
 namespace: default
 
@@ -17,6 +17,5 @@ resources:
   - api-service.yaml
   - ingress.yaml
 
-labels:
-- pairs:
-      hostk8s.app: basic
+commonLabels:
+    hostk8s.app: basic

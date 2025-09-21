@@ -5,7 +5,6 @@ resources:
   - namespace.yaml
   - test-job.yaml
 
-labels:
-- pairs:
-    hostk8s.stack: elastic
-    hostk8s.app: test-data-loader
+commonLabels:
+  hostk8s.stack: elastic
+  hostk8s.app: test-data-loader

@@ -4,6 +4,5 @@ kind: Kustomization
 resources:
   - certificate.yaml
 
-labels:
-- pairs:
-    hostk8s.component: certs
+commonLabels:
+  hostk8s.component: certs

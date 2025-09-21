@@ -8,7 +8,6 @@ resources:
   - elasticsearch.yaml
   - elasticsearch-ingress.yaml
 
-labels:
-- pairs:
-      hostk8s.component: elastic
-      component.hostk8s.io/role: cluster
+commonLabels:
+    hostk8s.component: elastic
+    component.hostk8s.io/role: cluster

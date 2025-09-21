@@ -6,6 +6,5 @@ resources:
   - source.yaml
   - release.yaml
 
-labels:
-- pairs:
-    hostk8s.component: certs
+commonLabels:
+  hostk8s.component: certs

@@ -4,7 +4,7 @@ kind: Kustomization
 metadata:
   name: voting-app
   labels:
-    hostk8s.app: sample-app
+  hostk8s.app: sample-app
 
 resources:
   - namespace.yaml
@@ -17,6 +17,5 @@ resources:
   - worker-deployment.yaml
   - voting-ingress.yaml
 
-labels:
-- pairs:
-    hostk8s.app: sample-app
+commonLabels:
+  hostk8s.app: sample-app
