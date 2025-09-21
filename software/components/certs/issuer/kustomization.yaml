@@ -5,5 +5,5 @@ resources:
   - issuer.yaml
   - lets-encrypt.yaml
 
-commonLabels:
+labels:
   hostk8s.component: certs

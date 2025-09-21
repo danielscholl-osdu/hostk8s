@@ -4,5 +4,5 @@ kind: Kustomization
 resources:
   - stack.yaml
 
-commonLabels:
+labels:
   hostk8s.stack: elastic

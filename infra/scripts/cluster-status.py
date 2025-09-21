@@ -1111,7 +1111,21 @@ class EnhancedClusterStatusChecker:
         """Perform GitOps-aware health checks."""
         logger.info("Health Check")
 
-        # First check if GitOps stack deployment is in progress
+        # First check if cluster is accessible
+        try:
+            cluster_check = run_kubectl(['get', 'nodes'], check=False, capture_output=True)
+            if cluster_check.returncode != 0:
+                print(f"❌ No cluster found")
+                print(f"   Status: Run 'make start' to create a cluster")
+                print()
+                return
+        except Exception:
+            print(f"❌ No cluster found")
+            print(f"   Status: Run 'make start' to create a cluster")
+            print()
+            return
+
+        # Check if GitOps stack deployment is in progress
         if has_flux():
             kustomizations = self.get_flux_kustomizations()
             if kustomizations:

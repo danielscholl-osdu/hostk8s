@@ -279,7 +279,7 @@ class VaultSetup:
                 '--set', 'resources.requests.cpu=10m',
                 '--set', 'resources.limits.memory=64Mi',
                 '--set', 'resources.limits.cpu=50m',
-                '--wait', '--timeout', '2m'
+                '--wait', '--timeout', '5m'
             ]
 
             run_helm(helm_args, capture_output=True)

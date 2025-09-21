@@ -17,5 +17,5 @@ resources:
   - worker-deployment.yaml
   - voting-ingress.yaml
 
-commonLabels:
+labels:
   hostk8s.app: sample-app
