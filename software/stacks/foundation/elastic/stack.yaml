@@ -16,7 +16,7 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: flux-system
+    name: flux-system-elastic
   path: ./software/components/elasticsearch
   prune: true
   wait: true
@@ -36,7 +36,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system
+    name: flux-system-elastic
   path: ./software/stacks/foundation/elastic/app
   prune: true
   wait: false  # Don't wait for test job
