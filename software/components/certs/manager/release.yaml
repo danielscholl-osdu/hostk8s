@@ -22,7 +22,7 @@ spec:
   values:
     installCRDs: true
     # Add HostK8s labels for component visibility
-    commonLabels:
+    extraLabels:
       hostk8s.component: cert-manager
     resources:
       limits:

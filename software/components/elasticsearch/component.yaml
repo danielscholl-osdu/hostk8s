@@ -12,7 +12,7 @@ metadata:
   name: component-elasticsearch-operator
   namespace: flux-system
   labels:
-    hostk8s.component: elasticsearch
+    hostk8s.component: elastic
 spec:
   interval: 1h
   retryInterval: 1m
@@ -37,7 +37,7 @@ metadata:
   name: component-elasticsearch-cluster
   namespace: flux-system
   labels:
-    hostk8s.component: elasticsearch
+    hostk8s.component: elastic
 spec:
   dependsOn:
     - name: component-elasticsearch-operator
@@ -54,7 +54,7 @@ spec:
     - apiVersion: elasticsearch.k8s.elastic.co/v1
       kind: Elasticsearch
       name: elasticsearch
-      namespace: elasticsearch
+      namespace: elastic
 
 ---
 # Step 3: Kibana UI
@@ -64,7 +64,7 @@ metadata:
   name: component-elasticsearch-kibana
   namespace: flux-system
   labels:
-    hostk8s.component: elasticsearch
+    hostk8s.component: elastic
 spec:
   dependsOn:
     - name: component-elasticsearch-cluster
@@ -81,4 +81,4 @@ spec:
     - apiVersion: kibana.k8s.elastic.co/v1
       kind: Kibana
       name: kibana
-      namespace: elasticsearch
+      namespace: elastic
