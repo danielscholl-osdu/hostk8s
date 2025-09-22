@@ -16,7 +16,7 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: flux-system-foundation-airflow
+    name: flux-system-airflow
   path: ./software/components/postgres
   prune: true
   wait: true
@@ -34,7 +34,7 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: flux-system-foundation-airflow
+    name: flux-system-airflow
   path: ./software/components/redis
   prune: true
   wait: true
@@ -52,7 +52,7 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: flux-system-foundation-airflow
+    name: flux-system-airflow
   path: ./software/components/airflow
   prune: true
   wait: true
@@ -73,7 +73,7 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: flux-system-foundation-airflow
+    name: flux-system-airflow
   path: ./software/stacks/foundation/airflow/db
   prune: true
   wait: true
@@ -93,7 +93,7 @@ spec:
   timeout: 10m
   sourceRef:
     kind: GitRepository
-    name: flux-system-foundation-airflow
+    name: flux-system-airflow
   path: ./software/stacks/foundation/airflow/dags
   prune: true
   wait: true
