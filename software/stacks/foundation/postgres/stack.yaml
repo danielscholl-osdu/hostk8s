@@ -26,7 +26,7 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: postgres-app
+  name: postgres-db
   namespace: flux-system
 spec:
   interval: 10m
@@ -35,7 +35,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system-postgres
-  path: ./software/stacks/foundation/postgres/app
+  path: ./software/stacks/foundation/postgres/db
   prune: true
   wait: true
   dependsOn:
