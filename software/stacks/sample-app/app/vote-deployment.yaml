@@ -5,7 +5,6 @@ metadata:
   namespace: sample-app
   labels:
     app: vote
-    hostk8s.app: sample-app
     hostk8s.component: vote-service
 spec:
   replicas: 1
@@ -16,7 +15,6 @@ spec:
     metadata:
       labels:
         app: vote
-        hostk8s.app: sample-app
         hostk8s.component: vote-service
     spec:
       containers:

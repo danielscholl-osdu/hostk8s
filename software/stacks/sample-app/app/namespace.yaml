@@ -3,4 +3,3 @@ kind: Namespace
 metadata:
   name: sample-app
   labels:
-    hostk8s.app: sample-app

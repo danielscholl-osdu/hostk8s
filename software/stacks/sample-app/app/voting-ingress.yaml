@@ -4,7 +4,6 @@ metadata:
   name: sample-app-ingress
   namespace: sample-app
   labels:
-    hostk8s.app: sample-app
     hostk8s.component: ingress
   annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /$2
