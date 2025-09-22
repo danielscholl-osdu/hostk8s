@@ -6,17 +6,7 @@ namespace: postgres
 resources:
   - database.yaml
 
-# Generate ConfigMap with hash suffix for automatic restart on changes
-configMapGenerator:
-  - name: pgadmin-servers-config
-    files:
-      - servers.json
-    options:
-      disableNameSuffixHash: false
-
-# The configMapGenerator will automatically create a hash suffix
-# When the ConfigMap content changes, the hash changes, and any deployment
-# referencing it will be updated by Flux automatically
+# ConfigMap generation moved to postgres-components for proper reference updates
 
 commonLabels:
   hostk8s.stack: postgres
