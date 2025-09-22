@@ -1,7 +1,7 @@
 {
   "Servers": {
     "1": {
-      "Name": "Foundation PostgreSQL",
+      "Name": "PostgreSQL",
       "Group": "Servers",
       "Host": "postgres-db-rw.postgres.svc.cluster.local",
       "Port": 5432,
