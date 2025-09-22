@@ -1,8 +1,0 @@
-apiVersion: hostk8s.io/v1
-kind: StorageContract
-metadata:
-  name: sample-app
-  namespace: sample-app
-spec:
-  directories:
-    # Note: PostgreSQL storage now provided by foundation/postgres stack

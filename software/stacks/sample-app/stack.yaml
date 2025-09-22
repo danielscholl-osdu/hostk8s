@@ -1,89 +1,61 @@
 ######################
-## Voting App Stack Components
-## PostgreSQL operator and Redis infrastructure must be ready before applications
+## Sample App Stack
+## Voting application using foundation Redis and Postgres stacks
 ######################
+
 ---
+# Infrastructure: Redis foundation stack
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-postgres
+  name: foundation-redis
   namespace: flux-system
-  labels:
-    hostk8s.stack: sample-app
-    hostk8s.type: component
 spec:
-  interval: 1h
+  interval: 10m
   retryInterval: 1m
-  timeout: 5m
+  timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/postgres
+  path: ./software/stacks/foundation/redis
   prune: true
   wait: true
-  healthChecks:
-    - kind: Deployment
-      name: cnpg-operator-cloudnative-pg
-      namespace: hostk8s
+
 ---
+# Infrastructure: Postgres foundation stack
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-redis
+  name: foundation-postgres
   namespace: flux-system
-  labels:
-    hostk8s.stack: sample-app
-    hostk8s.type: component
 spec:
-  interval: 1h
+  interval: 10m
   retryInterval: 1m
-  timeout: 5m
+  timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/redis
+  path: ./software/stacks/foundation/postgres
   prune: true
   wait: true
-  healthChecks:
-    - kind: Deployment
-      name: redis
-      namespace: redis
-    - kind: Deployment
-      name: redis-commander
-      namespace: redis
+
 ---
-######################
-## Voting App Applications
-## Deployed after infrastructure components are ready
-######################
+# Application: Voting app
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: app-sample-app
+  name: sample-app
   namespace: flux-system
-  labels:
-    hostk8s.stack: sample-app
-    hostk8s.type: application
 spec:
   dependsOn:
-    - name: component-postgres
-    - name: component-redis
-  interval: 1h
+    - name: foundation-redis
+    - name: foundation-postgres
+  interval: 10m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system-sample-app
-  path: ./software/stacks/sample-app/manifests
+  path: ./software/stacks/sample-app/app
   prune: true
   wait: true
-  healthChecks:
-    - kind: Deployment
-      name: vote
-      namespace: sample-app
-    - kind: Deployment
-      name: result
-      namespace: sample-app
-    - kind: Deployment
-      name: worker
-      namespace: sample-app
