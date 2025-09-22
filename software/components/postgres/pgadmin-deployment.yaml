@@ -19,6 +19,8 @@ spec:
         app: pgadmin4
         component: management-ui
         hostk8s.component: postgres
+      annotations:
+        hostk8s.configmap/hash: "placeholder"
     spec:
       containers:
       - name: pgadmin4

@@ -8,6 +8,20 @@ resources:
 
 # ConfigMap generation moved to postgres-components for proper reference updates
 
+# Inject ConfigMap hash into pgAdmin deployment to trigger restarts
+replacements:
+  - source:
+      kind: ConfigMap
+      name: pgadmin-servers-config
+      fieldPath: metadata.resourceVersion
+    targets:
+      - select:
+          kind: Deployment
+          name: pgadmin4
+          namespace: postgres
+        fieldPaths:
+          - spec.template.metadata.annotations.[hostk8s.configmap/hash]
+
 commonLabels:
   hostk8s.stack: postgres
   hostk8s.app: postgres-foundation
