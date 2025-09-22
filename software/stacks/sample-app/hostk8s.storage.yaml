@@ -10,5 +10,5 @@ spec:
       size: 5Gi
       accessModes: ["ReadWriteOnce"]
       storageClass: sample-app-voting-db
-      owner: "999:999"  # PostgreSQL user/group
+      owner: "26:26"    # CloudNativePG PostgreSQL user/group
       permissions: "777"
