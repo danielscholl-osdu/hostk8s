@@ -73,3 +73,4 @@ spec:
       - name: pgadmin-servers-config
         configMap:
           name: pgadmin-servers-config
+          optional: true
