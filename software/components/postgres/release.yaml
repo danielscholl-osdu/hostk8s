@@ -5,7 +5,7 @@ metadata:
   name: cnpg-operator
   namespace: flux-system
 spec:
-  targetNamespace: hostk8s
+  targetNamespace: postgres
   releaseName: cnpg-operator
   chart:
     spec:
@@ -16,7 +16,7 @@ spec:
         name: cnpg
         namespace: flux-system
   install:
-    createNamespace: false  # hostk8s namespace already exists
+    createNamespace: false  # postgres namespace created by namespace.yaml
     remediation:
       retries: 3
   interval: 10m0s

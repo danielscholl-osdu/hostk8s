@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres
+  labels:
+    hostk8s.component: postgres
+    component.hostk8s.io/type: foundation
+    component.hostk8s.io/category: database

@@ -3,7 +3,7 @@ apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: voting-db
-  namespace: sample-app
+  namespace: postgres
 spec:
   # Single instance for development
   instances: 1

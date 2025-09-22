@@ -27,7 +27,7 @@ spec:
           name: http
         env:
         - name: DATABASE_URL
-          value: "postgresql://postgres@voting-db-rw.sample-app.svc.cluster.local:5432/voting"
+          value: "postgresql://postgres@voting-db-rw.postgres.svc.cluster.local:5432/voting"
         resources:
           requests:
             memory: "64Mi"

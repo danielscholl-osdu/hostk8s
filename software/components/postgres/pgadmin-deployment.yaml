@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: pgadmin4
-  namespace: hostk8s
+  namespace: postgres
   labels:
     hostk8s.component: postgres
     app: pgadmin4
@@ -43,6 +43,8 @@ spec:
           value: "True"
         - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
           value: "False"
+        - name: PGADMIN_CONFIG_CONSOLE_LOG_LEVEL
+          value: "INFO"
         resources:
           requests:
             memory: "256Mi"

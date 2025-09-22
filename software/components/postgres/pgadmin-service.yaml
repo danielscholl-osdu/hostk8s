@@ -2,7 +2,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: pgadmin4
-  namespace: hostk8s
+  namespace: postgres
   labels:
     hostk8s.component: postgres
     app: pgadmin4
