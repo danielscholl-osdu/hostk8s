@@ -9,7 +9,7 @@ spec:
   instances: 1
 
   # PostgreSQL version
-  imageName: ghcr.io/cloudnative-pg/postgresql:16
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
 
   # Primary update strategy
   primaryUpdateStrategy: unsupervised
