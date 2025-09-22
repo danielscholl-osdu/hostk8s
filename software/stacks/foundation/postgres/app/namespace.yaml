@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres
+  labels:
+    hostk8s.stack: postgres
+    hostk8s.app: postgres-foundation

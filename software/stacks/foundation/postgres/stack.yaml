@@ -20,3 +20,23 @@ spec:
   path: ./software/components/postgres
   prune: true
   wait: true
+
+---
+# Deploy the PostgreSQL application (database cluster)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: postgres-app
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-postgres
+  path: ./software/stacks/foundation/postgres/app
+  prune: true
+  wait: true
+  dependsOn:
+    - name: postgres-components
