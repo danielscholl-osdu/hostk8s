@@ -1,32 +1,39 @@
 ######################
 ## Sample App Stack
-## Voting application using foundation Redis and Postgres stacks
+## Voting application using Redis and PostgreSQL components directly
 ######################
 
 ---
-# Infrastructure: Redis foundation stack
+# Infrastructure: Redis component
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: foundation-redis
+  name: component-redis
   namespace: flux-system
 spec:
   interval: 10m
   retryInterval: 1m
-  timeout: 10m
+  timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/foundation/redis
+  path: ./software/components/redis
   prune: true
   wait: true
+  healthChecks:
+    - kind: Deployment
+      name: redis
+      namespace: redis
+    - kind: Deployment
+      name: redis-commander
+      namespace: redis
 
 ---
-# Infrastructure: Postgres foundation stack
+# Infrastructure: PostgreSQL component
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: foundation-postgres
+  name: component-postgres
   namespace: flux-system
 spec:
   interval: 10m
@@ -35,9 +42,16 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/stacks/foundation/postgres
+  path: ./software/components/postgres
   prune: true
   wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cnpg-operator-cloudnative-pg
+      namespace: postgres
+    - kind: Deployment
+      name: pgadmin4
+      namespace: postgres
 
 ---
 # Application: Voting app
@@ -48,8 +62,8 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: foundation-redis
-    - name: foundation-postgres
+    - name: component-redis
+    - name: component-postgres
   interval: 10m
   retryInterval: 1m
   timeout: 5m
@@ -59,3 +73,13 @@ spec:
   path: ./software/stacks/sample-app/app
   prune: true
   wait: true
+  healthChecks:
+    - kind: Deployment
+      name: vote
+      namespace: sample-app
+    - kind: Deployment
+      name: result
+      namespace: sample-app
+    - kind: Deployment
+      name: worker
+      namespace: sample-app
