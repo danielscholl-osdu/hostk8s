@@ -16,5 +16,9 @@ resources:
   - worker-deployment.yaml
   - voting-ingress.yaml
 
+# Override pgAdmin server configuration to show voting-db instead of default
+patchesStrategicMerge:
+  - pgadmin-servers-patch.yaml
+
 commonLabels:
   hostk8s.app: sample-app
