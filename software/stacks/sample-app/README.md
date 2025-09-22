@@ -26,30 +26,14 @@ make up sample-app
 
 ## Architecture
 
-The stack deploys:
-- **PostgreSQL component** → CloudNativePG operator + pgAdmin UI + voting database
-- **Redis component** → Redis server + Redis Commander UI
-- **Voting application** → vote frontend + result backend + worker processor
+### Components Used
+- **redis component** → Provides Redis server + Redis Commander UI
+- **postgres component** → Provides PostgreSQL operator + pgAdmin UI
 
-## Access Points
-
-| Service | URL | Purpose |
-|---------|-----|---------|
-| **Voting** | http://localhost:8080/vote | Cast votes |
-| **Results** | http://localhost:8080/result | View results |
-| **pgAdmin** | http://pgadmin.localhost:8080/ | Database management |
-| **Redis Commander** | http://redis.localhost:8080/ | Redis monitoring |
-
-## Stack Management
-
-```bash
-# Check status
-make status
-
-# Redeploy
-make down sample-app
-make up sample-app
-
-# Force sync
-make sync sample-app
-```
+### Application Created
+- **`sample-app` namespace** → Application services container
+- **`voting-db` database** → PostgreSQL cluster (in postgres namespace)
+- **vote service** → Python Flask voting frontend
+- **result service** → Node.js Express results backend
+- **worker service** → .NET Core background processor
+- **ingress** → Web routing to vote + result services
