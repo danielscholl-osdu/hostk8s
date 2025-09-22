@@ -2,10 +2,10 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: pgadmin-config-restart
+  name: pgadmin-config-restart-foundation
   namespace: postgres
   labels:
-    hostk8s.app: sample-app
+    hostk8s.app: postgres-foundation
     hostk8s.component: postgres
     app.kubernetes.io/name: pgadmin-restart
 spec:

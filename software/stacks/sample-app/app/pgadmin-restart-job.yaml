@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: pgadmin-config-restart
+  name: pgadmin-config-restart-sample
   namespace: postgres
   labels:
     hostk8s.app: sample-app
