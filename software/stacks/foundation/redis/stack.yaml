@@ -16,7 +16,7 @@ spec:
   timeout: 5m
   sourceRef:
     kind: GitRepository
-    name: flux-system-redis
+    name: flux-system
   path: ./software/components/redis
   prune: true
   wait: true
