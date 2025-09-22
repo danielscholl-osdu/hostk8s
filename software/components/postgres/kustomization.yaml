@@ -6,7 +6,6 @@ resources:
   - source.yaml
   - release.yaml
   - external-secret.yaml
-  - pgadmin-servers-config.yaml
   - pgadmin-deployment.yaml
   - pgadmin-service.yaml
   - pgadmin-ingress.yaml

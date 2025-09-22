@@ -5,6 +5,21 @@ resources:
   - namespace.yaml
   - database.yaml
 
+# Generate ConfigMap with hash suffix for automatic restart on changes
+configMapGenerator:
+  - name: pgadmin-servers-config
+    files:
+      - servers.json
+    options:
+      disableNameSuffixHash: false
+
+# Patch pgAdmin deployment to include ConfigMap checksum for automatic restart
+patchesStrategicMerge:
+  - pgadmin-restart-patch.yaml
+
+# The configMapGenerator will automatically create a hash suffix
+# and kustomize will update references in the deployment
+
 commonLabels:
   hostk8s.stack: postgres
   hostk8s.app: postgres-foundation

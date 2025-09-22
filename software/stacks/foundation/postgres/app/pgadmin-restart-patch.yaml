@@ -1,0 +1,13 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgadmin4
+  namespace: postgres
+spec:
+  template:
+    metadata:
+      annotations:
+        # Force restart when ConfigMap changes
+        # The ConfigMap hash will be calculated and injected by kustomize
+        hostk8s.configmap/servers-config: "hash-placeholder"
