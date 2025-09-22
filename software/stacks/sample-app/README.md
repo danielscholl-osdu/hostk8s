@@ -1,213 +1,193 @@
-# Voting App Stack
+# Sample App Stack
 
-A complete example stack demonstrating HostK8s's end-to-end development workflow: from source code to production-like deployment using shared components and GitOps orchestration.
+A complete voting application demonstrating HostK8s's component-based architecture and GitOps workflow. Shows how to build custom applications that use PostgreSQL and Redis components.
 
-## Architecture
+## Prerequisites
 
-This stack demonstrates the **complete HostK8s value proposition**:
-- **Source Code** → **Local Registry** → **GitOps Deployment** → **Shared Components**
+### Required Environment Configuration
 
-### Components
-- **Registry Component** - Local container registry for custom images
-- **Redis Infrastructure** - Shared cache/queue for vote processing
-- **Voting Application** - Multi-service app using shared infrastructure
+The sample-app requires specific HostK8s addons. Configure your `.env` file:
 
-### Application Services
-- **Vote Service** (Python/Flask) - Web frontend for casting votes
-- **Result Service** (Node.js/Express) - Real-time results with WebSocket
-- **Worker Service** (Spring Boot/Java) - Background vote processor
-- **PostgreSQL Database** - Persistent storage for vote results
+```bash
+# Required for sample-app
+REGISTRY_ENABLED=true                  # Local container registry for built images
+VAULT_ENABLED=true                     # Vault secret management for credentials
+FLUX_ENABLED=true                      # GitOps deployment with Flux
 
-## Complete Workflow
+# Optional optimizations
+METALLB_ENABLED=true                   # Load balancer for services
+INGRESS_ENABLED=true                   # NGINX ingress for web access
+```
+
+## Quick Start
 
 ### 1. Start Cluster
 ```bash
-export FLUX_ENABLED=true
 make start
 ```
 
-### 2. Deploy Stack (Registry + Redis + Voting Apps)
-```bash
-make up voting-app
-```
+This creates a Kind cluster with registry, Vault, and Flux ready.
 
-**What happens automatically:**
-- Registry component deploys first
-- Redis infrastructure waits for registry readiness
-- Voting applications deploy after infrastructure is ready
-- All services connect via Kubernetes DNS
-
-### 3. Build and Push Custom Images
+### 2. Build Application Images
 ```bash
 make build src/sample-app
 ```
 
-**What happens:**
-- Builds vote, result, and worker services from source
-- Pushes to local registry at `localhost:5001/hostk8s-*:latest`
-- Images available for Kubernetes deployment
+**What this builds:**
+- `hostk8s-vote:latest` - Python Flask voting frontend
+- `hostk8s-result:latest` - Node.js Express results backend
+- `hostk8s-worker:latest` - .NET Core background processor
 
-### 4. Applications Auto-Deploy
-Since the stack is already deployed via GitOps, the applications will automatically pull the newly built images on restart or during deployment.
+Images are pushed to the local registry at `localhost:5002`.
+
+### 3. Deploy Stack
+```bash
+make up sample-app
+```
+
+**What deploys:**
+- PostgreSQL component (CloudNativePG operator + pgAdmin)
+- Redis component (Redis server + Redis Commander)
+- Voting application (vote + result + worker + database)
+
+## Architecture
+
+### Component-Based Design
+```
+sample-app stack
+├── postgres component → PostgreSQL operator + pgAdmin UI
+├── redis component → Redis server + Redis Commander UI
+└── voting application → vote + result + worker + voting-db
+```
+
+### Service Communication
+- **Vote service** → Redis (for vote queuing)
+- **Worker service** → Redis ↔ PostgreSQL (processes votes)
+- **Result service** → PostgreSQL (displays results)
+
+### Data Flow
+```
+User votes → Vote service → Redis queue → Worker → PostgreSQL → Result service
+```
 
 ## Access Points
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Vote** | http://localhost:8080/vote | Cast votes between options |
-| **Result** | http://localhost:8080/result | View real-time results |
-| **Redis Commander** | http://localhost:30081 | Monitor Redis data |
-| **Registry** | http://localhost:5001 | Container registry management |
+| **Voting** | http://localhost:8080/vote | Cast votes between options |
+| **Results** | http://localhost:8080/result | View real-time vote results |
+| **pgAdmin** | http://pgadmin.localhost:8080/ | PostgreSQL database management |
+| **Redis Commander** | http://redis.localhost:8080/ | Redis data monitoring |
 
-## Component Integration
+## Database Architecture
 
-### Service Discovery
-Applications connect to shared components via Kubernetes DNS:
-- **Redis**: `redis-master.redis.svc.cluster.local:6379`
-- **Database**: `db.voting-app.svc.cluster.local:5432`
+### PostgreSQL Cluster
+- **Cluster**: `voting-db` in `postgres` namespace
+- **Connection**: `voting-db-rw.postgres.svc.cluster.local:5432`
+- **Database**: `voting` with `votes` table
+- **Storage**: 5Gi persistent volume
 
-### Image Sources
-```yaml
-# Built from source code
-vote: localhost:5001/hostk8s-vote:latest
-result: localhost:5001/hostk8s-result:latest
-worker: localhost:5001/hostk8s-worker:latest
-
-# Standard images
-postgres: postgres:15-alpine
-redis: redis:7-alpine
-```
-
-## Dependency Flow
-
-```
-┌─────────────────┐
-│     Registry    │ ← Deployed first
-│   Component     │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐
-│      Redis      │ ← Waits for Registry
-│  Infrastructure │
-└─────────┬───────┘
-          │
-          ▼
-┌─────────────────┐
-│   Voting App    │ ← Waits for Redis
-│   Services      │
-└─────────────────┘
-```
+### Redis Cache
+- **Service**: `redis-master.redis.svc.cluster.local:6379`
+- **Usage**: Vote queuing and session storage
+- **Storage**: In-memory (development mode)
 
 ## Development Workflow
 
-### Iterative Development
+### Code Changes
 ```bash
 # 1. Modify source code in src/sample-app/
-# 2. Rebuild and push
+# 2. Rebuild images
 make build src/sample-app
 
 # 3. Restart deployments to pull new images
-kubectl rollout restart deployment/vote -n voting-app
-kubectl rollout restart deployment/result -n voting-app
-kubectl rollout restart deployment/worker -n voting-app
+kubectl rollout restart deployment/vote -n sample-app
+kubectl rollout restart deployment/result -n sample-app
+kubectl rollout restart deployment/worker -n sample-app
 ```
 
-### Local Development Against K8s Components
+### Monitoring
 ```bash
-# Connect local development to shared Redis
-cd src/sample-app/vote
-export REDIS_HOST=localhost
-kubectl port-forward -n redis svc/redis 6379:6379
-python app.py  # Runs locally, uses K8s Redis
-```
-
-## Monitoring and Debugging
-
-### Check Stack Status
-```bash
+# Check overall health
 make status
-```
 
-### View Component Health
-```bash
-# Redis infrastructure
+# View application logs
+kubectl logs -n sample-app deployment/vote -f
+kubectl logs -n sample-app deployment/result -f
+kubectl logs -n sample-app deployment/worker -f
+
+# Check database
+kubectl get cluster -n postgres voting-db
+
+# Monitor Redis
 kubectl get pods -n redis
-
-# Voting applications
-kubectl get pods -n voting-app
-
-# Registry status
-kubectl get pods -n registry
-```
-
-### Debug Service Connections
-```bash
-# Test Redis connectivity from voting app
-kubectl exec -n voting-app deployment/vote -- \
-  redis-cli -h redis-master.redis.svc.cluster.local ping
-
-# Test database connectivity
-kubectl exec -n voting-app deployment/result -- \
-  pg_isready -h db.voting-app.svc.cluster.local -p 5432
-```
-
-### View Application Logs
-```bash
-kubectl logs -n voting-app deployment/vote -f
-kubectl logs -n voting-app deployment/result -f
-kubectl logs -n voting-app deployment/worker -f
-```
-
-## Stack Management
-
-### Deploy Stack
-```bash
-make up voting-app
-```
-
-### Remove Stack
-```bash
-make down voting-app
-```
-
-### Sync Stack (Force GitOps Reconciliation)
-```bash
-make sync voting-app
 ```
 
 ## Troubleshooting
 
-### Images Not Pulling
-1. **Check registry accessibility**: `curl http://localhost:5001/v2/_catalog`
-2. **Verify images exist**: `curl http://localhost:5001/v2/hostk8s-vote/tags/list`
-3. **Rebuild if needed**: `make build src/sample-app`
+### Common Issues
 
-### Services Can't Connect
-1. **DNS resolution**: `kubectl exec -n voting-app deployment/vote -- nslookup redis-master.redis.svc.cluster.local`
-2. **Port connectivity**: `kubectl exec -n voting-app deployment/vote -- telnet redis-master.redis.svc.cluster.local 6379`
-3. **Check component health**: `kubectl get pods -n redis`
+**Applications not starting:**
+```bash
+# Check if images were built and pushed
+curl http://localhost:5002/v2/_catalog
+curl http://localhost:5002/v2/hostk8s-vote/tags/list
 
-### Stack Won't Deploy
-1. **Check Flux status**: `make status`
-2. **View Flux logs**: `kubectl logs -n flux-system deployment/source-controller`
-3. **Force reconciliation**: `make sync voting-app`
+# Rebuild if missing
+make build src/sample-app
+```
+
+**Database connection issues:**
+```bash
+# Check PostgreSQL cluster status
+kubectl get cluster -n postgres voting-db
+kubectl describe cluster -n postgres voting-db
+
+# Test database connectivity
+kubectl exec -n sample-app deployment/result -- \
+  pg_isready -h voting-db-rw.postgres.svc.cluster.local -p 5432
+```
+
+**Redis connection issues:**
+```bash
+# Check Redis status
+kubectl get pods -n redis
+
+# Test Redis connectivity
+kubectl exec -n sample-app deployment/worker -- \
+  redis-cli -h redis-master.redis.svc.cluster.local ping
+```
+
+### Stack Management
+
+```bash
+# Redeploy entire stack
+make down sample-app
+make up sample-app
+
+# Force GitOps sync
+make sync sample-app
+
+# View Flux reconciliation
+kubectl get kustomizations -n flux-system
+```
 
 ## What This Demonstrates
 
-### HostK8s Value Proposition
-✅ **Source-to-Deployment** - Complete workflow from `src/` to running applications
-✅ **Shared Components** - Efficient resource usage via shared Redis/Registry
-✅ **GitOps Orchestration** - Automated dependency management and health checks
-✅ **Local Development** - Production-like environment on local machine
-✅ **Container Integration** - Seamless build → registry → deploy workflow
+### HostK8s Patterns
+✅ **Component Composition** - Reusable postgres + redis components
+✅ **Source-to-Deployment** - Complete workflow from source code to running apps
+✅ **GitOps Automation** - Infrastructure and applications managed declaratively
+✅ **Local Development** - Production-like environment on your machine
+✅ **Secret Management** - Automatic credential generation and injection
+✅ **Persistent Storage** - Database survives cluster restarts
 
-### Real-World Patterns
-- Multi-service application architecture
-- Shared infrastructure components
-- Service discovery via DNS
-- Health checks and probes
-- Resource limits and requests
-- GitOps-based deployment automation
+### Real-World Architecture
+- Multi-service application with shared infrastructure
+- Database persistence and management
+- Background job processing
+- Real-time web interfaces
+- Container image management
+- Component-based system design
 
-This voting app stack showcases how HostK8s transforms complex Kubernetes development into a streamlined, consistent workflow that scales from local development to production environments.
+The sample-app validates that HostK8s provides a complete, production-ready development environment that scales from local development to cloud deployment.
