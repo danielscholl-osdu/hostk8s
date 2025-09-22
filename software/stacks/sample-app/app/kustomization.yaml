@@ -15,10 +15,17 @@ resources:
   - result-service.yaml
   - worker-deployment.yaml
   - voting-ingress.yaml
+  - pgadmin-restart-rbac.yaml
+  - pgadmin-restart-job.yaml
 
-# Override pgAdmin server configuration to show voting-db instead of default
-patchesStrategicMerge:
-  - pgadmin-servers-patch.yaml
+# Generate ConfigMap with voting database configuration (no hash for stable reference)
+configMapGenerator:
+  - name: pgadmin-servers-config
+    namespace: postgres
+    files:
+      - servers.json
+    options:
+      disableNameSuffixHash: true
 
 commonLabels:
   hostk8s.app: sample-app

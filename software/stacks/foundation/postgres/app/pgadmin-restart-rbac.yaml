@@ -1,0 +1,41 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: pgadmin-restart
+  namespace: postgres
+  labels:
+    hostk8s.app: sample-app
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: pgadmin-restart
+  namespace: postgres
+  labels:
+    hostk8s.app: sample-app
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments"]
+  verbs: ["get", "patch"]
+- apiGroups: ["apps"]
+  resources: ["deployments/scale"]
+  verbs: ["patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: pgadmin-restart
+  namespace: postgres
+  labels:
+    hostk8s.app: sample-app
+subjects:
+- kind: ServiceAccount
+  name: pgadmin-restart
+  namespace: postgres
+roleRef:
+  kind: Role
+  name: pgadmin-restart
+  apiGroup: rbac.authorization.k8s.io

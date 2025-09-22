@@ -5,6 +5,17 @@ namespace: postgres
 
 resources:
   - database.yaml
+  - pgadmin-restart-rbac.yaml
+  - pgadmin-restart-job.yaml
+
+# Generate ConfigMap with foundation postgres database configuration (no hash for stable reference)
+configMapGenerator:
+  - name: pgadmin-servers-config
+    namespace: postgres
+    files:
+      - servers.json
+    options:
+      disableNameSuffixHash: true
 
 commonLabels:
   hostk8s.stack: postgres

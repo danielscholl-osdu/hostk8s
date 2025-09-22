@@ -10,15 +10,8 @@ resources:
   - pgadmin-service.yaml
   - pgadmin-ingress.yaml
 
-# Generate ConfigMap with hash suffix for automatic restart on changes
-# This ensures pgAdmin restarts when server configuration changes
-configMapGenerator:
-  - name: pgadmin-servers-config
-    namespace: postgres
-    files:
-      - servers.json
-    options:
-      disableNameSuffixHash: false
+# ConfigMap is provided by each stack for stack-specific database configuration
+# pgAdmin deployment uses optional mount - will start without ConfigMap initially
 
 # Note: commonLabels removed - they conflict with HelmRelease label management
 # Labels should be managed directly in resources
