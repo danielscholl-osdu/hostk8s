@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: airflow
+  labels:
+    hostk8s.component: airflow
+    hostk8s.type: workflow-orchestrator

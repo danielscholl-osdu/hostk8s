@@ -1,0 +1,21 @@
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: foundation/airflow
+  namespace: airflow
+spec:
+  directories:
+    - name: airflow-dags
+      path: /mnt/pv/airflow-dags
+      size: 1Gi
+      accessModes: ["ReadWriteMany"]
+      storageClass: airflow-dags-storage
+      owner: "1000:1000"  # Airflow user/group
+      permissions: "755"
+    - name: airflow-logs
+      path: /mnt/pv/airflow-logs
+      size: 5Gi
+      accessModes: ["ReadWriteMany"]
+      storageClass: airflow-logs-storage
+      owner: "1000:1000"  # Airflow user/group
+      permissions: "755"

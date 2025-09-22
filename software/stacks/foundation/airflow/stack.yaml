@@ -1,0 +1,101 @@
+######################
+## Airflow Stack
+## Foundation stack for Apache Airflow with PostgreSQL and Redis
+######################
+
+---
+# Deploy PostgreSQL component (if not already deployed)
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: foundation-airflow-postgres-components
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-foundation-airflow
+  path: ./software/components/postgres
+  prune: true
+  wait: true
+
+---
+# Deploy Redis component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: foundation-airflow-redis-components
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-foundation-airflow
+  path: ./software/components/redis
+  prune: true
+  wait: true
+
+---
+# Deploy Airflow component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: foundation-airflow-components
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-foundation-airflow
+  path: ./software/components/airflow
+  prune: true
+  wait: true
+  dependsOn:
+    - name: foundation-airflow-postgres-components
+    - name: foundation-airflow-redis-components
+
+---
+# Deploy PostgreSQL database for Airflow
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: foundation-airflow-postgres-db
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-foundation-airflow
+  path: ./software/stacks/foundation/airflow/db
+  prune: true
+  wait: true
+  dependsOn:
+    - name: foundation-airflow-postgres-components
+
+---
+# Deploy Airflow DAGs and configuration
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: foundation-airflow-dags
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-foundation-airflow
+  path: ./software/stacks/foundation/airflow/dags
+  prune: true
+  wait: true
+  dependsOn:
+    - name: foundation-airflow-components

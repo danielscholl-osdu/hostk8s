@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: airflow
+  annotations:
+    component.hostk8s.io/description: "Apache Airflow workflow orchestrator with Celery executor"
+    component.hostk8s.io/version: "2.10.1"
+    component.hostk8s.io/dependencies: "postgres,redis"
+
+resources:
+  - namespace.yaml
+  - source.yaml
+  - release.yaml
+  - external-secret.yaml
+  - airflow-ingress.yaml
+
+# Note: commonLabels removed - they conflict with HelmRelease label management
+# Labels should be managed directly in resources

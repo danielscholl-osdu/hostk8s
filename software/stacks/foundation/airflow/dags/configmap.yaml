@@ -1,0 +1,211 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: airflow-example-dags
+  namespace: airflow
+  labels:
+    hostk8s.stack: airflow
+data:
+  hello_world.py: |
+    """
+    Hello World DAG for HostK8s Airflow
+
+    This DAG demonstrates basic Airflow functionality with simple Python tasks.
+    It runs every 30 minutes and performs basic operations.
+    """
+    from airflow import DAG
+    from airflow.operators.python import PythonOperator
+    from airflow.operators.bash import BashOperator
+    from datetime import datetime, timedelta
+    import random
+
+    # Default arguments for the DAG
+    default_args = {
+        'owner': 'hostk8s',
+        'depends_on_past': False,
+        'start_date': datetime(2024, 1, 1),
+        'email': ['admin@hostk8s.com'],
+        'email_on_failure': False,
+        'email_on_retry': False,
+        'retries': 1,
+        'retry_delay': timedelta(minutes=5),
+    }
+
+    # Define the DAG
+    dag = DAG(
+        'hello_world',
+        default_args=default_args,
+        description='A simple hello world DAG for HostK8s',
+        schedule=timedelta(minutes=30),
+        catchup=False,
+        tags=['example', 'hostk8s'],
+    )
+
+    # Python function for the first task
+    def print_hello():
+        """Print a welcome message"""
+        message = "Hello from HostK8s Airflow!"
+        print(message)
+        return message
+
+    # Python function for the second task
+    def print_date():
+        """Print the current date"""
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print(f"Current time: {current_time}")
+        return current_time
+
+    # Python function for random number generation
+    def generate_random_number():
+        """Generate a random number between 1 and 100"""
+        number = random.randint(1, 100)
+        print(f"Random number: {number}")
+        return number
+
+    # Define tasks
+    hello_task = PythonOperator(
+        task_id='hello_task',
+        python_callable=print_hello,
+        dag=dag,
+    )
+
+    date_task = PythonOperator(
+        task_id='date_task',
+        python_callable=print_date,
+        dag=dag,
+    )
+
+    random_task = PythonOperator(
+        task_id='random_number_task',
+        python_callable=generate_random_number,
+        dag=dag,
+    )
+
+    bash_task = BashOperator(
+        task_id='bash_echo',
+        bash_command='echo "HostK8s Airflow is running in Kubernetes!"',
+        dag=dag,
+    )
+
+    # Set task dependencies
+    hello_task >> date_task >> [random_task, bash_task]
+
+  data_pipeline.py: |
+    """
+    Data Pipeline Example DAG for HostK8s
+
+    This DAG demonstrates a more complex data processing pipeline
+    with branching and conditional logic.
+    """
+    from airflow import DAG
+    from airflow.operators.python import PythonOperator, BranchPythonOperator
+    from airflow.operators.dummy import DummyOperator
+    from datetime import datetime, timedelta
+    import random
+
+    default_args = {
+        'owner': 'hostk8s',
+        'depends_on_past': False,
+        'start_date': datetime(2024, 1, 1),
+        'email_on_failure': False,
+        'email_on_retry': False,
+        'retries': 2,
+        'retry_delay': timedelta(minutes=2),
+    }
+
+    dag = DAG(
+        'data_pipeline_example',
+        default_args=default_args,
+        description='Example data pipeline with branching',
+        schedule='@daily',
+        catchup=False,
+        tags=['example', 'pipeline', 'hostk8s'],
+    )
+
+    def extract_data():
+        """Simulate data extraction"""
+        print("Extracting data from source...")
+        data_size = random.randint(100, 1000)
+        print(f"Extracted {data_size} records")
+        return data_size
+
+    def decide_processing_path(**context):
+        """Decide which processing path to take based on data size"""
+        data_size = context['task_instance'].xcom_pull(task_ids='extract_data')
+        if data_size > 500:
+            return 'process_large_dataset'
+        else:
+            return 'process_small_dataset'
+
+    def process_small_data(**context):
+        """Process small dataset"""
+        data_size = context['task_instance'].xcom_pull(task_ids='extract_data')
+        print(f"Processing small dataset with {data_size} records")
+        return f"Small processing completed for {data_size} records"
+
+    def process_large_data(**context):
+        """Process large dataset"""
+        data_size = context['task_instance'].xcom_pull(task_ids='extract_data')
+        print(f"Processing large dataset with {data_size} records in parallel")
+        return f"Large processing completed for {data_size} records"
+
+    def load_data(**context):
+        """Load processed data"""
+        print("Loading processed data to destination...")
+        print("Data successfully loaded!")
+
+    # Define tasks
+    start = DummyOperator(
+        task_id='start',
+        dag=dag,
+    )
+
+    extract = PythonOperator(
+        task_id='extract_data',
+        python_callable=extract_data,
+        dag=dag,
+    )
+
+    branch = BranchPythonOperator(
+        task_id='decide_path',
+        python_callable=decide_processing_path,
+        provide_context=True,
+        dag=dag,
+    )
+
+    process_small = PythonOperator(
+        task_id='process_small_dataset',
+        python_callable=process_small_data,
+        provide_context=True,
+        dag=dag,
+    )
+
+    process_large = PythonOperator(
+        task_id='process_large_dataset',
+        python_callable=process_large_data,
+        provide_context=True,
+        dag=dag,
+    )
+
+    join = DummyOperator(
+        task_id='join_paths',
+        trigger_rule='none_failed_or_skipped',
+        dag=dag,
+    )
+
+    load = PythonOperator(
+        task_id='load_data',
+        python_callable=load_data,
+        provide_context=True,
+        dag=dag,
+    )
+
+    end = DummyOperator(
+        task_id='end',
+        dag=dag,
+    )
+
+    # Set task dependencies
+    start >> extract >> branch
+    branch >> [process_small, process_large]
+    [process_small, process_large] >> join >> load >> end

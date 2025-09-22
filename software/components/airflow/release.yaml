@@ -1,0 +1,191 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: airflow
+  namespace: flux-system
+spec:
+  targetNamespace: airflow
+  releaseName: airflow
+  chart:
+    spec:
+      chart: airflow
+      version: "1.x"  # Uses latest 1.x version
+      sourceRef:
+        kind: HelmRepository
+        name: apache-airflow
+        namespace: flux-system
+  install:
+    createNamespace: false  # airflow namespace created by namespace.yaml
+    remediation:
+      retries: 3
+  interval: 10m0s
+  values:
+    # Images
+    images:
+      airflow:
+        repository: apache/airflow
+        tag: "2.10.1-python3.11"
+        pullPolicy: IfNotPresent
+
+    # Airflow configuration
+    airflowVersion: "2.10.1"
+
+    # Executor configuration - using CeleryExecutor with Redis
+    executor: "CeleryExecutor"
+
+    # Database configuration - using external PostgreSQL
+    postgresql:
+      enabled: false  # Use external PostgreSQL from postgres component
+
+    # Redis configuration for Celery backend
+    redis:
+      enabled: false  # Use external Redis from redis component
+
+    # External connections
+    data:
+      metadataConnection:
+        user: airflow
+        pass: airflow  # Will be overridden by ExternalSecret
+        protocol: postgresql
+        host: postgres-cluster-rw.postgres.svc.cluster.local
+        port: 5432
+        db: airflow
+        sslmode: disable
+      brokerUrl: "redis://:@redis.redis.svc.cluster.local:6379/0"
+
+    # Web server configuration
+    webserver:
+      enabled: true
+      replicas: 1
+      service:
+        type: ClusterIP
+        ports:
+          - name: airflow-ui
+            port: 8080
+
+      # Default admin user
+      defaultUser:
+        enabled: true
+        role: Admin
+        username: admin
+        email: admin@hostk8s.com
+        firstName: Admin
+        lastName: User
+        password: admin  # Will be overridden by ExternalSecret
+
+      # Resource limits for local development
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 256Mi
+
+    # Scheduler configuration
+    scheduler:
+      enabled: true
+      replicas: 1
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 256Mi
+
+    # Worker configuration for CeleryExecutor
+    workers:
+      enabled: true
+      replicas: 2
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 100m
+          memory: 256Mi
+
+    # Triggerer configuration
+    triggerer:
+      enabled: true
+      replicas: 1
+      resources:
+        limits:
+          cpu: 200m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+
+    # Flower UI for Celery monitoring (optional)
+    flower:
+      enabled: false  # Can be enabled if needed
+
+    # DAGs configuration
+    dags:
+      gitSync:
+        enabled: false  # We'll mount DAGs from persistent volume
+
+      persistence:
+        enabled: true
+        existingClaim: "airflow-dags-pvc"
+        accessMode: ReadWriteMany
+        size: 1Gi
+
+    # Logs configuration
+    logs:
+      persistence:
+        enabled: true
+        size: 5Gi
+        accessMode: ReadWriteMany
+
+    # Config for Airflow
+    config:
+      core:
+        load_examples: "False"  # Don't load example DAGs
+        dags_folder: "/opt/airflow/dags"
+        executor: "CeleryExecutor"
+
+      webserver:
+        expose_config: "True"  # Allow viewing config in UI (dev environment)
+        enable_proxy_fix: "True"  # For ingress proxy
+        base_url: "http://airflow.localhost"
+
+      scheduler:
+        dag_dir_list_interval: 60  # Scan for new DAGs every 60 seconds
+
+      celery:
+        broker_url: "redis://:@redis.redis.svc.cluster.local:6379/0"
+        result_backend: "db+postgresql://airflow:airflow@postgres-cluster-rw.postgres.svc.cluster.local:5432/airflow"
+
+    # Security
+    fernetKey: ""  # Will be set by ExternalSecret
+    webserverSecretKey: ""  # Will be set by ExternalSecret
+
+    # Create RBAC resources
+    rbac:
+      create: true
+      createSCCRoleBinding: false  # Not needed for Kind
+
+    # ServiceAccount
+    serviceAccount:
+      create: true
+      name: airflow
+
+    # Extra environment variables
+    extraEnvVars:
+      - name: AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS
+        value: "False"
+      - name: AIRFLOW__CORE__LOAD_EXAMPLES
+        value: "False"
+      - name: AIRFLOW__WEBSERVER__EXPOSE_HOSTNAME
+        value: "True"
+      - name: AIRFLOW__WEBSERVER__EXPOSE_STACKTRACE
+        value: "True"  # For development
+
+    # Labels
+    labels:
+      hostk8s.component: airflow
+      hostk8s.type: workflow-orchestrator

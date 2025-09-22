@@ -1,0 +1,41 @@
+# Note: This creates the airflow database in the existing PostgreSQL cluster
+# The postgres component must be deployed first (handled by stack dependencies)
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-airflow-db
+  namespace: postgres
+  labels:
+    hostk8s.stack: airflow
+spec:
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: create-db
+        image: postgres:16-alpine
+        env:
+        - name: PGHOST
+          value: postgres-cluster-rw.postgres.svc.cluster.local
+        - name: PGUSER
+          value: postgres
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-cluster-superuser
+              key: password
+        command:
+        - sh
+        - -c
+        - |
+          # Check if database exists, create if not
+          if ! psql -lqt | cut -d \| -f 1 | grep -qw airflow; then
+            echo "Creating airflow database..."
+            psql -c "CREATE DATABASE airflow;"
+            psql -c "CREATE USER airflow WITH ENCRYPTED PASSWORD 'airflow';"
+            psql -c "GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;"
+            psql -d airflow -c "GRANT ALL ON SCHEMA public TO airflow;"
+            echo "Database created successfully"
+          else
+            echo "Database 'airflow' already exists"
+          fi
