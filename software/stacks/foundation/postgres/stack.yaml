@@ -1,0 +1,22 @@
+######################
+## Postgres Stack
+## Foundation stack for PostgreSQL database with pgAdmin management UI
+######################
+
+---
+# Deploy the PostgreSQL component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: postgres-components
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-postgres
+  path: ./software/components/postgres
+  prune: true
+  wait: true
