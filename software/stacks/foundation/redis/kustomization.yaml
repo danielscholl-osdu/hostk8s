@@ -3,7 +3,6 @@ kind: Kustomization
 
 resources:
   - stack.yaml
-  - external-secret.yaml
 
 commonLabels:
   hostk8s.stack: redis
