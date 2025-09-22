@@ -11,4 +11,4 @@ spec:
       accessModes: ["ReadWriteOnce"]
       storageClass: sample-app-voting-db
       owner: "999:999"  # PostgreSQL user/group
-      permissions: "700"
+      permissions: "755"
