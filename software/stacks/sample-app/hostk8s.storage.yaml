@@ -1,0 +1,14 @@
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: sample-app
+spec:
+  directories:
+    # PostgreSQL database storage for voting-db cluster
+    - name: voting-db
+      path: /mnt/pv/sample-app/voting-db
+      size: 5Gi
+      accessModes: ["ReadWriteOnce"]
+      storageClass: sample-app-voting-db
+      owner: "999:999"  # PostgreSQL user/group
+      permissions: "700"

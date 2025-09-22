@@ -51,7 +51,7 @@ spec:
   # Storage configuration - use storage contract
   storage:
     size: 5Gi
-    storageClass: postgres-default
+    storageClass: sample-app-voting-db
     pvcTemplate:
       accessModes:
         - ReadWriteOnce
