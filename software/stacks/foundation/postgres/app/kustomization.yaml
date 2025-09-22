@@ -15,7 +15,7 @@ configMapGenerator:
 
 # Patch pgAdmin deployment to include ConfigMap checksum for automatic restart
 patchesStrategicMerge:
-  - pgadmin-restart-patch.yaml
+  - pgadmin-patch.yaml
 
 # The configMapGenerator will automatically create a hash suffix
 # and kustomize will update references in the deployment
