@@ -5,12 +5,4 @@ metadata:
   namespace: sample-app
 spec:
   directories:
-    # PostgreSQL database storage for voting application
-    - name: sample-app
-      path: /mnt/pv/sample-app
-      size: 5Gi
-      accessModes:
-        - ReadWriteOnce
-      storageClass: sample-app-database
-      owner: "999:999"          # PostgreSQL UID:GID in container
-      permissions: "777"         # Allow PostgreSQL to create pgdata subdirectory
+    # Note: PostgreSQL storage now provided by foundation/postgres stack

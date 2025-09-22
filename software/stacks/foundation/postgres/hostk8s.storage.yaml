@@ -1,0 +1,13 @@
+apiVersion: hostk8s.io/v1
+kind: StorageContract
+metadata:
+  name: foundation/postgres
+spec:
+  directories:
+    - name: postgres-default
+      path: /mnt/pv/postgres
+      size: 5Gi
+      accessModes: ["ReadWriteOnce"]
+      storageClass: postgres-default
+      owner: "999:999"  # PostgreSQL user/group
+      permissions: "700"

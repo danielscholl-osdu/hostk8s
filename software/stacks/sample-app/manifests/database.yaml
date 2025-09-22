@@ -51,7 +51,7 @@ spec:
   # Storage configuration - use storage contract
   storage:
     size: 5Gi
-    storageClass: sample-app-database
+    storageClass: postgres-default
     pvcTemplate:
       accessModes:
         - ReadWriteOnce
