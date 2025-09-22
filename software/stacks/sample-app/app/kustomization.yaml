@@ -8,12 +8,10 @@ metadata:
 
 resources:
   - namespace.yaml
-  - vote-deployment.yaml
-  - vote-service.yaml
-  - result-deployment.yaml
-  - result-service.yaml
-  - worker-deployment.yaml
-  - voting-ingress.yaml
+  - vote.yaml
+  - result.yaml
+  - worker.yaml
+  - ingress.yaml
 
 commonLabels:
   hostk8s.app: sample-app
