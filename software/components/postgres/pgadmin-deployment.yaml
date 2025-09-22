@@ -43,6 +43,11 @@ spec:
           value: "True"
         - name: PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED
           value: "False"
+        volumeMounts:
+        - name: pgadmin-servers-config
+          mountPath: /pgadmin4/servers.json
+          subPath: servers.json
+          readOnly: true
         resources:
           requests:
             memory: "256Mi"
@@ -64,3 +69,7 @@ spec:
           initialDelaySeconds: 90
           periodSeconds: 15
           timeoutSeconds: 5
+      volumes:
+      - name: pgadmin-servers-config
+        configMap:
+          name: pgadmin-servers-config
