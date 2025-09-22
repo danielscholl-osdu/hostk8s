@@ -54,6 +54,32 @@ spec:
       namespace: postgres
 
 ---
+# Database: Voting database and pgAdmin configuration
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sample-app-db
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: component-redis
+    - name: component-postgres
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-sample-app
+  path: ./software/stacks/sample-app/db
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Cluster
+      name: voting-db
+      namespace: postgres
+      apiVersion: postgresql.cnpg.io/v1
+
+---
 # Application: Voting app
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -62,8 +88,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: component-redis
-    - name: component-postgres
+    - name: sample-app-db
   interval: 10m
   retryInterval: 1m
   timeout: 5m
