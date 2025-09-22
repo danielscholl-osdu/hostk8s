@@ -1,8 +1,8 @@
 {
   "Servers": {
     "1": {
-      "Name": "Voting Database",
-      "Group": "Servers",
+      "Name": "Voting DB",
+      "Group": "Sample App",
       "Host": "voting-db-rw.postgres.svc.cluster.local",
       "Port": 5432,
       "MaintenanceDB": "voting",
