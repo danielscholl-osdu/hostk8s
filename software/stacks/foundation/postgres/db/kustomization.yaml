@@ -5,8 +5,7 @@ namespace: postgres
 
 resources:
   - database.yaml
-  - pgadmin-restart-rbac.yaml
-  - pgadmin-restart-job.yaml
+  - restart.yaml
 
 # Generate ConfigMap with foundation postgres database configuration (no hash for stable reference)
 configMapGenerator:
