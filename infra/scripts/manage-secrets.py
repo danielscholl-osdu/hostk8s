@@ -148,7 +148,7 @@ class SecretManager:
     def process_secret_data(self, secret_name: str, namespace: str,
                           data_list: List[Dict[str, Any]], stack: str) -> bool:
         """Process a single secret from the contract."""
-        vault_path = f"{stack}/{namespace}/{secret_name}"
+        vault_path = f"{namespace}/{secret_name}"
 
         # Check if secret already exists in Vault (idempotency)
         if self.vault_secret_exists(vault_path):
@@ -260,9 +260,9 @@ def remove_secrets(stack: str) -> None:
         # Try to remove by pattern: secret/metadata/STACK/*
         namespaces = sm.list_vault_secrets(stack)
         for namespace in namespaces:
-            secrets = sm.list_vault_secrets(f"{stack}/{namespace}")
+            secrets = sm.list_vault_secrets(f"{namespace}")
             for secret_name in secrets:
-                vault_path = f"{stack}/{namespace}/{secret_name}"
+                vault_path = f"{namespace}/{secret_name}"
                 sm.remove_vault_secret(vault_path)
     else:
         # Process each secret in the contract for removal
