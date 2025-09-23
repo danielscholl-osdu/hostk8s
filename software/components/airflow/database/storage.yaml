@@ -5,7 +5,7 @@ metadata:
   name: airflow-dags-pvc
   namespace: airflow
   labels:
-    hostk8s.stack: airflow
+    hostk8s.component: airflow
     hostk8s.type: dags-storage
 spec:
   accessModes:
