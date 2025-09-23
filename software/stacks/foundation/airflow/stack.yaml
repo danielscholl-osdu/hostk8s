@@ -4,56 +4,6 @@
 ######################
 
 ---
-# Infrastructure: PostgreSQL component
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: foundation-airflow-postgres
-  namespace: flux-system
-spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system-airflow
-  path: ./software/components/postgres
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Deployment
-      name: cnpg-operator-cloudnative-pg
-      namespace: postgres
-    - kind: Deployment
-      name: pgadmin4
-      namespace: postgres
-
----
-# Infrastructure: Redis component
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: foundation-airflow-redis
-  namespace: flux-system
-spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system-airflow
-  path: ./software/components/redis
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Deployment
-      name: redis
-      namespace: redis
-    - kind: Deployment
-      name: redis-commander
-      namespace: redis
-
----
 # Application: Airflow component (includes database setup)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -61,9 +11,6 @@ metadata:
   name: foundation-airflow
   namespace: flux-system
 spec:
-  dependsOn:
-    - name: foundation-airflow-postgres
-    - name: foundation-airflow-redis
   interval: 10m
   retryInterval: 1m
   timeout: 10m
@@ -73,30 +20,30 @@ spec:
   path: ./software/components/airflow
   prune: true
   wait: true
-  healthChecks:
-    - kind: Deployment
-      name: airflow-webserver
-      namespace: airflow
-    - kind: Deployment
-      name: airflow-scheduler
-      namespace: airflow
+  # healthChecks:
+  #   - kind: Deployment
+  #     name: airflow-webserver
+  #     namespace: airflow
+  #   - kind: Deployment
+  #     name: airflow-scheduler
+  #     namespace: airflow
 
----
-# Configuration: Example DAGs
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: foundation-airflow-dags
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: foundation-airflow
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system-airflow
-  path: ./software/stacks/foundation/airflow/dags
-  prune: true
-  wait: true
+# ---
+# # Configuration: Example DAGs
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: foundation-airflow-dags
+#   namespace: flux-system
+# spec:
+#   dependsOn:
+#     - name: foundation-airflow
+#   interval: 10m
+#   retryInterval: 1m
+#   timeout: 10m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system-airflow
+#   path: ./software/stacks/foundation/airflow/dags
+#   prune: true
+#   wait: true
