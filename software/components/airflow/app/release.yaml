@@ -44,14 +44,7 @@ spec:
 
     # External connections
     data:
-      metadataConnection:
-        user: airflow
-        pass: airflow  # Will be overridden by ExternalSecret
-        protocol: postgresql
-        host: postgres-cluster-rw.postgres.svc.cluster.local
-        port: 5432
-        db: airflow
-        sslmode: disable
+      metadataSecretName: airflow-metadata  # Use existing secret with correct password
       brokerUrl: "redis://:@redis.redis.svc.cluster.local:6379/0"
 
     # Web server configuration

@@ -35,10 +35,7 @@ spec:
     initdb:
       database: postgres
       owner: postgres
-      postInitApplicationSQL:
-        - "CREATE DATABASE IF NOT EXISTS airflow;"
-        - "CREATE USER IF NOT EXISTS airflow WITH ENCRYPTED PASSWORD 'airflow';"
-        - "GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;"
+      # Note: User and database creation handled manually to use generated passwords from secrets
 
   # Storage configuration
   storage:
