@@ -18,6 +18,6 @@ spec:
       path: /mnt/pv/airflow-dags
       size: 1Gi
       accessModes: ["ReadWriteOnce"]
-      storageClass: standard
+      storageClass: airflow-storage  # Custom StorageClass for immediate binding
       owner: "1000:1000"  # Airflow user/group
       permissions: "755"

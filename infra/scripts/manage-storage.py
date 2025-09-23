@@ -208,7 +208,7 @@ class StorageManager:
             },
             'provisioner': 'kubernetes.io/no-provisioner',
             'reclaimPolicy': 'Retain',
-            'volumeBindingMode': 'WaitForFirstConsumer',
+            'volumeBindingMode': 'Immediate',  # Immediate binding for pre-created PVs
             'allowVolumeExpansion': False
         }
 
