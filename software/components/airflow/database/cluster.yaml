@@ -45,10 +45,6 @@ spec:
     size: 5Gi
     storageClass: postgres-default
 
-  # Monitoring
-  monitoring:
-    enabled: false
-
   # Resources for local development
   resources:
     requests:
