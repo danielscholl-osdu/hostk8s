@@ -17,15 +17,7 @@ spec:
     - name: airflow-dags
       path: /mnt/pv/airflow-dags
       size: 1Gi
-      accessModes: ["ReadWriteMany"]
-      storageClass: airflow-dags-storage
-      owner: "1000:1000"  # Airflow user/group
-      permissions: "755"
-    # Airflow logs storage
-    - name: airflow-logs
-      path: /mnt/pv/airflow-logs
-      size: 5Gi
-      accessModes: ["ReadWriteMany"]
-      storageClass: airflow-logs-storage
+      accessModes: ["ReadWriteOnce"]
+      storageClass: standard
       owner: "1000:1000"  # Airflow user/group
       permissions: "755"

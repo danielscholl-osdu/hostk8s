@@ -9,24 +9,8 @@ metadata:
     hostk8s.type: dags-storage
 spec:
   accessModes:
-    - ReadWriteMany
-  storageClassName: airflow-dags-storage
+    - ReadWriteOnce
+  storageClassName: standard
   resources:
     requests:
       storage: 1Gi
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: airflow-logs-pvc
-  namespace: airflow
-  labels:
-    hostk8s.stack: airflow
-    hostk8s.type: logs-storage
-spec:
-  accessModes:
-    - ReadWriteMany
-  storageClassName: airflow-logs-storage
-  resources:
-    requests:
-      storage: 5Gi

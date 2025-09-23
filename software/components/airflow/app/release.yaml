@@ -130,7 +130,7 @@ spec:
       persistence:
         enabled: true
         existingClaim: "airflow-dags-pvc"
-        accessMode: ReadWriteMany
+        accessMode: ReadWriteOnce
         size: 1Gi
 
     # Logs configuration
