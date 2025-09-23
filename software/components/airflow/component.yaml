@@ -56,31 +56,31 @@ spec:
 
 
 ---
-# Database: Create Airflow database in PostgreSQL cluster
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: component-airflow-database
-  namespace: flux-system
-  labels:
-    hostk8s.component: airflow
-spec:
-  dependsOn:
-    - name: component-postgres
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  path: ./software/components/airflow/database
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Cluster
-      name: postgres-cluster
-      namespace: postgres
-      apiVersion: postgresql.cnpg.io/v1
+# # Database: Create Airflow database in PostgreSQL cluster
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: component-airflow-database
+#   namespace: flux-system
+#   labels:
+#     hostk8s.component: airflow
+# spec:
+#   dependsOn:
+#     - name: component-postgres
+#   interval: 10m
+#   retryInterval: 1m
+#   timeout: 10m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./software/components/airflow/database
+#   prune: true
+#   wait: true
+#   healthChecks:
+#     - kind: Cluster
+#       name: postgres-cluster
+#       namespace: postgres
+#       apiVersion: postgresql.cnpg.io/v1
 
 # ---
 # # Application: Deploy Airflow
