@@ -54,40 +54,15 @@ spec:
       namespace: redis
 
 ---
-# Database: PostgreSQL cluster with Airflow database
+# Application: Airflow component (includes database setup)
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: foundation-airflow-db
+  name: foundation-airflow
   namespace: flux-system
 spec:
   dependsOn:
     - name: foundation-airflow-postgres
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system-airflow
-  path: ./software/stacks/foundation/airflow/db
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Cluster
-      name: postgres-cluster
-      namespace: postgres
-      apiVersion: postgresql.cnpg.io/v1
-
----
-# Application: Airflow component
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: foundation-airflow-app
-  namespace: flux-system
-spec:
-  dependsOn:
-    - name: foundation-airflow-db
     - name: foundation-airflow-redis
   interval: 10m
   retryInterval: 1m
@@ -107,7 +82,7 @@ spec:
       namespace: airflow
 
 ---
-# Configuration: Airflow DAGs
+# Configuration: Example DAGs
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
@@ -115,7 +90,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: foundation-airflow-app
+    - name: foundation-airflow
   interval: 10m
   retryInterval: 1m
   timeout: 10m

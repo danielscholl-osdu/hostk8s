@@ -1,12 +1,12 @@
-# Create PostgreSQL cluster for Airflow (and other stacks that need it)
-# This creates the main postgres-cluster that all stacks can use
+# PostgreSQL cluster for Airflow
+# This ensures a postgres-cluster exists with the airflow database
 apiVersion: postgresql.cnpg.io/v1
 kind: Cluster
 metadata:
   name: postgres-cluster
   namespace: postgres
   labels:
-    hostk8s.stack: airflow
+    hostk8s.component: airflow
 spec:
   instances: 1
   primaryUpdateStrategy: unsupervised
@@ -35,7 +35,7 @@ spec:
     initdb:
       database: postgres
       owner: postgres
-      postInitSQL:
+      postInitApplicationSQL:
         - "CREATE DATABASE IF NOT EXISTS airflow;"
         - "CREATE USER IF NOT EXISTS airflow WITH ENCRYPTED PASSWORD 'airflow';"
         - "GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;"
