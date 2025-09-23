@@ -1,41 +1,59 @@
-# Note: This creates the airflow database in the existing PostgreSQL cluster
-# The postgres component must be deployed first (handled by stack dependencies)
-apiVersion: batch/v1
-kind: Job
+# Create PostgreSQL cluster for Airflow (and other stacks that need it)
+# This creates the main postgres-cluster that all stacks can use
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
 metadata:
-  name: create-airflow-db
+  name: postgres-cluster
   namespace: postgres
   labels:
     hostk8s.stack: airflow
 spec:
-  template:
-    spec:
-      restartPolicy: OnFailure
-      containers:
-      - name: create-db
-        image: postgres:16-alpine
-        env:
-        - name: PGHOST
-          value: postgres-cluster-rw.postgres.svc.cluster.local
-        - name: PGUSER
-          value: postgres
-        - name: PGPASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: postgres-cluster-superuser
-              key: password
-        command:
-        - sh
-        - -c
-        - |
-          # Check if database exists, create if not
-          if ! psql -lqt | cut -d \| -f 1 | grep -qw airflow; then
-            echo "Creating airflow database..."
-            psql -c "CREATE DATABASE airflow;"
-            psql -c "CREATE USER airflow WITH ENCRYPTED PASSWORD 'airflow';"
-            psql -c "GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;"
-            psql -d airflow -c "GRANT ALL ON SCHEMA public TO airflow;"
-            echo "Database created successfully"
-          else
-            echo "Database 'airflow' already exists"
-          fi
+  instances: 1
+  primaryUpdateStrategy: unsupervised
+
+  # PostgreSQL configuration
+  postgresql:
+    parameters:
+      max_connections: "200"
+      shared_buffers: "256MB"
+      effective_cache_size: "1GB"
+      maintenance_work_mem: "64MB"
+      checkpoint_completion_target: "0.9"
+      wal_buffers: "16MB"
+      default_statistics_target: "100"
+      random_page_cost: "1.1"
+      effective_io_concurrency: "200"
+      work_mem: "4MB"
+      min_wal_size: "1GB"
+      max_wal_size: "2GB"
+      max_worker_processes: "2"
+      max_parallel_workers_per_gather: "1"
+      max_parallel_workers: "2"
+
+  # Bootstrap configuration - create airflow database
+  bootstrap:
+    initdb:
+      database: postgres
+      owner: postgres
+      postInitSQL:
+        - "CREATE DATABASE IF NOT EXISTS airflow;"
+        - "CREATE USER IF NOT EXISTS airflow WITH ENCRYPTED PASSWORD 'airflow';"
+        - "GRANT ALL PRIVILEGES ON DATABASE airflow TO airflow;"
+
+  # Storage configuration
+  storage:
+    size: 5Gi
+    storageClass: postgres-default
+
+  # Monitoring
+  monitoring:
+    enabled: false
+
+  # Resources for local development
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"

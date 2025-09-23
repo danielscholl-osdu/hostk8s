@@ -4,11 +4,11 @@
 ######################
 
 ---
-# Deploy PostgreSQL component (if not already deployed)
+# Infrastructure: PostgreSQL component
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: foundation-airflow-postgres-components
+  name: foundation-airflow-postgres
   namespace: flux-system
 spec:
   interval: 10m
@@ -20,13 +20,20 @@ spec:
   path: ./software/components/postgres
   prune: true
   wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cnpg-operator-cloudnative-pg
+      namespace: postgres
+    - kind: Deployment
+      name: pgadmin4
+      namespace: postgres
 
 ---
-# Deploy Redis component
+# Infrastructure: Redis component
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: foundation-airflow-redis-components
+  name: foundation-airflow-redis
   namespace: flux-system
 spec:
   interval: 10m
@@ -38,36 +45,24 @@ spec:
   path: ./software/components/redis
   prune: true
   wait: true
+  healthChecks:
+    - kind: Deployment
+      name: redis
+      namespace: redis
+    - kind: Deployment
+      name: redis-commander
+      namespace: redis
 
 ---
-# Deploy Airflow component
+# Database: PostgreSQL cluster with Airflow database
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: foundation-airflow-components
+  name: foundation-airflow-db
   namespace: flux-system
 spec:
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system-airflow
-  path: ./software/components/airflow
-  prune: true
-  wait: true
   dependsOn:
-    - name: foundation-airflow-postgres-components
-    - name: foundation-airflow-redis-components
-
----
-# Deploy PostgreSQL database for Airflow
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: foundation-airflow-postgres-db
-  namespace: flux-system
-spec:
+    - name: foundation-airflow-postgres
   interval: 10m
   retryInterval: 1m
   timeout: 10m
@@ -77,17 +72,50 @@ spec:
   path: ./software/stacks/foundation/airflow/db
   prune: true
   wait: true
-  dependsOn:
-    - name: foundation-airflow-postgres-components
+  healthChecks:
+    - kind: Cluster
+      name: postgres-cluster
+      namespace: postgres
+      apiVersion: postgresql.cnpg.io/v1
 
 ---
-# Deploy Airflow DAGs and configuration
+# Application: Airflow component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: foundation-airflow-app
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: foundation-airflow-db
+    - name: foundation-airflow-redis
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system-airflow
+  path: ./software/components/airflow
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: airflow-webserver
+      namespace: airflow
+    - kind: Deployment
+      name: airflow-scheduler
+      namespace: airflow
+
+---
+# Configuration: Airflow DAGs
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
   name: foundation-airflow-dags
   namespace: flux-system
 spec:
+  dependsOn:
+    - name: foundation-airflow-app
   interval: 10m
   retryInterval: 1m
   timeout: 10m
@@ -97,5 +125,3 @@ spec:
   path: ./software/stacks/foundation/airflow/dags
   prune: true
   wait: true
-  dependsOn:
-    - name: foundation-airflow-components
