@@ -5,6 +5,57 @@
 ######################
 
 ---
+# Infrastructure: PostgreSQL component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-postgres
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/postgres
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: cnpg-operator-cloudnative-pg
+      namespace: postgres
+    - kind: Deployment
+      name: pgadmin4
+      namespace: postgres
+
+---
+# Infrastructure: Redis component
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-redis
+  namespace: flux-system
+spec:
+  interval: 10m
+  retryInterval: 1m
+  timeout: 10m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/redis
+  prune: true
+  wait: true
+  healthChecks:
+    - kind: Deployment
+      name: redis
+      namespace: redis
+    - kind: Deployment
+      name: redis-commander
+      namespace: redis
+
+
+---
 # Database: Create Airflow database in PostgreSQL cluster
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
@@ -14,6 +65,8 @@ metadata:
   labels:
     hostk8s.component: airflow
 spec:
+  dependsOn:
+    - name: component-postgres
   interval: 10m
   retryInterval: 1m
   timeout: 10m
@@ -29,34 +82,34 @@ spec:
       namespace: postgres
       apiVersion: postgresql.cnpg.io/v1
 
----
-# Application: Deploy Airflow
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: component-airflow-app
-  namespace: flux-system
-  labels:
-    hostk8s.component: airflow
-spec:
-  dependsOn:
-    - name: component-airflow-database
-  interval: 10m
-  retryInterval: 1m
-  timeout: 10m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  path: ./software/components/airflow/app
-  prune: true
-  wait: true
-  healthChecks:
-    - kind: Deployment
-      name: airflow-webserver
-      namespace: airflow
-    - kind: Deployment
-      name: airflow-scheduler
-      namespace: airflow
-    - kind: Deployment
-      name: airflow-worker
-      namespace: airflow
+# ---
+# # Application: Deploy Airflow
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: component-airflow-app
+#   namespace: flux-system
+#   labels:
+#     hostk8s.component: airflow
+# spec:
+#   dependsOn:
+#     - name: component-airflow-database
+#   interval: 10m
+#   retryInterval: 1m
+#   timeout: 10m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./software/components/airflow/app
+#   prune: true
+#   wait: true
+#   healthChecks:
+#     - kind: Deployment
+#       name: airflow-webserver
+#       namespace: airflow
+#     - kind: Deployment
+#       name: airflow-scheduler
+#       namespace: airflow
+#     - kind: Deployment
+#       name: airflow-worker
+#       namespace: airflow
