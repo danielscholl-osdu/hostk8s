@@ -97,7 +97,6 @@ spec:
 
     # Worker configuration for CeleryExecutor
     workers:
-      enabled: true
       replicas: 2
       resources:
         limits:
@@ -139,7 +138,6 @@ spec:
       persistence:
         enabled: true
         size: 5Gi
-        accessMode: ReadWriteMany
 
     # Config for Airflow
     config:
