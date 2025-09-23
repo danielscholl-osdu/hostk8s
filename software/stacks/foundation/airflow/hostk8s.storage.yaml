@@ -5,6 +5,15 @@ metadata:
   namespace: airflow
 spec:
   directories:
+    # PostgreSQL storage (component dependency)
+    - name: postgres-default
+      path: /mnt/pv/postgres
+      size: 5Gi
+      accessModes: ["ReadWriteOnce"]
+      storageClass: postgres-default
+      owner: "26:26"  # CloudNativePG PostgreSQL user/group
+      permissions: "700"
+    # Airflow DAGs storage
     - name: airflow-dags
       path: /mnt/pv/airflow-dags
       size: 1Gi
@@ -12,6 +21,7 @@ spec:
       storageClass: airflow-dags-storage
       owner: "1000:1000"  # Airflow user/group
       permissions: "755"
+    # Airflow logs storage
     - name: airflow-logs
       path: /mnt/pv/airflow-logs
       size: 5Gi
