@@ -10,7 +10,7 @@ spec:
   chart:
     spec:
       chart: airflow
-      version: "1.x"  # Uses latest 1.x version
+      version: "1.18.0"
       sourceRef:
         kind: HelmRepository
         name: airflow-official
@@ -25,11 +25,11 @@ spec:
     images:
       airflow:
         repository: apache/airflow
-        tag: "2.10.1-python3.11"
+        tag: "3.0.6"
         pullPolicy: IfNotPresent
 
     # Airflow configuration
-    airflowVersion: "2.10.1"
+    airflowVersion: "3.0.6"
 
     # Executor configuration - using CeleryExecutor with Redis
     executor: "CeleryExecutor"
