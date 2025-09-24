@@ -13,7 +13,7 @@ spec:
       version: "1.x"  # Uses latest 1.x version
       sourceRef:
         kind: HelmRepository
-        name: apache-airflow
+        name: airflow-official
         namespace: flux-system
   install:
     createNamespace: false  # airflow namespace created by namespace.yaml

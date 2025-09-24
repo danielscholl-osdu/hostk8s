@@ -8,4 +8,4 @@ resources:
   - external-secret.yaml
   - release.yaml
   - ingress.yaml
-  - create-admin-job.yaml
+  # Note: create-admin-job.yaml should be deployed separately after Airflow is ready

@@ -109,3 +109,25 @@ spec:
 #     - kind: Deployment
 #       name: airflow-worker
 #       namespace: airflow
+---
+# Post-Install: Create admin user after Airflow is ready
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: component-airflow-post-install
+  namespace: flux-system
+  labels:
+    hostk8s.component: airflow
+spec:
+  dependsOn:
+    - name: component-airflow-app  # Wait for Airflow to be deployed
+    - name: component-redis          # Ensure Redis is ready
+  interval: 10m
+  retryInterval: 1m
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./software/components/airflow/post-install
+  prune: true
+  wait: true
