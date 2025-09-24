@@ -5,7 +5,7 @@ resources:
   - namespace.yaml
   - storage.yaml
   - source.yaml
-  - external-secret.yaml
+  - secret.yaml
   - release.yaml
   - ingress.yaml
-  # Note: create-admin-job.yaml should be deployed separately after Airflow is ready
+  - job.yaml

@@ -22,20 +22,20 @@ spec:
       initContainers:
       # Wait for Airflow webserver to be ready
       - name: wait-for-airflow
-        image: busybox:1.36
+        image: mcr.microsoft.com/azurelinux/base/core:3.0
         command:
         - sh
         - -c
         - |
-          echo "Waiting for Airflow webserver to be ready..."
-          until nc -z airflow-webserver.airflow.svc.cluster.local 8080; do
-            echo "Airflow webserver not ready yet, waiting..."
+          echo "Waiting for Airflow API server to be ready..."
+          until nc -z airflow-api-server.airflow.svc.cluster.local 8080; do
+            echo "Airflow API server not ready yet, waiting..."
             sleep 10
           done
-          echo "Airflow webserver is ready!"
+          echo "Airflow API server is ready!"
       containers:
       - name: create-admin
-        image: apache/airflow:2.10.1-python3.11
+        image: apache/airflow:3.0.6
         imagePullPolicy: IfNotPresent
         command:
         - bash

@@ -101,33 +101,14 @@ spec:
   wait: true
   healthChecks:
     - kind: Deployment
-      name: airflow-webserver
+      name: airflow-api-server
       namespace: airflow
     - kind: Deployment
       name: airflow-scheduler
       namespace: airflow
-    - kind: Deployment
+    - kind: StatefulSet
       name: airflow-worker
       namespace: airflow
----
-# After: Create admin user after Airflow is ready
-apiVersion: kustomize.toolkit.fluxcd.io/v1
-kind: Kustomization
-metadata:
-  name: component-airflow-after
-  namespace: flux-system
-  labels:
-    hostk8s.component: airflow
-spec:
-  dependsOn:
-    - name: component-airflow      # Wait for main Airflow to be deployed
-    - name: component-redis        # Ensure Redis is ready
-  interval: 10m
-  retryInterval: 1m
-  timeout: 5m
-  sourceRef:
-    kind: GitRepository
-    name: flux-system
-  path: ./software/components/airflow/after
-  prune: true
-  wait: true
+    - kind: Job
+      name: airflow-create-admin-user
+      namespace: airflow
