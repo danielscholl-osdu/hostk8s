@@ -83,7 +83,7 @@ spec:
       resources:
         limits:
           cpu: 500m
-          memory: 768Mi  # Increased to prevent OOMKilled
+          memory: 1Gi  # Further increased - API server needs more memory
         requests:
           cpu: 100m
           memory: 256Mi
@@ -111,7 +111,7 @@ spec:
       resources:
         limits:
           cpu: 200m
-          memory: 384Mi  # Increased to prevent OOMKilled
+          memory: 512Mi  # Further increased for triggerer stability
         requests:
           cpu: 50m
           memory: 128Mi
