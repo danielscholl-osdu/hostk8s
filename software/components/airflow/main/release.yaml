@@ -139,6 +139,8 @@ spec:
         load_examples: "False"  # Don't load example DAGs
         dags_folder: "/opt/airflow/dags"
         executor: "CeleryExecutor"
+        # Enable FAB auth manager for user management CLI commands (Airflow 3.x)
+        auth_manager: "airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
 
       webserver:
         expose_config: "True"  # Allow viewing config in UI (dev environment)

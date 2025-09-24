@@ -45,8 +45,11 @@ spec:
           echo "Waiting for Airflow database to be ready..."
           airflow db check
 
+          echo "Creating admin user with Airflow 3.x + FAB auth manager..."
+
+          # Now that FAB auth manager is configured, the users command should be available
           echo "Checking if admin user exists..."
-          if airflow users list | grep -q "^admin"; then
+          if airflow users list 2>/dev/null | grep -q "^admin"; then
             echo "Admin user exists, updating password..."
             airflow users reset-password \
               --username admin \
