@@ -39,21 +39,20 @@ spec:
     # Airflow configuration
     airflowVersion: "3.0.6"
 
-    # Executor configuration - using CeleryExecutor with Redis
-    executor: "CeleryExecutor"
+    # Executor configuration - using LocalExecutor for development
+    executor: "LocalExecutor"
 
     # Database configuration - using external PostgreSQL
     postgresql:
       enabled: false  # Use external PostgreSQL from postgres component
 
-    # Redis configuration for Celery backend
+    # Redis configuration - not needed for LocalExecutor
     redis:
-      enabled: false  # Use external Redis from redis component
+      enabled: false
 
     # External connections
     data:
       metadataSecretName: airflow-metadata  # Uses ExternalSecret template for connection string
-      brokerUrl: "redis://:@redis.redis.svc.cluster.local:6379/0"
 
     # Web server configuration
     webserver:
@@ -78,28 +77,21 @@ spec:
           cpu: 100m
           memory: 256Mi
 
-    # Scheduler configuration
+    # Scheduler configuration - handles task execution with LocalExecutor
     scheduler:
       enabled: true
       replicas: 1
       resources:
         limits:
-          cpu: 500m
+          cpu: 1000m
+          memory: 3Gi  # Increased for LocalExecutor task execution
+        requests:
+          cpu: 200m
           memory: 1Gi
-        requests:
-          cpu: 100m
-          memory: 256Mi
 
-    # Worker configuration for CeleryExecutor
+    # Worker configuration - disabled for LocalExecutor
     workers:
-      replicas: 1
-      resources:
-        limits:
-          cpu: 500m
-          memory: 4Gi  # Further increased for Airflow 3.x OOMKilled at 2Gi
-        requests:
-          cpu: 100m
-          memory: 1Gi  # Increased base request for Airflow 3.x
+      replicas: 0  # No workers needed with LocalExecutor
 
     # Triggerer configuration
     triggerer:
@@ -137,9 +129,9 @@ spec:
           cpu: 50m
           memory: 64Mi
 
-    # Flower UI for Celery monitoring (optional)
+    # Flower UI for Celery monitoring - not needed for LocalExecutor
     flower:
-      enabled: false  # Can be enabled if needed
+      enabled: false
 
     # DAGs configuration
     dags:
@@ -162,7 +154,7 @@ spec:
       core:
         load_examples: "False"  # Don't load example DAGs
         dags_folder: "/opt/airflow/dags"
-        executor: "CeleryExecutor"
+        executor: "LocalExecutor"
         # Enable FAB auth manager for user management CLI commands (Airflow 3.x)
         auth_manager: "airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager"
 
@@ -176,9 +168,6 @@ spec:
 
       dag_processor:
         refresh_interval: 60  # Scan for new DAGs every 60 seconds
-
-      celery:
-        broker_url: "redis://:@redis.redis.svc.cluster.local:6379/0"
 
     # Security
     fernetKey: ""  # Will be set by ExternalSecret
