@@ -96,10 +96,10 @@ spec:
       resources:
         limits:
           cpu: 500m
-          memory: 1Gi
+          memory: 4Gi  # Further increased for Airflow 3.x OOMKilled at 2Gi
         requests:
           cpu: 100m
-          memory: 256Mi
+          memory: 1Gi  # Increased base request for Airflow 3.x
 
     # Triggerer configuration
     triggerer:
@@ -112,6 +112,30 @@ spec:
         requests:
           cpu: 50m
           memory: 128Mi
+
+    # DAG Processor configuration
+    dagProcessor:
+      enabled: true
+      replicas: 1
+      resources:
+        limits:
+          cpu: 200m
+          memory: 512Mi
+        requests:
+          cpu: 50m
+          memory: 128Mi
+
+    # StatsD configuration
+    statsd:
+      enabled: true
+      replicas: 1
+      resources:
+        limits:
+          cpu: 100m
+          memory: 128Mi
+        requests:
+          cpu: 50m
+          memory: 64Mi
 
     # Flower UI for Celery monitoring (optional)
     flower:
@@ -148,7 +172,10 @@ spec:
         base_url: "http://airflow.localhost"
 
       scheduler:
-        dag_dir_list_interval: 60  # Scan for new DAGs every 60 seconds
+        # dag_dir_list_interval moved to dag_processor section for Airflow 3.x
+
+      dag_processor:
+        refresh_interval: 60  # Scan for new DAGs every 60 seconds
 
       celery:
         broker_url: "redis://:@redis.redis.svc.cluster.local:6379/0"
