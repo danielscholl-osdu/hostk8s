@@ -106,9 +106,6 @@ spec:
     - kind: Deployment
       name: airflow-scheduler
       namespace: airflow
-    - kind: StatefulSet
-      name: airflow-worker
-      namespace: airflow
     - kind: Job
       name: airflow-create-admin-user
       namespace: airflow
