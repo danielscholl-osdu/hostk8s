@@ -68,14 +68,14 @@ spec:
       defaultUser:
         enabled: false  # We'll create user via init container with secret
 
-      # Resource limits for local development
+      # Resource limits - reduced for web UI only workload
       resources:
         limits:
           cpu: 500m
-          memory: 1Gi
+          memory: 512Mi  # Reduced from 1Gi - web UI doesn't need much
         requests:
           cpu: 100m
-          memory: 256Mi
+          memory: 128Mi
 
     # Scheduler configuration - handles task execution with LocalExecutor
     scheduler:
