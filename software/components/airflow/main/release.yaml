@@ -21,6 +21,14 @@ spec:
       retries: 3
   interval: 10m0s
   values:
+    # Required for Flux deployments - disable Helm hooks for jobs
+    createUserJob:
+      useHelmHooks: false
+      applyCustomEnv: false
+    migrateDatabaseJob:
+      useHelmHooks: false
+      applyCustomEnv: false
+
     # Images
     images:
       airflow:
