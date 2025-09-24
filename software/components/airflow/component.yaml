@@ -99,16 +99,16 @@ spec:
   path: ./software/components/airflow/app
   prune: true
   wait: true
-#   healthChecks:
-#     - kind: Deployment
-#       name: airflow-webserver
-#       namespace: airflow
-#     - kind: Deployment
-#       name: airflow-scheduler
-#       namespace: airflow
-#     - kind: Deployment
-#       name: airflow-worker
-#       namespace: airflow
+  healthChecks:
+    - kind: Deployment
+      name: airflow-webserver
+      namespace: airflow
+    - kind: Deployment
+      name: airflow-scheduler
+      namespace: airflow
+    - kind: Deployment
+      name: airflow-worker
+      namespace: airflow
 ---
 # Post-Install: Create admin user after Airflow is ready
 apiVersion: kustomize.toolkit.fluxcd.io/v1
