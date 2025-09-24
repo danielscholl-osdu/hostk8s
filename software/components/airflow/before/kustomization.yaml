@@ -3,3 +3,7 @@ kind: Kustomization
 
 resources:
   - cluster.yaml
+
+commonLabels:
+  hostk8s.stack: airflow
+  hostk8s.type: database

@@ -1,0 +1,81 @@
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: airflow-db
+  namespace: postgres
+spec:
+  # Single instance for development
+  instances: 1
+
+  # PostgreSQL version
+  imageName: ghcr.io/cloudnative-pg/postgresql:17
+
+  # Primary update strategy
+  primaryUpdateStrategy: unsupervised
+
+  # Bootstrap configuration with airflow database and user
+  bootstrap:
+    initdb:
+      database: airflow
+      owner: airflow
+      secret:
+        name: airflow-db-credentials
+      dataChecksums: true
+      encoding: UTF8
+      localeCollate: en_US.utf8
+      localeCType: en_US.utf8
+      # Fix Windows permissions by setting PostgreSQL to run as postgres user
+      options:
+        - "--auth-local=trust"
+        - "--auth-host=trust"
+
+      # Initialize with airflow schema (let Airflow handle its own schema)
+      postInitSQL:
+        - |
+          -- Airflow will create its own schema during migration
+          -- Just ensure the database and user exist
+          SELECT 1;
+
+  # Resource limits for local development
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi
+      cpu: 300m
+
+  # Storage configuration - use storage contract
+  storage:
+    size: 5Gi
+    storageClass: airflow-db
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      volumeMode: Filesystem
+
+  # PostgreSQL configuration
+  postgresql:
+    parameters:
+      # Basic settings for development
+      max_connections: "100"
+      shared_buffers: "64MB"
+      effective_cache_size: "128MB"
+
+      # Logging for development
+      log_statement: "all"
+      log_duration: "on"
+
+    # pg_hba rules for authentication - allow trust for local development
+    pg_hba:
+      - host all all 0.0.0.0/0 trust
+      - host all all ::0/0 trust
+
+  # Disable superuser access - not needed for local development with trust auth
+  enableSuperuserAccess: false
+
+  # Monitoring disabled for local dev (omit monitoring section to disable)

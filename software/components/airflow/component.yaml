@@ -53,11 +53,11 @@ spec:
       name: redis-commander
       namespace: redis
 ---
-# Database: Create Airflow database in PostgreSQL cluster
+# Before: Create Airflow database in PostgreSQL cluster
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-airflow-database
+  name: component-airflow-before
   namespace: flux-system
   labels:
     hostk8s.component: airflow
@@ -70,33 +70,33 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/airflow/database
+  path: ./software/components/airflow/before
   prune: true
   wait: true
   healthChecks:
     - kind: Cluster
-      name: postgres-cluster
+      name: airflow-db
       namespace: postgres
       apiVersion: postgresql.cnpg.io/v1
 ---
-# Application: Deploy Airflow
+# Main: Deploy Airflow application
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-airflow-app
+  name: component-airflow
   namespace: flux-system
   labels:
     hostk8s.component: airflow
 spec:
   dependsOn:
-    - name: component-airflow-database
+    - name: component-airflow-before
   interval: 10m
   retryInterval: 1m
   timeout: 10m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/airflow/app
+  path: ./software/components/airflow/main
   prune: true
   wait: true
   healthChecks:
@@ -110,24 +110,24 @@ spec:
       name: airflow-worker
       namespace: airflow
 ---
-# Post-Install: Create admin user after Airflow is ready
+# After: Create admin user after Airflow is ready
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-airflow-post-install
+  name: component-airflow-after
   namespace: flux-system
   labels:
     hostk8s.component: airflow
 spec:
   dependsOn:
-    - name: component-airflow-app  # Wait for Airflow to be deployed
-    - name: component-redis          # Ensure Redis is ready
+    - name: component-airflow      # Wait for main Airflow to be deployed
+    - name: component-redis        # Ensure Redis is ready
   interval: 10m
   retryInterval: 1m
   timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/airflow/post-install
+  path: ./software/components/airflow/after
   prune: true
   wait: true
