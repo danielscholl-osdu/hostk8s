@@ -84,10 +84,10 @@ spec:
       resources:
         limits:
           cpu: 1000m
-          memory: 3Gi  # Increased for LocalExecutor task execution
+          memory: 1Gi  # Conservative start, scale up if needed
         requests:
           cpu: 200m
-          memory: 1Gi
+          memory: 500Mi
 
     # Worker configuration - disabled for LocalExecutor
     workers:
