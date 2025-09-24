@@ -48,14 +48,14 @@ spec:
 
   # Storage configuration - use storage contract
   storage:
-    size: 5Gi
-    storageClass: postgres-default
+    size: 1Gi
+    storageClass: airflow-db
     pvcTemplate:
       accessModes:
         - ReadWriteOnce
       resources:
         requests:
-          storage: 5Gi
+          storage: 1Gi
       volumeMode: Filesystem
 
   # PostgreSQL configuration
