@@ -77,9 +77,8 @@ spec:
           cpu: 100m
           memory: 128Mi
 
-    # API Server configuration (Airflow 3.x separate component)
+    # API Server configuration (separate component in Airflow Helm chart)
     apiServer:
-      enabled: true
       replicas: 1
       resources:
         limits:
