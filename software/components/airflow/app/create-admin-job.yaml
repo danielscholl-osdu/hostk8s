@@ -1,0 +1,87 @@
+---
+# Job to create Airflow admin user from secret
+# This replaces the Helm chart's defaultUser to avoid hardcoding passwords
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: airflow-create-admin-user
+  namespace: airflow
+  labels:
+    hostk8s.component: airflow
+    hostk8s.type: setup-job
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-weight: "1"
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      labels:
+        hostk8s.component: airflow
+        hostk8s.type: setup-job
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: create-admin
+        image: apache/airflow:2.10.1-python3.11
+        imagePullPolicy: IfNotPresent
+        command:
+        - bash
+        - -c
+        - |
+          set -e
+          echo "Waiting for Airflow database to be ready..."
+          airflow db check
+
+          echo "Checking if admin user exists..."
+          if airflow users list | grep -q "^admin"; then
+            echo "Admin user exists, updating password..."
+            airflow users reset-password \
+              --username admin \
+              --password "$ADMIN_PASSWORD"
+          else
+            echo "Creating admin user..."
+            airflow users create \
+              --username admin \
+              --firstname Admin \
+              --lastname User \
+              --role Admin \
+              --email admin@hostk8s.com \
+              --password "$ADMIN_PASSWORD"
+          fi
+          echo "Admin user setup complete!"
+        env:
+        - name: ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: airflow-secrets
+              key: admin-password
+        - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+          valueFrom:
+            secretKeyRef:
+              name: airflow-metadata
+              key: connection
+        - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
+          valueFrom:
+            secretKeyRef:
+              name: airflow-metadata
+              key: connection
+        - name: AIRFLOW_CONN_AIRFLOW_DB
+          valueFrom:
+            secretKeyRef:
+              name: airflow-metadata
+              key: connection
+        - name: AIRFLOW__CORE__EXECUTOR
+          value: LocalExecutor  # Use LocalExecutor for admin operations
+        - name: AIRFLOW__CORE__LOAD_DEFAULT_CONNECTIONS
+          value: "False"
+        - name: AIRFLOW__CORE__LOAD_EXAMPLES
+          value: "False"
+        volumeMounts:
+        - name: config
+          mountPath: /opt/airflow/airflow.cfg
+          subPath: airflow.cfg
+      volumes:
+      - name: config
+        configMap:
+          name: airflow-config

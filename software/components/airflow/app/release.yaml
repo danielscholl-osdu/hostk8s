@@ -57,15 +57,9 @@ spec:
           - name: airflow-ui
             port: 8080
 
-      # Default admin user
+      # Default admin user - disabled to use init container instead
       defaultUser:
-        enabled: true
-        role: Admin
-        username: admin
-        email: admin@hostk8s.com
-        firstName: Admin
-        lastName: User
-        password: admin  # Will be overridden by ExternalSecret
+        enabled: false  # We'll create user via init container with secret
 
       # Resource limits for local development
       resources:

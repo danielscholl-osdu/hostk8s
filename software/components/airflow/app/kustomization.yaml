@@ -6,5 +6,6 @@ resources:
   - storage.yaml
   - source.yaml
   - external-secret.yaml
-  # - release.yaml
-  # - ingress.yaml
+  - release.yaml
+  - ingress.yaml
+  - create-admin-job.yaml
