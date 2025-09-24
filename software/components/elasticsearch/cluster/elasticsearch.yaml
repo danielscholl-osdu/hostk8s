@@ -52,11 +52,11 @@ spec:
             - name: elasticsearch
               env:
                 - name: ES_JAVA_OPTS
-                  value: "-Xms1g -Xmx1g"  # 1GB heap for development
+                  value: "-Xms768m -Xmx768m"  # 768MB heap for development
               resources:
                 requests:
-                  memory: 2Gi
+                  memory: 1536Mi
                   cpu: 100m
                 limits:
-                  memory: 2Gi
+                  memory: 1536Mi
                   cpu: 1000m

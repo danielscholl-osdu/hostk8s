@@ -1,52 +1,118 @@
 # Airflow Component
 
-Apache Airflow workflow orchestrator component for HostK8s.
+Apache Airflow workflow orchestrator component providing task scheduling, dependency management, and workflow automation with CeleryExecutor and web UI for HostK8s stacks.
 
-## Overview
+## Resource Requirements
 
-This component provides Apache Airflow 2.10.1 with:
-- CeleryExecutor with Redis backend
-- External PostgreSQL database
-- NGINX ingress for web UI
-- Persistent DAG storage
-- Vault-managed secrets
+| Component | Replicas | CPU Request | CPU Limit | Memory Request | Memory Limit | Storage |
+|-----------|----------|-------------|-----------|----------------|--------------|---------|
+| Scheduler | 1 | 100m | 500m | 256Mi | 512Mi | - |
+| API Server | 1 | 100m | 500m | 256Mi | 512Mi | - |
+| Triggerer | 1 | 100m | 500m | 256Mi | 512Mi | - |
+| DAG Processor | 1 | 100m | 500m | 128Mi | 256Mi | - |
+| StatSD | 1 | 50m | 100m | 64Mi | 128Mi | - |
+| **Total Component Resources** | | **450m** | **2100m** | **960Mi** | **1920Mi** | **-** |
 
-## Dependencies
+## Services & Access
 
-- `postgres` component - Database backend
-- `redis` component - Celery broker
-- `vault` addon - Secret management
+| Service | Endpoint | Port | Purpose | Credentials |
+|---------|----------|------|---------|-------------|
+| Airflow Web UI | `http://airflow.localhost:8080` | 8080 | Workflow management dashboard | `admin` user |
+| API Server | `airflow-api-server.airflow.svc.cluster.local` | 8080 | REST API for automation | Same credentials |
+| Scheduler | Internal only | - | Task scheduling engine | - |
 
-## Access
+**Default Credentials:**
+- **Username**: `admin`
+- **Password**: Retrieved from Vault secret `foundation/airflow/airflow/airflow-credentials`
 
-- Web UI: http://airflow.localhost
-- Default user: admin (password generated in Vault)
+## Architecture
 
-## Configuration
-
-The component uses the official Apache Airflow Helm chart with:
-- 1 scheduler
-- 2 workers (Celery)
-- 1 triggerer
-- Resource limits optimized for local development
-
-## Usage
-
-Deploy via foundation/airflow stack:
-```bash
-make up foundation/airflow
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Airflow Component                       │
+│                                                             │
+│  ┌─────────────────┐    ┌─────────────────┐    ┌──────────┐ │
+│  │                 │    │                 │    │          │ │
+│  │   Scheduler     │───►│   API Server    │───►│ Web UI   │ │
+│  │   + executor    │    │   + REST API    │    │ + tasks  │ │
+│  │   + DAG parser  │    │   + auth        │    │          │ │
+│  │                 │    │                 │    │          │ │
+│  └─────────────────┘    └─────────────────┘    └──────────┘ │
+│          │                       │                    │     │
+│          ▼                       ▼                    ▼     │
+│    ┌──────────┐            ┌──────────┐         ┌─────────┐ │
+│    │Triggerer │            │   DAG    │         │ StatSD  │ │
+│    │  async   │            │Processor │         │metrics  │ │
+│    └──────────┘            └──────────┘         └─────────┘ │
+│                                                             │
+│  External Dependencies: PostgreSQL (metadata) + Redis (Celery) │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-Or deploy component directly (requires dependencies):
+## Quick Start
+
+Add to your stack's `stack.yaml`:
+
+```yaml
+- name: component-postgres
+  namespace: flux-system
+  path: ./software/components/postgres
+- name: component-redis
+  namespace: flux-system
+  path: ./software/components/redis
+- name: component-airflow
+  namespace: flux-system
+  path: ./software/components/airflow
+```
+
+## Connection Configuration
+
+**Database Connection** (automatically configured):
+```yaml
+env:
+- name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+  value: "postgresql://airflow:password@airflow-db-rw.postgres:5432/airflow"
+- name: AIRFLOW__CELERY__BROKER_URL
+  value: "redis://redis-master.redis:6379/0"
+- name: AIRFLOW__CELERY__RESULT_BACKEND
+  value: "redis://redis-master.redis:6379/0"
+```
+
+**External API Access**:
 ```bash
-kubectl apply -k software/components/airflow
+# Access Airflow API from applications
+curl -u admin:password http://airflow-api-server.airflow:8080/api/v1/dags
 ```
 
 ## DAG Management
 
-DAGs are stored in persistent volume at `/mnt/pv/airflow-dags`.
-The foundation stack includes example DAGs:
-- `hello_world.py` - Simple hello world DAG
-- `data_pipeline.py` - Example pipeline with branching
+**DAG Storage**: `/opt/airflow/dags` (persistent across restarts)
 
-Add custom DAGs by mounting to the PVC or updating the ConfigMap.
+**Adding Custom DAGs**:
+1. Mount DAGs via ConfigMap (development):
+```yaml
+# In your stack manifests
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: custom-dags
+  namespace: airflow
+data:
+  my_dag.py: |
+    from airflow import DAG
+    from airflow.operators.bash import BashOperator
+    # DAG definition here
+```
+
+2. Persistent volume (production-like):
+```bash
+# Copy DAGs to persistent storage
+kubectl cp my_dag.py airflow/airflow-scheduler-0:/opt/airflow/dags/
+```
+
+## Dependencies
+
+- **PostgreSQL component**: Database backend for metadata
+- **Redis component**: Celery broker and result backend
+- **Vault addon**: Credential and secret management
+- **NGINX Ingress**: Web UI access via `airflow.localhost`
