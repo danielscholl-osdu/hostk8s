@@ -57,7 +57,7 @@ spec:
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: component-airflow-before
+  name: component-airflow-db
   namespace: flux-system
   labels:
     hostk8s.component: airflow
@@ -70,7 +70,7 @@ spec:
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./software/components/airflow/before
+  path: ./software/components/airflow/db
   prune: true
   wait: true
   healthChecks:
@@ -89,7 +89,7 @@ metadata:
     hostk8s.component: airflow
 spec:
   dependsOn:
-    - name: component-airflow-before
+    - name: component-airflow-db
   interval: 10m
   retryInterval: 1m
   timeout: 10m

@@ -77,17 +77,29 @@ spec:
           cpu: 100m
           memory: 128Mi
 
+    # API Server configuration (Airflow 3.x separate component)
+    apiServer:
+      enabled: true
+      replicas: 1
+      resources:
+        limits:
+          cpu: 500m
+          memory: 512Mi  # Limit API server memory for development
+        requests:
+          cpu: 100m
+          memory: 256Mi
+
     # Scheduler configuration - handles task execution with LocalExecutor
     scheduler:
       enabled: true
       replicas: 1
       resources:
         limits:
-          cpu: 1000m
-          memory: 1Gi  # Conservative start, scale up if needed
+          cpu: 500m
+          memory: 512Mi  # Reduced for development workload
         requests:
-          cpu: 200m
-          memory: 500Mi
+          cpu: 100m
+          memory: 256Mi
 
     # Worker configuration - disabled for LocalExecutor
     workers:
@@ -100,7 +112,7 @@ spec:
       resources:
         limits:
           cpu: 200m
-          memory: 512Mi
+          memory: 256Mi  # Reduced for development
         requests:
           cpu: 50m
           memory: 128Mi
@@ -112,7 +124,7 @@ spec:
       resources:
         limits:
           cpu: 200m
-          memory: 512Mi
+          memory: 256Mi  # Reduced for development
         requests:
           cpu: 50m
           memory: 128Mi

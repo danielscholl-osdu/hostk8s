@@ -8,10 +8,11 @@ Apache Airflow workflow orchestrator component providing task scheduling, depend
 |-----------|----------|-------------|-----------|----------------|--------------|---------|
 | Scheduler | 1 | 100m | 500m | 256Mi | 512Mi | - |
 | API Server | 1 | 100m | 500m | 256Mi | 512Mi | - |
-| Triggerer | 1 | 100m | 500m | 256Mi | 512Mi | - |
-| DAG Processor | 1 | 100m | 500m | 128Mi | 256Mi | - |
+| Webserver | 1 | 100m | 500m | 128Mi | 512Mi | - |
+| Triggerer | 1 | 50m | 200m | 128Mi | 256Mi | - |
+| DAG Processor | 1 | 50m | 200m | 128Mi | 256Mi | - |
 | StatSD | 1 | 50m | 100m | 64Mi | 128Mi | - |
-| **Total Component Resources** | | **450m** | **2100m** | **960Mi** | **1920Mi** | **-** |
+| **Total Component Resources** | | **450m** | **2000m** | **960Mi** | **2176Mi** | **-** |
 
 ## Services & Access
 

@@ -8,8 +8,8 @@ Complete Elasticsearch stack with Kibana dashboard for full-text search, analyti
 |-----------|----------|-------------|-----------|----------------|--------------|---------|
 | ECK Operator | 1 | 100m | 200m | 150Mi | 256Mi | - |
 | Elasticsearch | 1 | 100m | 1000m | 1536Mi | 1536Mi | 10Gi |
-| Kibana | 1 | 100m | 500m | 512Mi | 768Mi | - |
-| **Total Component Resources** | | **300m** | **1700m** | **2.19Gi** | **2.53Gi** | **10Gi** |
+| Kibana | 1 | 100m | 500m | 512Mi | 1Gi | - |
+| **Total Component Resources** | | **300m** | **1700m** | **2.19Gi** | **2.78Gi** | **10Gi** |
 
 ## Services & Access
 
