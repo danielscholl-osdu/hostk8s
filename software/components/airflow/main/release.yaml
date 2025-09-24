@@ -120,7 +120,6 @@ spec:
     # StatsD configuration
     statsd:
       enabled: true
-      replicas: 1
       resources:
         limits:
           cpu: 100m
