@@ -92,7 +92,7 @@ spec:
 
     # Worker configuration for CeleryExecutor
     workers:
-      replicas: 2
+      replicas: 1
       resources:
         limits:
           cpu: 500m
