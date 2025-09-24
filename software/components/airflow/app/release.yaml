@@ -44,7 +44,7 @@ spec:
 
     # External connections
     data:
-      metadataSecretName: airflow-db-credentials
+      metadataSecretName: airflow-metadata  # Uses ExternalSecret template for connection string
       brokerUrl: "redis://:@redis.redis.svc.cluster.local:6379/0"
 
     # Web server configuration
@@ -167,18 +167,6 @@ spec:
         value: "True"
       - name: AIRFLOW__WEBSERVER__EXPOSE_STACKTRACE
         value: "True"  # For development
-      # Database connection environment variables
-      - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
-        value: "postgresql://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
-
-    # Extra environment variables from secrets
-    extraEnvVarsSecret: airflow-db-credentials
-    extraEnvVarsSecretMapping:
-      DB_USER: username
-      DB_PASSWORD: password
-      DB_HOST: host
-      DB_PORT: port
-      DB_NAME: database
 
     # Labels
     labels:
