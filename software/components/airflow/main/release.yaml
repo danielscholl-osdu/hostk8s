@@ -83,7 +83,7 @@ spec:
       resources:
         limits:
           cpu: 500m
-          memory: 512Mi  # Limit API server memory for development
+          memory: 768Mi  # Increased to prevent OOMKilled
         requests:
           cpu: 100m
           memory: 256Mi
@@ -111,7 +111,7 @@ spec:
       resources:
         limits:
           cpu: 200m
-          memory: 256Mi  # Reduced for development
+          memory: 384Mi  # Increased to prevent OOMKilled
         requests:
           cpu: 50m
           memory: 128Mi
@@ -123,7 +123,7 @@ spec:
       resources:
         limits:
           cpu: 200m
-          memory: 256Mi  # Reduced for development
+          memory: 384Mi  # Increased to prevent OOMKilled
         requests:
           cpu: 50m
           memory: 128Mi
